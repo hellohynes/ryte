@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ryte Documentation Audit"
+  short_description: "Find verified documentation drift in Ryte."
+  default_prompt: "Use $docs-audit to review Ryte documentation for drift."

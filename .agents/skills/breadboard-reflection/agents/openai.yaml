@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ryte Breadboard Reflection"
+  short_description: "Harden Ryte plans before implementation"
+  default_prompt: "Use $breadboard-reflection to critique a Ryte breadboard or slice plan before implementation."

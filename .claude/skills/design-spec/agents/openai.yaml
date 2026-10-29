@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ryte Design Spec"
+  short_description: "Plan substantial Ryte work in approved vertical slices."
+  default_prompt: "Use $design-spec to plan this substantial Ryte change."

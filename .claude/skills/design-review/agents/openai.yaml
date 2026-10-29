@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ryte Design Review"
+  short_description: "Review Ryte native UI behavior"
+  default_prompt: "Use $design-review to review this Ryte UI change in the installed app."

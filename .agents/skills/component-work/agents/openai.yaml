@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ryte Component Work"
+  short_description: "Build focused Vue and Electron interactions safely."
+  default_prompt: "Use $component-work to improve a Ryte UI component."

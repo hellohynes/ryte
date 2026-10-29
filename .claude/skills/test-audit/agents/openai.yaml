@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ryte Test Audit"
+  short_description: "Assess test value and focused coverage gaps."
+  default_prompt: "Use $test-audit to review Ryte test coverage for this area."

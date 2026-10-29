@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Where Ryte is today and what is being built next: workstreams, a record of what your agents did, kept as plain Markdown in your notes folder."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#18171a" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <title>Roadmap — Ryte</title>
+    <link rel="icon" type="image/svg+xml" href="assets/ryte-icon.svg" />
+    <script>
+      document.documentElement.classList.add("js");
+    </script>
+    <link
+      rel="preload"
+      href="assets/fonts/geist-latin-wght-normal.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="stencil-tokens.css?v=2" />
+    <link rel="stylesheet" href="styles.css?v=32" />
+    <script src="main.js?v=28" defer></script>
+  </head>
+  <body>
+    <header class="topbar is-visible">
+      <a class="topbar-brand" href="index.html" aria-label="Ryte, home">
+        <img src="assets/ryte-icon.svg" alt="" width="32" height="32" />
+        <span class="wordmark" role="img" aria-label="Ryte"></span>
+      </a>
+      <a class="button button-compact" href="https://github.com/hellohynes/ryte/releases/download/v0.5.1/ryte-0.5.1-arm64.dmg">Download for Mac</a>
+    </header>
+
+    <main>
+      <section class="page-head" aria-labelledby="roadmap-title">
+        <h1 id="roadmap-title">Roadmap</h1>
+        <p class="section-lede">
+          Where Ryte is today and what is being built next. Nothing here has a
+          date, and the order can change.
+        </p>
+      </section>
+
+      <ol class="timeline">
+        <li class="timeline-item reveal">
+          <div>
+            <p class="badge">Shipped</p>
+            <h2>Ryte 0.5</h2>
+          </div>
+          <div>
+            <p>
+              A Markdown viewer with local search. Open the folder you already
+              have, search every note on your Mac, and read them with a section
+              outline. Add a ChatGPT or Claude key for cited summaries.
+            </p>
+            <p>
+              <a class="text-link" href="releases.html#v0-5-1">What&rsquo;s new in 0.5.1</a>
+            </p>
+          </div>
+        </li>
+        <li class="timeline-item reveal">
+          <div>
+            <p class="badge">In development</p>
+            <h2>Workstreams</h2>
+          </div>
+          <div>
+            <p>
+              A record of what your agents did. A workstream is a plain Markdown
+              document in your notes folder: what each agent did, what is still
+              open, and where to pick up.
+            </p>
+            <p>
+              Ryte shows each one as a board and a timeline, next to your git
+              and GitHub activity and pull request alerts.
+            </p>
+          </div>
+        </li>
+        <li class="timeline-item reveal">
+          <div>
+            <p class="badge">Planned</p>
+            <h2>Connect your agents</h2>
+          </div>
+          <div>
+            <p>
+              Ryte finds the agent tools on your Mac and connects each one so it
+              can write to a workstream. It also suggests workstreams from work
+              already in your folders.
+            </p>
+          </div>
+        </li>
+        <li class="timeline-item reveal">
+          <div>
+            <p class="badge">Planned</p>
+            <h2>Comments for agents</h2>
+          </div>
+          <div>
+            <p>
+              Leave a comment on a workstream. Your agent reads it back and marks
+              it resolved once it has dealt with it.
+            </p>
+          </div>
+        </li>
+        <li class="timeline-item reveal">
+          <div>
+            <p class="badge">Planned</p>
+            <h2>Today</h2>
+          </div>
+          <div>
+            <p>
+              A view of what needs you now across all your workstreams, and
+              find-in-page (&#8984;F) inside a note.
+            </p>
+          </div>
+        </li>
+      </ol>
+    </main>
+
+    <footer class="footer">
+      <a class="topbar-brand" href="index.html" aria-label="Ryte, home">
+        <img src="assets/ryte-icon.svg" alt="" width="32" height="32" />
+        <span class="wordmark" role="img" aria-label="Ryte"></span>
+      </a>
+      <nav class="footer-links" aria-label="Footer">
+        <a class="text-link" href="https://github.com/hellohynes/ryte/releases/download/v0.5.1/ryte-0.5.1-arm64.dmg">Download for Mac</a>
+        <a class="text-link" href="releases.html">Releases</a>
+        <a class="text-link" href="roadmap.html" aria-current="page">Roadmap</a>
+        <a class="text-link" href="index.html#installation">Installation help</a>
+        <a class="text-link" href="stencil/">Stencil</a>
+      </nav>
+    </footer>
+  </body>
+</html>

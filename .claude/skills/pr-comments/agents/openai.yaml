@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ryte PR Comments"
+  short_description: "Triage Ryte review feedback"
+  default_prompt: "Use $pr-comments to triage these Ryte pull-request comments."

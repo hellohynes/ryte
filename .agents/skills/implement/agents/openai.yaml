@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ryte Implement"
+  short_description: "Execute scoped Ryte work with validation and QA."
+  default_prompt: "Use $implement to execute the approved Ryte work."

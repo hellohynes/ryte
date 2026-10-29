@@ -1,0 +1,75 @@
+name: Release macOS
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish ad-hoc signed Apple Silicon DMG
+    runs-on: macos-14
+    environment: release
+
+    defaults:
+      run:
+        working-directory: app
+
+    steps:
+      - name: Checkout tagged source
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.1
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+
+      - name: Confirm Apple Silicon runner
+        run: test "$(uname -m)" = arm64
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Confirm tag matches app version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: pnpm release:check
+
+      - name: Build DMG and verify app signature and packaged native search
+        run: pnpm package:mac:arm64
+
+      - name: Verify DMG and create checksum
+        env:
+          RELEASE_VERSION: ${{ github.ref_name }}
+        run: |
+          hdiutil verify "dist/ryte-${RELEASE_VERSION#v}-arm64.dmg"
+          shasum -a 256 "dist/ryte-${RELEASE_VERSION#v}-arm64.dmg" > "dist/ryte-${RELEASE_VERSION#v}-arm64.dmg.sha256"
+
+      - name: Publish GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          VERSION="${RELEASE_TAG#v}"
+          printf '%s\n' \
+            'This Apple Silicon build is ad-hoc signed, without an Apple-verified developer identity, and has not been notarized by Apple.' \
+            '' \
+            'If macOS blocks launch, see [Apple’s instructions for opening an app from an unidentified developer](https://support.apple.com/102445).' \
+            'If macOS says Ryte is damaged, see the [Ryte first-launch guide](https://github.com/hellohynes/ryte/blob/'"$RELEASE_TAG"'/docs/releasing-macos.md#first-launch-of-an-unsigned-build).' \
+            > "$RUNNER_TEMP/release-notes.md"
+          gh release create "$RELEASE_TAG" "dist/ryte-${VERSION}-arm64.dmg" "dist/ryte-${VERSION}-arm64.dmg.sha256" \
+            --verify-tag \
+            --title "Ryte $RELEASE_TAG (unsigned)" \
+            --notes-file "$RUNNER_TEMP/release-notes.md" \
+            --generate-notes

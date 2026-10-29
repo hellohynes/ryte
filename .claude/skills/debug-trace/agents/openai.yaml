@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ryte Debug Trace"
+  short_description: "Use temporary privacy-safe runtime diagnostics."
+  default_prompt: "Use $debug-trace for this narrow Ryte runtime issue."

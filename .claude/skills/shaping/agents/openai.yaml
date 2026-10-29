@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ryte Shaping"
+  short_description: "Shape Ryte phases before implementation"
+  default_prompt: "Use $shaping to frame and shape the next Ryte feature phase."

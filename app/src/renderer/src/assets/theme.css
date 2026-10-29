@@ -1,0 +1,13 @@
+/*
+ * Typeface tokens. Color lives in the generated stencil/colors.css (semantic `--st-color-*` tokens
+ * for each theme); the window's theme comes from Electron's native theme via `prefers-color-scheme`.
+ */
+:root {
+  /* Interface type: always Geist, whatever font is chosen. */
+  --st-font-ui: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --st-font-ui-mono: 'Geist Mono Variable', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* Content type (notes, summaries, code): Geist until the saved choice loads, then set on the root from Preferences. */
+  --st-font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
+  --st-font-mono: 'Geist Mono Variable', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+}

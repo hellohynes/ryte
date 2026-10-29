@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ryte Framing"
+  short_description: "Frame Ryte efforts before shaping"
+  default_prompt: "Use $framing to capture the why, outcome, and boundaries for a Ryte phase."

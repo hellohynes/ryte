@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ryte Review"
+  short_description: "Perform Staff Engineer Ryte reviews and hardening passes."
+  default_prompt: "Use $review to review the current Ryte work."

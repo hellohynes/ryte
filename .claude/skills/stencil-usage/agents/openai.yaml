@@ -1,0 +1,4 @@
+interface:
+  display_name: "Stencil Usage"
+  short_description: "Build Ryte UI with Stencil components, tokens, and checks."
+  default_prompt: "Use $stencil-usage to build this Ryte renderer UI with Stencil."

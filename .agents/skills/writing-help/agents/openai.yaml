@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ryte Writing Help"
+  short_description: "Tighten agent-authored Ryte product and build prose."
+  default_prompt: "Use $writing-help to tighten this Ryte build artifact."

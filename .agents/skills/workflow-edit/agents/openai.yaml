@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ryte Workflow Edit"
+  short_description: "Safely change Ryte Actions workflows"
+  default_prompt: "Use $workflow-edit to review this Ryte GitHub Actions change."

@@ -1,0 +1,118 @@
+/*
+ * Chrome for StSelect, StCheckbox, and StSegmented. These controls have no prop-driven variants, so
+ * the rules are written by hand; every value reads a Stencil token.
+ */
+
+/* StSelect: a native select drawn like the boxed input, with a chevron. */
+.st-select {
+  position: relative;
+  display: block;
+  width: 100%;
+}
+
+select.st-input {
+  padding-right: var(--st-space-400);
+  appearance: none;
+  cursor: pointer;
+}
+
+.st-select-chevron {
+  position: absolute;
+  top: 50%;
+  right: var(--st-space-125);
+  color: var(--st-color-text-primary);
+  transform: translateY(-50%) rotate(90deg);
+  pointer-events: none;
+}
+
+/* StCheckbox: the real input stays in place for keyboard and assistive tech; the box is drawn over it. */
+.st-checkbox {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--st-space-100);
+  color: var(--st-color-text-primary);
+  font: var(--st-type-body-md);
+  cursor: pointer;
+}
+
+.st-checkbox[data-st-disabled] {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.st-checkbox input {
+  position: absolute;
+  width: var(--st-block-200);
+  height: var(--st-block-200);
+  margin: 0;
+  opacity: 0;
+  cursor: inherit;
+}
+
+.st-checkbox-box {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--st-block-200);
+  height: var(--st-block-200);
+  border: var(--st-border-100) solid var(--st-color-border-contrast);
+  border-radius: var(--st-space-50);
+  color: var(--st-color-text-contrast);
+}
+
+.st-checkbox-box svg {
+  opacity: 0;
+}
+
+.st-checkbox input:checked + .st-checkbox-box {
+  border-color: var(--st-color-accent);
+  background: var(--st-color-accent);
+}
+
+.st-checkbox input:checked + .st-checkbox-box svg {
+  opacity: 1;
+}
+
+.st-checkbox input:focus-visible + .st-checkbox-box {
+  outline: var(--st-border-200) solid var(--st-color-focus);
+  outline-offset: var(--st-space-25);
+}
+
+.st-checkbox-label {
+  min-width: 0;
+}
+
+/* StSegmented: a radio group drawn as buttons. */
+.st-segmented {
+  display: flex;
+  gap: var(--st-space-50);
+}
+
+.st-segmented-option {
+  flex: 1 1 0;
+  padding: var(--st-space-100) var(--st-space-75);
+  border: var(--st-border-100) solid var(--st-color-border-base);
+  border-radius: var(--st-space-100);
+  background: transparent;
+  color: var(--st-color-text-secondary);
+  font: var(--st-type-label-md);
+  cursor: pointer;
+}
+
+.st-segmented-option[aria-checked='true'] {
+  border-color: var(--st-color-fill-primary);
+  background: var(--st-color-fill-primary);
+  color: var(--st-color-text-on-primary);
+}
+
+.st-segmented-option:hover:not([aria-checked='true']) {
+  background: var(--st-color-surface-hover);
+}
+
+.st-segmented-option:focus-visible {
+  outline: var(--st-border-200) solid var(--st-color-focus);
+  outline-offset: var(--st-space-25);
+}

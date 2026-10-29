@@ -1,0 +1,4 @@
+interface:
+  display_name: "Site Design"
+  short_description: "Change the Ryte website in its clean, high-touch style on Stencil."
+  default_prompt: "Use $site-design to change the Ryte website."

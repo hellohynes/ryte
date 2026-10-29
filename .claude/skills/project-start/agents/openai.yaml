@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ryte Project Start"
+  short_description: "Start Ryte work safely with branch, notes, and artifact context."
+  default_prompt: "Use $project-start to start the next Ryte effort."

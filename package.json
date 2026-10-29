@@ -1,0 +1,25 @@
+{
+  "name": "ryte-local-commands",
+  "private": true,
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "build:local": "corepack pnpm --dir app build",
+    "qa:local": "corepack pnpm --dir app qa:local",
+    "stencil": "corepack pnpm --dir app stencil",
+    "dmg:local": "corepack pnpm --dir app package:mac:arm64",
+    "site:build": "node scripts/build-site.mjs",
+    "site:preview": "node scripts/serve.mjs site 6001 --stencil http://localhost:6002/",
+    "site:stencil": "corepack pnpm --dir app stencil",
+    "site:serve": "node scripts/build-site.mjs && node scripts/serve.mjs site-dist 6001",
+    "check:site": "node scripts/check-site.mjs",
+    "site:screenshots": "node scripts/capture-site-screenshots.mjs",
+    "check:skills": "node scripts/check-skill-contracts.mjs",
+    "sync:claude-skills": "node scripts/sync-claude-skills.mjs",
+    "hooks:install": "node scripts/install-git-hooks.mjs",
+    "check:conventions": "node --test scripts/conventional-commits.test.mjs",
+    "check:pr-title": "node scripts/conventional-commits.mjs --title"
+  },
+  "packageManager": "pnpm@10.12.1"
+}

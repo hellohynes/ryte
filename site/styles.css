@@ -1,0 +1,581 @@
+/*
+ * Landing page styles, on Stencil: structure and color both come from the generated
+ * stencil-tokens.css (space, layout, type roles, semantic colors for light and dark, shadows, rings),
+ * and the type is Geist, self-hosted, like the app. There are no site-only colors and, outside :root,
+ * no raw colors or px sizes: `pnpm check:site` enforces it. The root is 62.5% so Stencil's
+ * rem tokens resolve to the same pixels as in the app and still follow the reader's browser text size.
+ */
+@font-face {
+  font-family: "Geist Variable";
+  font-style: normal;
+  font-display: swap;
+  font-weight: 100 900;
+  src: url("assets/fonts/geist-latin-wght-normal.woff2") format("woff2-variations");
+}
+:root {
+  color-scheme: light dark;
+  --st-font-ui-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --st-font-ui: "Geist Variable", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --site-gutter: clamp(var(--st-space-250), 4vw, var(--st-space-800));
+  /* Content sits in one centered column; the gutter applies below its width. */
+  --site-pad-x: max(var(--site-gutter), calc((100% - var(--st-layout-1800)) / 2));
+  --site-section-y: clamp(var(--st-layout-100), 9vw, var(--st-layout-200));
+  --site-display: clamp(4.48rem, 5.2vw, 7.84rem);
+}
+* {
+  box-sizing: border-box;
+}
+html {
+  font-size: 62.5%;
+  scroll-behavior: smooth;
+}
+body {
+  margin: 0;
+  color: var(--st-color-text-primary);
+  font: var(--st-type-body-lg);
+  background: var(--st-color-surface-base);
+  -webkit-font-smoothing: antialiased;
+}
+::selection {
+  background: var(--st-color-surface-selected);
+}
+a {
+  color: inherit;
+}
+
+main,
+.topbar {
+  position: relative;
+  z-index: 1;
+}
+
+/* The wordmark is the app's own ryte-logo.svg, tinted with the page text color. */
+.wordmark {
+  display: block;
+  width: var(--st-layout-200);
+  aspect-ratio: 40 / 22;
+  background: var(--st-color-text-strong);
+  -webkit-mask: url("assets/ryte-wordmark.svg") center / contain no-repeat;
+  mask: url("assets/ryte-wordmark.svg") center / contain no-repeat;
+}
+
+.hero {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 100svh;
+  padding: var(--st-space-600) var(--site-pad-x);
+  text-align: center;
+}
+.hero-copy {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--st-space-300);
+  max-width: var(--st-layout-2000);
+}
+.eyebrow {
+  margin: 0;
+  color: var(--st-color-text-secondary);
+  font: var(--st-type-label-md);
+  font-family: var(--st-font-ui-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.lockup {
+  display: flex;
+  align-items: center;
+  gap: var(--st-space-150);
+}
+.lockup-glyph {
+  display: block;
+  width: var(--st-layout-125);
+  height: auto;
+  filter: drop-shadow(
+    0 var(--st-space-150) var(--st-space-250)
+      color-mix(in oklab, var(--st-color-shadow) 40%, transparent)
+  );
+}
+h1,
+h2 {
+  text-wrap: balance;
+}
+.lede,
+.section-lede,
+.feature p,
+.local-card p,
+.stencil-card p {
+  text-wrap: pretty;
+}
+h1 {
+  max-width: 12ch;
+  margin: 0;
+  color: var(--st-color-text-strong);
+  font-size: var(--site-display);
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  line-height: 1.02;
+}
+.lede {
+  max-width: 46ch;
+  margin: 0;
+  color: var(--st-color-text-primary);
+  font-size: clamp(1.8rem, 1.4vw + 0.8rem, 2rem);
+}
+
+
+.button {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--st-space-25);
+  min-height: var(--st-block-525);
+  padding: var(--st-space-150) var(--st-space-300) var(--st-space-150) var(--st-space-250);
+  border-radius: var(--st-space-200);
+  color: var(--st-color-text-on-primary);
+  background: var(--st-color-fill-primary);
+  text-decoration: none;
+  box-shadow: var(--st-shadow-md);
+  transition: background 160ms ease;
+}
+.button:hover {
+  background: color-mix(in oklab, var(--st-color-fill-primary) 85%, transparent);
+}
+.button:focus-visible,
+.topbar-brand:focus-visible,
+.text-link:focus-visible,
+.stencil-card:focus-visible,
+.button-label {
+  font: var(--st-type-label-lg);
+  font-size: var(--st-font-size-250);
+  line-height: 1.25;
+}
+.button-sub {
+  font: var(--st-type-label-md);
+}
+.button-compact {
+  flex-direction: row;
+  align-items: center;
+  min-height: var(--st-block-500);
+  padding: var(--st-space-75) var(--st-space-200);
+  border-radius: var(--st-space-125);
+  font: var(--st-type-label-lg);
+  box-shadow: none;
+}
+
+.download-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--st-space-150);
+}
+.download-note {
+  margin: 0;
+  color: var(--st-color-text-primary);
+  font: var(--st-type-body-md);
+  line-height: 1.7;
+}
+.text-link {
+  display: inline-block;
+  min-height: var(--st-block-300);
+  text-decoration-thickness: var(--st-border-100);
+  text-underline-offset: 0.2em;
+}
+.text-link:hover {
+  text-decoration-thickness: var(--st-border-200);
+}
+
+/* Sections share one rhythm: the same vertical padding and gutter, one hairline between them. */
+.section {
+  padding: var(--site-section-y) var(--site-pad-x);
+  border-top: var(--st-border-100) solid var(--st-color-border-base);
+  background: var(--st-color-surface-base);
+  scroll-margin-top: var(--st-space-700);
+}
+h2 {
+  margin: 0;
+  color: var(--st-color-text-strong);
+  font-size: clamp(var(--st-font-size-500), 3.4vw, var(--st-font-size-600));
+  font-weight: 600;
+  letter-spacing: -0.04em;
+  line-height: 1.1;
+}
+h3 {
+  margin: 0;
+  color: var(--st-color-text-strong);
+  font: var(--st-type-headline-sm);
+  letter-spacing: -0.01em;
+}
+.section-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--st-space-150);
+  max-width: var(--st-layout-1200);
+}
+.section-lede {
+  margin: 0;
+  color: var(--st-color-text-primary);
+  font: var(--st-type-body-xl);
+}
+
+.badge {
+  align-self: flex-start;
+  margin: 0;
+  padding: var(--st-space-25) var(--st-space-125);
+  border-radius: var(--st-radius-pill);
+  color: var(--st-color-text-secondary);
+  box-shadow: var(--st-ring-strong);
+  font: var(--st-type-label-sm);
+  font-family: var(--st-font-ui-mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.icon {
+  display: block;
+  width: var(--st-block-300);
+  height: var(--st-block-300);
+  fill: currentColor;
+}
+.icon-inline {
+  display: inline-block;
+  width: var(--st-block-200);
+  height: var(--st-block-200);
+  vertical-align: -0.2em;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(var(--st-space-300), 3vw, var(--st-space-600));
+  margin: var(--st-space-600) 0 0;
+  padding: 0;
+  list-style: none;
+}
+.feature {
+  display: flex;
+  flex-direction: column;
+  gap: var(--st-space-100);
+}
+.feature .icon {
+  margin-bottom: var(--st-space-100);
+  color: var(--st-color-accent);
+}
+.feature p {
+  margin: 0;
+  max-width: 36ch;
+  color: var(--st-color-text-primary);
+}
+
+.local-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--st-space-300);
+  padding: var(--st-space-400);
+  border-radius: var(--st-space-300);
+  background: var(--st-color-surface-raised);
+  box-shadow: var(--st-ring-base);
+}
+.local-card .icon {
+  color: var(--st-color-accent);
+}
+.local-card p {
+  margin: var(--st-space-150) 0 0;
+  max-width: 56ch;
+  color: var(--st-color-text-primary);
+  font: var(--st-type-body-xl);
+}
+
+.release {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: clamp(var(--st-space-400), 5vw, var(--st-layout-125));
+}
+.release-heading {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--st-space-150);
+}
+.release-heading p {
+  margin: 0;
+  color: var(--st-color-text-secondary);
+}
+.release-body {
+  max-width: var(--st-layout-1000);
+}
+.release-highlights {
+  display: grid;
+  gap: var(--st-space-200);
+  margin: 0;
+  padding-left: var(--st-space-250);
+  color: var(--st-color-text-primary);
+  font: var(--st-type-body-xl);
+}
+.install-note {
+  margin: var(--st-space-300) 0 0;
+}
+
+.stencil-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--st-space-300);
+  padding: var(--st-space-400);
+  border-radius: var(--st-space-300);
+  background: var(--st-color-surface-raised);
+  box-shadow: var(--st-ring-base);
+  text-decoration: none;
+  transition: background 160ms ease;
+}
+.stencil-card:hover {
+  background: var(--st-color-surface-hover);
+}
+.stencil-card p {
+  margin: var(--st-space-100) 0 0;
+  color: var(--st-color-text-primary);
+  font: var(--st-type-body-xl);
+}
+.stencil-link {
+  flex: 0 0 auto;
+  color: var(--st-color-link);
+  font: var(--st-type-label-lg);
+  white-space: nowrap;
+}
+
+.footer {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--st-space-300);
+  padding: var(--st-space-500) var(--site-pad-x);
+  border-top: var(--st-border-100) solid var(--st-color-border-base);
+  background: var(--st-color-surface-base);
+  color: var(--st-color-text-secondary);
+}
+.footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--st-space-100) var(--st-space-300);
+  font: var(--st-type-body-md);
+}
+
+.hero-shot picture {
+  display: block;
+}
+.hero-shot {
+  position: relative;
+  min-width: 0;
+  margin: var(--st-space-500) 0 0;
+  container-type: inline-size;
+}
+.hero-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: var(--st-space-175);
+  box-shadow:
+    0 0 0 var(--st-border-100) var(--st-color-border-strong),
+    var(--st-shadow-xl);
+}
+/* Traffic lights match the app's window: 12pt buttons at x=20, y=22 in a 1440pt-wide window. */
+.lights {
+  position: absolute;
+  top: calc(22 / 1440 * 100cqw);
+  left: calc(20 / 1440 * 100cqw);
+  display: flex;
+  gap: calc(8 / 1440 * 100cqw);
+}
+.lights i {
+  display: block;
+  width: calc(12 / 1440 * 100cqw);
+  height: calc(12 / 1440 * 100cqw);
+  border-radius: var(--st-radius-circle);
+  box-shadow: inset 0 0 0 var(--st-border-50)
+    color-mix(in oklab, var(--st-neutral-black) 22%, transparent);
+}
+.light-close {
+  background: var(--st-red-400);
+}
+.light-min {
+  background: var(--st-gold-300);
+}
+.light-max {
+  background: var(--st-green-400);
+}
+
+.topbar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--st-space-150) var(--site-pad-x);
+  border-bottom: var(--st-border-100) solid var(--st-color-border-base);
+  background: color-mix(in srgb, var(--st-color-surface-base) 88%, transparent);
+  transform: translateY(-100%);
+  visibility: hidden;
+  transition:
+    transform 260ms ease,
+    visibility 0s linear 260ms;
+}
+.topbar.is-visible {
+  transform: translateY(0);
+  visibility: visible;
+  transition-delay: 0s;
+}
+.topbar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--st-space-125);
+  text-decoration: none;
+}
+.topbar-brand img {
+  display: block;
+  width: var(--st-block-400);
+  height: var(--st-block-400);
+}
+.topbar .wordmark,
+.footer .wordmark {
+  width: var(--st-layout-75);
+}
+
+/* Roadmap and releases pages: one row per entry, badge and title on the left, detail on the right. */
+.page-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--st-space-150);
+  padding: calc(var(--st-space-700) + var(--st-space-400)) var(--site-pad-x) var(--st-space-400);
+}
+.page-head h1 {
+  max-width: none;
+}
+.timeline {
+  margin: 0;
+  padding: 0 var(--site-pad-x) var(--site-section-y);
+  list-style: none;
+}
+.timeline-item {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 3fr);
+  gap: var(--st-space-300) clamp(var(--st-space-400), 5vw, var(--st-layout-125));
+  padding: var(--st-space-400) 0;
+  border-top: var(--st-border-100) solid var(--st-color-border-base);
+}
+.timeline-item .badge {
+  display: inline-block;
+  margin-bottom: var(--st-space-150);
+}
+.timeline-item p {
+  margin: 0;
+  max-width: 56ch;
+  color: var(--st-color-text-primary);
+  font: var(--st-type-body-xl);
+}
+.timeline-item p + p {
+  margin-top: var(--st-space-150);
+}
+
+.timeline-item time {
+  display: block;
+  margin-top: var(--st-space-100);
+  color: var(--st-color-text-secondary);
+  font: var(--st-type-body-md);
+}
+.timeline-item h3 {
+  margin: var(--st-space-300) 0 var(--st-space-100);
+}
+.timeline-item h3:first-child {
+  margin-top: 0;
+}
+.timeline-item ul {
+  display: grid;
+  gap: var(--st-space-100);
+  max-width: 56ch;
+  margin: 0;
+  padding-left: var(--st-space-300);
+  color: var(--st-color-text-primary);
+  font: var(--st-type-body-lg);
+}
+.timeline-item .badge-version {
+  text-transform: none;
+}
+.timeline-item p + ul {
+  margin-top: var(--st-space-150);
+}
+.timeline-item .note-text {
+  color: var(--st-color-text-secondary);
+  font: var(--st-type-body-lg);
+}
+
+/* Sections ease in once as they scroll into view. Without JavaScript they are simply there. */
+.js .reveal {
+  opacity: 0;
+  transform: translateY(var(--st-space-150));
+  transition:
+    opacity 260ms ease-out,
+    transform 260ms ease-out;
+}
+.js .reveal.is-in {
+  opacity: 1;
+  transform: none;
+}
+
+@media (max-width: 56rem) {
+  .hero {
+    min-height: auto;
+    padding: var(--st-space-500) var(--site-gutter) var(--st-space-600);
+  }
+  .release,
+  .timeline-item {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .local-card {
+    grid-template-columns: minmax(0, 1fr);
+    padding: var(--st-space-300);
+  }
+  .stencil-card {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: var(--st-space-300);
+  }
+  .lockup-glyph {
+    width: var(--st-layout-150);
+  }
+  .wordmark {
+    width: var(--st-layout-100);
+  }
+  .topbar .wordmark,
+  .footer .wordmark {
+    width: var(--st-layout-75);
+  }
+}
+/* Three features stay side by side on tablets and stack on phones. */
+@media (max-width: 40rem) {
+  .feature-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .topbar,
+  .button,
+  .stencil-card {
+    transition: none;
+  }
+  .js .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}

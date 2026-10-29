@@ -1,0 +1,257 @@
+/*
+ * Chrome for StDialog, StPopover, StMenu, StTooltip, StToaster, and StDisclosure. These have no
+ * prop-driven variants beyond a few data attributes, so the rules are written by hand; every value
+ * reads a Stencil token. The top layer (native dialog and popover) needs no z-index.
+ */
+
+/* StDialog: the native dialog fills the window and is itself the scrim; the slot is the panel. */
+.st-dialog {
+  --st-dialog-padding: var(--st-space-600);
+
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: var(--st-dialog-padding);
+  border: 0;
+  background: transparent;
+  color: var(--st-color-text-primary);
+  overflow: visible;
+  -webkit-app-region: no-drag;
+}
+
+.st-dialog[open] {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.st-dialog[data-st-placement='top'] {
+  --st-dialog-padding: 12vh var(--st-space-300) var(--st-space-300);
+}
+
+.st-dialog[data-st-placement='top'][open] {
+  align-items: flex-start;
+}
+
+.st-dialog[data-st-scrim='dim'] {
+  background: var(--st-color-surface-scrim);
+  transition: background-color 150ms ease;
+}
+
+.st-dialog::backdrop {
+  background: transparent;
+}
+
+.st-dialog:focus {
+  outline: none;
+}
+
+@media (max-width: 760px) {
+  .st-dialog[data-st-placement='center'] {
+    --st-dialog-padding: var(--st-space-200);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st-dialog[data-st-scrim='dim'] {
+    transition: none;
+  }
+}
+
+/* StPopover and StMenu: a floating surface placed next to its anchor. */
+.st-popover {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: var(--st-space-50);
+  border: var(--st-border-100) solid var(--st-color-border-base);
+  border-radius: var(--st-space-100);
+  background: var(--st-color-surface-floating);
+  box-shadow: var(--st-shadow-md);
+  color: var(--st-color-text-primary);
+  font: var(--st-type-body-compact);
+  -webkit-app-region: no-drag;
+}
+
+.st-popover:focus {
+  outline: none;
+}
+
+.st-menu {
+  min-width: var(--st-layout-300);
+}
+
+.st-menu-item {
+  display: flex;
+  align-items: center;
+  gap: var(--st-space-100);
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--st-block-400);
+  padding: var(--st-space-50) var(--st-space-125);
+  border: 0;
+  border-radius: var(--st-space-75);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.st-menu-item:hover,
+.st-menu-item:focus-visible {
+  background: var(--st-color-surface-hover);
+  outline: none;
+}
+
+.st-menu-item[data-st-tone='danger'] {
+  color: var(--st-color-danger);
+}
+
+.st-menu-item[data-st-tone='danger']:hover,
+.st-menu-item[data-st-tone='danger']:focus-visible {
+  background: var(--st-color-surface-danger);
+}
+
+.st-menu-item:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.st-menu-item[aria-checked='true'] {
+  color: var(--st-color-text-strong);
+  font-weight: var(--st-font-weight-semi-bold);
+}
+
+.st-menu-item-check {
+  display: inline-flex;
+  flex: 0 0 auto;
+  width: var(--st-block-175);
+}
+
+.st-menu-label {
+  padding: var(--st-space-50) var(--st-space-125);
+  color: var(--st-color-text-tertiary);
+  font: var(--st-type-label-sm);
+}
+
+.st-menu-separator {
+  height: var(--st-block-1);
+  margin: var(--st-space-50) var(--st-space-100);
+  background: var(--st-color-surface-hover);
+}
+
+/* StTooltip: a small label next to its trigger. */
+.st-tooltip-anchor {
+  display: inline-flex;
+}
+
+.st-tooltip {
+  position: fixed;
+  inset: auto;
+  margin: 0;
+  padding: var(--st-space-50) var(--st-space-100);
+  border: 0;
+  border-radius: var(--st-space-75);
+  background: var(--st-color-surface-floating);
+  box-shadow: var(--st-shadow-sm);
+  color: var(--st-color-text-strong);
+  font: var(--st-type-label-sm);
+  pointer-events: none;
+}
+
+/* StToaster: a stack of short messages at the bottom center. */
+.st-toaster {
+  position: fixed;
+  inset: auto auto var(--st-space-300) 50%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--st-space-100);
+  width: min(var(--st-layout-600), calc(100vw - var(--st-block-600)));
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  overflow: visible;
+  transform: translateX(-50%);
+}
+
+.st-toast {
+  display: flex;
+  align-items: center;
+  gap: var(--st-space-150);
+  padding: var(--st-space-100) var(--st-space-150);
+  border: var(--st-border-100) solid var(--st-color-border-base);
+  border-radius: var(--st-space-100);
+  background: var(--st-color-surface-floating);
+  box-shadow: var(--st-shadow-lg);
+  color: var(--st-color-text-primary);
+  font: var(--st-type-body-compact);
+}
+
+.st-toast-message {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.st-toast[data-st-tone='success'] {
+  border-color: var(--st-color-success);
+}
+
+.st-toast[data-st-tone='danger'] {
+  border-color: var(--st-color-danger);
+}
+
+/* StDisclosure: a native details element whose body glides open. */
+.st-disclosure {
+  interpolate-size: allow-keywords;
+}
+
+.st-disclosure::details-content {
+  block-size: 0;
+  overflow: clip;
+  transition:
+    block-size 360ms cubic-bezier(0.22, 1, 0.36, 1),
+    content-visibility 360ms allow-discrete;
+}
+
+.st-disclosure[open]::details-content {
+  block-size: auto;
+}
+
+.st-disclosure-summary {
+  display: flex;
+  align-items: center;
+  gap: var(--st-space-100);
+  cursor: pointer;
+  list-style: none;
+}
+
+.st-disclosure-summary::-webkit-details-marker {
+  display: none;
+}
+
+.st-disclosure-summary:focus-visible {
+  outline: var(--st-border-200) solid var(--st-color-focus);
+  outline-offset: var(--st-space-25);
+  border-radius: var(--st-space-50);
+}
+
+.st-disclosure-chevron {
+  transition: transform 150ms ease-out;
+}
+
+.st-disclosure[open] > .st-disclosure-summary .st-disclosure-chevron {
+  transform: rotate(90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .st-disclosure::details-content,
+  .st-disclosure-chevron {
+    transition: none;
+  }
+}

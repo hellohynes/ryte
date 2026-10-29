@@ -1,0 +1,4 @@
+#!/bin/sh
+# Rejects commit messages that don't follow Conventional Commits (docs/branch-workflow.md).
+# Installed by `pnpm hooks:install` (or `pnpm install` in app/), which sets core.hooksPath.
+exec node "$(git rev-parse --show-toplevel)/scripts/conventional-commits.mjs" --commit-msg-file "$1"

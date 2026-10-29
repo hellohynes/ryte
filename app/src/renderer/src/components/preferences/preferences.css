@@ -1,0 +1,75 @@
+/*
+ * Shared look of the Preferences panes, from the design (Figma node 150:3648). Colors are the
+ * semantic theme tokens, so the modal follows the chosen color mode. Class names carry a `pf-`
+ * prefix because this stylesheet is global.
+ */
+.pf-pane {
+  display: flex;
+  flex-direction: column;
+}
+
+.pf-pane-title {
+  margin: 0;
+  padding: var(--st-space-150) var(--st-space-300) var(--st-space-125) var(--st-space-150);
+}
+
+.pf-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--st-space-150);
+  padding: var(--st-space-150) var(--st-space-300) var(--st-space-150) var(--st-space-150);
+}
+
+.pf-desc strong {
+  font-weight: var(--st-font-weight-bold);
+}
+
+.pf-error {
+  margin: 0;
+  padding: 0 var(--st-space-300) var(--st-space-150) var(--st-space-150);
+}
+
+.pf-banner {
+  margin: 0 var(--st-space-300) 0 var(--st-space-150);
+}
+
+/* The read-only box that shows where notes live. */
+.pf-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--st-space-100);
+  padding: var(--st-space-75) var(--st-space-75) var(--st-space-75) var(--st-space-200);
+  border: var(--st-border-100) solid var(--st-color-border-base);
+  border-radius: var(--st-space-125);
+  background: var(--st-color-surface-sunken);
+  color: var(--st-color-text-secondary);
+  font-size: var(--st-type-body-md-size);
+  line-height: var(--st-type-body-md-leading);
+}
+
+.pf-box-path {
+  min-width: 0;
+  overflow: hidden;
+  font-family: var(--st-type-code-md-family);
+  font-size: var(--st-type-code-md-size);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.st-input.pf-mask {
+  color: var(--st-color-text-secondary);
+  letter-spacing: 0.08em;
+}
+
+.pf-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--st-space-50);
+  font-size: var(--st-type-body-sm-size);
+  line-height: var(--st-type-body-sm-leading);
+}
+
+.pf-status--ok {
+  color: var(--st-color-success);
+}

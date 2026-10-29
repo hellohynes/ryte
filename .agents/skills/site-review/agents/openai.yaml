@@ -1,0 +1,4 @@
+interface:
+  display_name: "Site Review"
+  short_description: "Review the Ryte website for design, accessibility, performance, and honest copy."
+  default_prompt: "Use $site-review to review this change to the Ryte website."

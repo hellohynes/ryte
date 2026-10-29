@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ryte Bug Hunt"
+  short_description: "Diagnose a Ryte defect safely"
+  default_prompt: "Use $bug-hunt to trace and diagnose this Ryte defect."

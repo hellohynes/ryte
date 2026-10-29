@@ -1,0 +1,280 @@
+/*
+ * StProse: typography for rendered markdown. The content is generated HTML, so these rules style
+ * descendants by element and by the class names the markdown renderer emits. Size, leading and
+ * family follow the reading variables (--st-reading-*), so reading preferences scale it.
+ */
+.st-prose {
+  color: var(--st-color-text-primary);
+  font-family: var(--st-font-sans);
+  font-size: var(--st-reading-size);
+  line-height: var(--st-reading-leading);
+}
+
+.st-prose h1,
+.st-prose h2,
+.st-prose h3,
+.st-prose h4 {
+  color: var(--st-color-text-strong);
+  font-weight: var(--st-font-weight-semi-bold);
+  letter-spacing: -0.01em;
+  line-height: var(--st-line-height-200);
+  margin-top: 1.75em;
+  margin-bottom: 0.5em;
+}
+
+.st-prose h1 {
+  font-size: var(--st-font-size-450);
+  margin-top: 0;
+}
+
+.st-prose h2 {
+  font-size: var(--st-font-size-350);
+  border-bottom: var(--st-border-100) solid var(--st-color-border-subtle);
+  padding-bottom: 0.25em;
+}
+
+.st-prose h3 {
+  font-size: var(--st-font-size-250);
+}
+
+.st-prose p,
+.st-prose ul,
+.st-prose ol,
+.st-prose blockquote {
+  margin: 0.85em 0;
+}
+
+.st-prose ul {
+  padding-left: 1.5em;
+  list-style-type: disc;
+}
+
+.st-prose ol {
+  padding-left: 1.5em;
+  list-style-type: decimal;
+}
+
+.st-prose ul ul {
+  list-style-type: circle;
+}
+
+.st-prose .markdown-task-list {
+  padding-left: 0.5em;
+}
+
+.st-prose li {
+  margin: 0.25em 0;
+}
+
+.st-prose .markdown-task-item {
+  list-style-type: none;
+}
+
+.st-prose .markdown-task-item::marker {
+  content: '';
+}
+
+.st-prose .markdown-task-line {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.55em;
+  cursor: pointer;
+}
+
+.st-prose .markdown-task-content {
+  cursor: pointer;
+}
+
+.st-prose .markdown-task-toggle {
+  width: 1em;
+  height: 1em;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0;
+  border: var(--st-border-100) solid var(--st-color-border-strong);
+  border-radius: 0.25em;
+  background: var(--st-color-surface-sunken);
+  color: var(--st-color-text-primary);
+  cursor: pointer;
+  vertical-align: -0.12em;
+  position: relative;
+}
+
+.st-prose .markdown-task-toggle:hover,
+.st-prose .markdown-task-line:hover .markdown-task-toggle,
+.st-prose .markdown-task-toggle:focus-visible {
+  border-color: var(--st-color-border-contrast);
+  background: var(--st-color-surface-hover);
+}
+
+.st-prose .markdown-task-toggle:focus-visible {
+  outline: var(--st-border-200) solid var(--st-color-focus);
+  outline-offset: var(--st-space-25);
+}
+
+.st-prose .markdown-task-toggle[data-task-checked='true'] {
+  background: var(--st-color-surface-active);
+  border-color: var(--st-color-border-contrast);
+}
+
+.st-prose .markdown-task-toggle[data-task-checked='true']::after {
+  content: '';
+  position: absolute;
+  left: 0.24em;
+  top: 0.1em;
+  width: 0.35em;
+  height: 0.6em;
+  border-right: var(--st-border-150) solid currentColor;
+  border-bottom: var(--st-border-150) solid currentColor;
+  transform: rotate(42deg);
+}
+
+.st-prose .markdown-task-toggle:disabled {
+  cursor: default;
+  opacity: 0.65;
+}
+
+.st-prose .markdown-task-line[data-task-checked='true'] .markdown-task-content {
+  color: var(--st-color-text-muted);
+  text-decoration: line-through;
+}
+
+.st-prose a {
+  color: var(--st-color-link);
+  text-decoration: none;
+  border-bottom: var(--st-border-100) solid
+    color-mix(in srgb, var(--st-color-link) 30%, transparent);
+}
+
+.st-prose a:hover {
+  border-bottom-color: color-mix(in srgb, var(--st-color-link) 70%, transparent);
+}
+
+.st-prose code {
+  font-family: var(--st-font-mono);
+  font-size: 0.875em;
+  background: var(--st-color-surface-hover);
+  padding: 0.1em 0.35em;
+  border-radius: var(--st-space-50);
+  color: var(--st-color-warning);
+}
+
+.st-prose pre {
+  background: var(--st-color-surface-sunken);
+  border-radius: var(--st-space-75);
+  padding: var(--st-space-200) var(--st-space-250);
+  overflow: auto;
+  font-size: var(--st-type-code-lg-size);
+  line-height: var(--st-type-code-lg-leading);
+  margin: 1.25em 0;
+  border: var(--st-border-100) solid var(--st-color-border-subtle);
+}
+
+.st-prose pre code {
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font-size: inherit;
+}
+
+/* Highlighted code is written for dark; each token carries its light color as a variable. */
+@media (prefers-color-scheme: light) {
+  .st-prose pre.shiki {
+    border: var(--st-border-100) solid var(--st-color-border-base);
+    background-color: var(--st-color-surface-sunken) !important;
+    color: var(--shiki-light) !important;
+  }
+
+  .st-prose .shiki span {
+    color: var(--shiki-light) !important;
+  }
+}
+
+.st-prose pre.mermaid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--st-space-125);
+  align-items: center;
+  background: var(--st-color-surface-sunken);
+  color: var(--st-color-text-secondary);
+}
+
+.st-prose pre.mermaid svg {
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+}
+
+.st-prose .mermaid-error-label {
+  align-self: stretch;
+  color: var(--st-color-danger);
+  font-family: var(--st-font-sans);
+  font-weight: var(--st-font-weight-semi-bold);
+}
+
+.st-prose .mermaid-error-detail,
+.st-prose .mermaid-error-source {
+  align-self: stretch;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.st-prose .mermaid-error-detail {
+  color: var(--st-color-danger);
+}
+
+.st-prose blockquote {
+  border-left: var(--st-border-300) solid var(--st-color-border-selected);
+  padding-left: 1em;
+  color: var(--st-color-text-tertiary);
+  font-style: italic;
+}
+
+.st-prose table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1.25em 0;
+  font-size: 0.875em;
+  border: var(--st-border-100) solid var(--st-color-border-base);
+  border-radius: var(--st-space-50);
+  overflow: hidden;
+}
+
+.st-prose th,
+.st-prose td {
+  text-align: left;
+  padding: 0.5em 0.85em;
+  border-bottom: var(--st-border-100) solid var(--st-color-border-subtle);
+  border-right: var(--st-border-100) solid var(--st-color-border-subtle);
+}
+
+.st-prose th:last-child,
+.st-prose td:last-child {
+  border-right: none;
+}
+
+.st-prose th {
+  font-weight: var(--st-font-weight-semi-bold);
+  color: var(--st-color-text-strong);
+  background: var(--st-color-surface-hover);
+  border-bottom: var(--st-border-200) solid var(--st-color-border-base);
+}
+
+.st-prose tr:last-child td {
+  border-bottom: none;
+}
+
+.st-prose tr:hover td {
+  background: var(--st-color-surface-sunken);
+}
+
+.st-prose hr {
+  border: none;
+  border-top: var(--st-border-100) solid var(--st-color-border-subtle);
+  margin: 2em 0;
+}
+
+.st-prose img {
+  max-width: 100%;
+  border-radius: var(--st-space-50);
+}

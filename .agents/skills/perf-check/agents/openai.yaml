@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ryte Performance Check"
+  short_description: "Measure Ryte performance bottlenecks"
+  default_prompt: "Use $perf-check to measure and diagnose this Ryte performance concern."

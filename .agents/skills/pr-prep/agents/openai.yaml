@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ryte PR Prep"
+  short_description: "Prepare Ryte work for review"
+  default_prompt: "Use $pr-prep to assess this Ryte branch before creating a PR."

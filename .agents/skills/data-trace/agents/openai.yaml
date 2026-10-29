@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ryte Data Trace"
+  short_description: "Trace Ryte ownership and invalidation"
+  default_prompt: "Use $data-trace to map this Ryte data flow and source of truth."

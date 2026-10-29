@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ryte Dependency Audit"
+  short_description: "Check dependency, native-module, and package risk."
+  default_prompt: "Use $deps-audit for Ryte release dependency health."

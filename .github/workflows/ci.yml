@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches-ignore:
+      - main
+      - master
+
+jobs:
+  app:
+    name: App validation
+    runs-on: macos-latest
+
+    defaults:
+      run:
+        working-directory: app
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.12.1
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Validate
+        run: pnpm validate
+
+      # Launch the shipped executable: codesign verification alone cannot detect dyld failures.
+      - name: Check Apple Silicon package and native launch
+        env:
+          # This command uses ad-hoc identity "-" without certificates or signing secrets.
+          # electron-builder otherwise skips signing on pull requests, invalidating the bundle.
+          CSC_FOR_PULL_REQUEST: "true"
+        run: |
+          test "$(uname -m)" = arm64
+          pnpm package:mac:arm64
+
+      - name: Stencil keyboard contracts
+        run: pnpm test:stencil
+
+      # The same assembly the Pages deploy runs, so a broken gallery or site build fails the PR.
+      - name: Site build
+        run: node ../scripts/build-site.mjs

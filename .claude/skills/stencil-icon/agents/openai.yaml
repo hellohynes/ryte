@@ -1,0 +1,4 @@
+interface:
+  display_name: "Stencil Icon"
+  short_description: "Draw and ship an icon in Ryte's Stencil set."
+  default_prompt: "Use $stencil-icon to add an icon to Ryte's Stencil set."

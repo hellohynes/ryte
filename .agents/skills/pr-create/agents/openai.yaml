@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ryte PR Create"
+  short_description: "Create or update Ryte pull requests."
+  default_prompt: "Use $pr-create to create or update the Ryte PR."

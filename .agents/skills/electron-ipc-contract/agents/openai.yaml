@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ryte Electron IPC Contract"
+  short_description: "Define secure Ryte IPC contracts"
+  default_prompt: "Use $electron-ipc-contract to design or review this Ryte IPC change."

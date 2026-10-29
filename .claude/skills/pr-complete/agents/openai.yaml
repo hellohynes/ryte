@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ryte PR Complete"
+  short_description: "Close out merged Ryte pull requests."
+  default_prompt: "Use $pr-complete to close out the merged Ryte PR."

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ryte Validate"
+  short_description: "Run Ryte validation and smoke checks safely."
+  default_prompt: "Use $validate to validate the current Ryte work."

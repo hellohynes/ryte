@@ -1,0 +1,4 @@
+interface:
+  display_name: "Ryte Test Create"
+  short_description: "Add focused Ryte regression coverage"
+  default_prompt: "Use $test-create to add the smallest useful Ryte regression test."

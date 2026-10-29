@@ -1,0 +1,73 @@
+name: Conventional Commits
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+# Reads the checkout and the PR's commit list; never writes to the repository or the PR.
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  check:
+    name: PR title and commits
+    runs-on: ubuntu-latest
+    steps:
+      # The policy lives in scripts/conventional-commits.mjs (no dependencies, so no install step).
+      # docs/branch-workflow.md is checked out for the test that keeps the docs in sync.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          sparse-checkout: |
+            scripts/
+            docs/branch-workflow.md
+          sparse-checkout-cone-mode: false
+          persist-credentials: false
+
+      - name: Test the validator
+        run: node --test scripts/conventional-commits.test.mjs
+
+      - name: Check PR title and commit messages
+        uses: actions/github-script@f28e40c7f34bde8b3046d885e986cb6290c5673b # v7.1.0
+        with:
+          script: |
+            const path = require('path');
+            const { pathToFileURL } = require('url');
+            const policyUrl = pathToFileURL(
+              path.join(process.env.GITHUB_WORKSPACE, 'scripts/conventional-commits.mjs')
+            ).href;
+            const { buildFailureMessage, commitHeader, validateCommitMessage, validateHeader } =
+              await import(policyUrl);
+
+            // The title and commit messages are untrusted: read them from the event payload and
+            // the API at runtime instead of interpolating them into this script.
+            const failures = [];
+            const title = context.payload.pull_request.title;
+            const titleResult = validateHeader(title);
+            if (!titleResult.valid) {
+              failures.push(buildFailureMessage(title, titleResult, 'PR title'));
+            }
+
+            const commits = await github.paginate(github.rest.pulls.listCommits, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.payload.pull_request.number,
+              per_page: 100,
+            });
+            for (const { sha, commit } of commits) {
+              const result = validateCommitMessage(commit.message);
+              if (!result.valid) {
+                failures.push(
+                  buildFailureMessage(commitHeader(commit.message), result, `Commit ${sha.slice(0, 7)}`)
+                );
+              }
+            }
+
+            if (failures.length === 0) {
+              core.info(`PR title and ${commits.length} commit(s) follow Conventional Commits.`);
+              return;
+            }
+            await core.summary.addRaw(failures.join('\n\n---\n\n')).write();
+            core.setFailed(
+              `${failures.length} header(s) don't follow Conventional Commits. See the job summary.`
+            );

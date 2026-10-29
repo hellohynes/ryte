@@ -1,0 +1,23 @@
+# App
+/node_modules/
+app/node_modules/
+app/out/
+app/dist/
+app/.eslintcache
+
+# Built site (landing page plus the Stencil gallery)
+site-dist/
+
+# Local developer tooling
+.codegraph/
+.playwright-cli/
+
+# Spikes (local research only, not committed)
+spikes/
+
+# macOS
+.DS_Store
+
+# Secrets
+.env
+.env.*
