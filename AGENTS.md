@@ -15,6 +15,7 @@ Ryte is a local-first macOS Electron app for browsing, indexing, and searching a
 - Main process owns filesystem access, SQLite/vector storage, provider calls, credentials, and external link handling.
 - Renderer is UI only. It should call the typed preload API and should not gain direct Node filesystem access.
 - Preload should expose narrow, typed operations. Avoid generic IPC passthroughs.
+- Every operation and event between main and the UI is defined once in `app/src/contract/` (see `docs/api-contract.md` and the `electron-ipc-contract` skill). Do not hand-write channel strings, `ipcMain` or `ipcRenderer` calls, validators, or preload methods, and a new operation always goes in the contract, even in an area that has not been migrated. `pnpm check:contract` enforces this.
 - Secrets are encrypted through Electron `safeStorage`; plaintext keys should never be written to disk or logs.
 
 ## Validation
@@ -27,7 +28,7 @@ pnpm validate
 pnpm smoke:indexer
 ```
 
-`pnpm validate` runs Node version validation, lint, typecheck, tests, and production build. `pnpm smoke:indexer` is the explicit native SQLite/indexer smoke using synthetic fixtures.
+`pnpm validate` runs Node version validation, the Stencil and site checks, the API contract checks (`pnpm contract:generate --check`, `pnpm check:contract`), lint, typecheck, tests, and production build. After editing a contract definition, run `pnpm contract:generate` and commit the generated files. `pnpm smoke:indexer` is the explicit native SQLite/indexer smoke using synthetic fixtures.
 
 The individual validation commands are:
 

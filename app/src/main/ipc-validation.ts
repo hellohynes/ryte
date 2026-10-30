@@ -10,8 +10,8 @@ import type {
 import type { SearchOptions, SearchSnapshotFreshnessInput } from './search/search-service'
 import type { FileRenameInput } from '../shared/files'
 import { isFontId } from '../shared/fonts'
+import { MAX_PATH_LENGTH, normalizeWorkspaceSourcePath } from '../shared/source-path'
 import { isReferenceLinkBase } from '../shared/reference-links'
-import type { TaskListInput, TaskToggleInput } from '../shared/tasks'
 import type {
   WorkspaceCloseTabInput,
   WorkspaceFileRef,
@@ -38,15 +38,12 @@ import {
   type ProviderId
 } from '../shared/provider-registry'
 
-const MAX_PATH_LENGTH = 4096
 const MAX_FILE_NAME_LENGTH = 255
 const MAX_QUERY_LENGTH = 2000
 const MAX_WINDOW_DIMENSION = 10000
 const MAX_SIDEBAR_WIDTH = 4000
 const MAX_DOCUMENT_OUTLINE_WIDTH = 1000
 const MAX_TAB_ID_LENGTH = 200
-const MAX_TASK_LIST_LIMIT = 200
-const MAX_TASK_SOURCE_LINE_LENGTH = 20000
 const REQUEST_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const WORKSPACE_TAB_ID_RE = /^[A-Za-z0-9][A-Za-z0-9:_.-]{0,199}$/
 
@@ -109,36 +106,8 @@ function assertObjectWithKeys(
   return input
 }
 
-function hasParentTraversal(value: string): boolean {
-  return value.split(/[\\/]+/).some((segment) => segment === '..')
-}
-
 function assertValidWorkspaceSourcePath(value: unknown): string {
-  if (
-    typeof value !== 'string' ||
-    value.length === 0 ||
-    value.length > MAX_PATH_LENGTH ||
-    value.includes('\0') ||
-    isAbsolute(value) ||
-    win32.isAbsolute(value) ||
-    hasParentTraversal(value)
-  ) {
-    throw new Error('Invalid workspace source path')
-  }
-
-  const sourcePath = normalize(value)
-  if (
-    sourcePath === '.' ||
-    sourcePath === '..' ||
-    sourcePath.includes('\0') ||
-    isAbsolute(sourcePath) ||
-    win32.isAbsolute(sourcePath) ||
-    sourcePath.startsWith(`..${sep}`)
-  ) {
-    throw new Error('Invalid workspace source path')
-  }
-
-  return sourcePath
+  return normalizeWorkspaceSourcePath(value)
 }
 
 function assertValidFileName(value: unknown): string {
@@ -307,57 +276,6 @@ export function assertValidSearchSnapshotFreshnessInput(
     retrievalMode: input.retrievalMode,
     generatedAt,
     sourcePaths: [...new Set(input.sourcePaths)]
-  }
-}
-
-export function assertValidTaskListInput(value: unknown): TaskListInput {
-  if (value === undefined || value === null) return {}
-  if (typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error('Invalid task list input')
-  }
-  const input = value as Record<string, unknown>
-  for (const key of Object.keys(input)) {
-    if (key !== 'checked' && key !== 'limit') throw new Error(`Invalid task list input key: ${key}`)
-  }
-
-  const taskListInput: TaskListInput = {}
-  if ('checked' in input) {
-    taskListInput.checked = assertOptionalBoolean(input.checked, 'task checked')
-  }
-  if ('limit' in input) {
-    const limit = assertFiniteNumber(input.limit, 'task list limit')
-    if (limit < 0 || limit > MAX_TASK_LIST_LIMIT) throw new Error('Invalid task list limit')
-    taskListInput.limit = Math.floor(limit)
-  }
-
-  return taskListInput
-}
-
-export function assertValidTaskToggleInput(value: unknown): TaskToggleInput {
-  const input = assertObjectWithKeys(
-    value,
-    ['sourcePath', 'line', 'checkboxColumn', 'checked', 'expectedLine'],
-    'task toggle input'
-  )
-  const line = assertFiniteNumber(input.line, 'task line')
-  const checkboxColumn = assertFiniteNumber(input.checkboxColumn, 'task checkbox column')
-  if (!Number.isInteger(line) || line < 1) throw new Error('Invalid task line')
-  if (!Number.isInteger(checkboxColumn) || checkboxColumn < 0) {
-    throw new Error('Invalid task checkbox column')
-  }
-  if (
-    typeof input.expectedLine !== 'string' ||
-    input.expectedLine.length > MAX_TASK_SOURCE_LINE_LENGTH
-  ) {
-    throw new Error('Invalid task expected line')
-  }
-
-  return {
-    sourcePath: assertValidWorkspaceSourcePath(input.sourcePath),
-    line,
-    checkboxColumn,
-    checked: assertOptionalBoolean(input.checked, 'task checked'),
-    expectedLine: input.expectedLine
   }
 }
 

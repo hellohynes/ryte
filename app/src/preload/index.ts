@@ -11,13 +11,6 @@ import type {
   FileTreeResponse
 } from '../shared/files'
 import type {
-  TaskFactsResponse,
-  TaskListInput,
-  TaskRefreshResponse,
-  TaskToggleInput,
-  TaskToggleResponse
-} from '../shared/tasks'
-import type {
   WorkspaceCloseTabInput,
   WorkspaceFileRef,
   WorkspaceFocusTabInput,
@@ -42,6 +35,12 @@ import type {
 } from '../main/search/search-service'
 import type { ProviderId } from '../shared/provider-registry'
 import { APP_MENU_COMMAND_CHANNEL, type AppMenuCommand } from '../shared/app-menu'
+import {
+  createContractApi,
+  mergeContractApi,
+  type ContractApi,
+  type MergeApi
+} from './contract-api'
 
 export type SearchRetrievalMode = MainSearchRetrievalMode
 export type SearchAnswerMode = MainSearchAnswerMode
@@ -87,7 +86,7 @@ export interface SearchQueryOptions {
   answerMode?: SearchAnswerMode
 }
 
-export interface RyteApi {
+interface LegacyRyteApi {
   app: {
     getVersion(): Promise<string>
     onMenuCommand(cb: (command: AppMenuCommand) => void): () => void
@@ -146,12 +145,6 @@ export interface RyteApi {
     onTreeChanged(cb: () => void): () => void
     onCatalogChanged(cb: (event?: FileCatalogChangeEvent) => void): () => void
   }
-  tasks: {
-    list(input?: TaskListInput): Promise<TaskFactsResponse>
-    refresh(): Promise<TaskRefreshResponse>
-    toggle(input: TaskToggleInput): Promise<TaskToggleResponse>
-    onChanged(cb: () => void): () => void
-  }
   search: {
     query(q: string, options?: SearchQueryOptions): Promise<string | null>
     cancel(requestId: string): Promise<void>
@@ -166,7 +159,10 @@ export interface RyteApi {
   }
 }
 
-const api: RyteApi = {
+/** The full `window.ryte` API: the hand-written areas plus the areas built from the contract. */
+export type RyteApi = MergeApi<LegacyRyteApi, ContractApi>
+
+const legacyApi: LegacyRyteApi = {
   app: {
     getVersion: () => ipcRenderer.invoke('app:get-version'),
     onMenuCommand: (cb) => {
@@ -253,16 +249,6 @@ const api: RyteApi = {
       return () => ipcRenderer.removeListener('files:catalog-changed', listener)
     }
   },
-  tasks: {
-    list: (input) => ipcRenderer.invoke('tasks:list', input),
-    refresh: () => ipcRenderer.invoke('tasks:refresh'),
-    toggle: (input) => ipcRenderer.invoke('tasks:toggle', input),
-    onChanged: (cb) => {
-      const listener = (): void => cb()
-      ipcRenderer.on('tasks:changed', listener)
-      return () => ipcRenderer.removeListener('tasks:changed', listener)
-    }
-  },
   search: {
     query: (q, options) => ipcRenderer.invoke('search:query', q, options),
     cancel: (requestId) => ipcRenderer.invoke('search:cancel', requestId),
@@ -316,6 +302,8 @@ const api: RyteApi = {
     }
   }
 }
+
+const api: RyteApi = mergeContractApi(legacyApi, createContractApi(ipcRenderer))
 
 if (process.contextIsolated) {
   try {

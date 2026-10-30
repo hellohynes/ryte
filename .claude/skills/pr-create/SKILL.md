@@ -93,7 +93,7 @@ Start from `.github/pull_request_template.md` so its headings and checklists sta
 
 ## GIF
 
-Every new PR gets one GIF at the top. Run the lookup inline with the web search and fetch tools; do not spawn an agent for it.
+Every new PR gets one GIF at the top. Run the lookup inline with `curl`; do not spawn an agent for it.
 
 1. **Pick the angle.** If a calendar event falls within about two weeks of today, use its keywords: Halloween (spooky halloween costume), Thanksgiving (thanksgiving turkey feast), December (holiday christmas celebration), New Year (new year celebration fireworks), Super Bowl (football touchdown celebration), Valentine's Day (love heart valentine), St. Patrick's Day (lucky shamrock green), April Fools (prank funny gotcha), Pride Month (pride rainbow celebration). Otherwise pick two different angles by PR mood:
    - Bug fix: `relief`, `disaster averted`, `close call`
@@ -102,9 +102,18 @@ Every new PR gets one GIF at the top. Run the lookup inline with the web search 
    - Performance or size: `zoom fast`, `lightning quick`, `turbo speed`
    - Rename, chore, docs, build: `fresh start`, `name change`, `rebrand`
    - Breaking change: `careful warning`, `proceed with caution`
-2. **Search.** Run `site:giphy.com <term> gif` for two terms, fetch each results page, and collect GIF IDs into a pool of 8-12.
-3. **Choose.** Skip the top result of each search (everyone has seen it). From the rest, pick `index = current_minute % pool_size`.
-4. **Link.** Use `https://media.giphy.com/media/<ID>/giphy.gif`.
+2. **Collect.** The search tools return only GIPHY tag pages, with no individual GIF links, so fetch the tag page's raw HTML with `curl` instead. For each of the two angles, replace spaces with hyphens and pull the IDs from the `giphy.com/gifs/<slug>-<ID>` links (the ID is the last hyphen segment). Skip the first ID on each page (everyone has seen it), keep up to 8, and combine both into one pool:
+
+   ```bash
+   UA='Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36'
+   curl -sL --max-time 20 -A "$UA" "https://giphy.com/explore/satisfying-clean" \
+     | grep -o 'giphy\.com/gifs/[A-Za-z0-9-]*' | sed 's|.*/||; s|.*-||' | awk '!s[$0]++' | tail -n +2 | head -8
+   ```
+
+   Only use an ID that came out of a fetched page. Never write one from memory or guess one.
+3. **Choose.** From the pool, pick `index = current_minute % pool_size`.
+4. **Validate.** `https://giphy.com/gifs/<ID>` must return `200`. A made-up ID returns `404`. Do not rely on the media URL for this: `media.giphy.com/media/<ID>/giphy.gif` returns `200 image/gif` for any ID, serving a placeholder for unknown ones. Also confirm the media URL returns `image/gif`. If the pick fails, try the next ID in the pool.
+5. **Link.** Use `https://media.giphy.com/media/<ID>/giphy.gif`.
 
 Rules:
 

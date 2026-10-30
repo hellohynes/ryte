@@ -9,8 +9,6 @@ import {
   assertValidSearchQuery,
   assertValidSourceFileInput,
   assertValidSettingsPatch,
-  assertValidTaskListInput,
-  assertValidTaskToggleInput,
   assertValidWorkspaceCloseTabInput,
   assertValidWorkspaceFileRefInput,
   assertValidWorkspaceFocusTabInput,
@@ -39,25 +37,6 @@ describe('ipc validation', () => {
       retrievalMode: 'keyword',
       answerMode: 'local-only'
     })
-    expect(assertValidTaskListInput({ checked: false, limit: 25 })).toEqual({
-      checked: false,
-      limit: 25
-    })
-    expect(
-      assertValidTaskToggleInput({
-        sourcePath: 'folder/tasks.md',
-        line: 3,
-        checkboxColumn: 2,
-        checked: true,
-        expectedLine: '- [ ] Follow up'
-      })
-    ).toEqual({
-      sourcePath: 'folder/tasks.md',
-      line: 3,
-      checkboxColumn: 2,
-      checked: true,
-      expectedLine: '- [ ] Follow up'
-    })
   })
 
   it('rejects malformed primitive inputs', () => {
@@ -68,41 +47,6 @@ describe('ipc validation', () => {
       'Invalid retrieval mode'
     )
     expect(() => assertValidSearchOptions({ arbitrary: true })).toThrow('Invalid search option')
-    expect(() => assertValidTaskListInput({ arbitrary: true })).toThrow(
-      'Invalid task list input key'
-    )
-    expect(() => assertValidTaskListInput({ checked: 'false' })).toThrow('Invalid task checked')
-    expect(() => assertValidTaskListInput({ limit: 201 })).toThrow('Invalid task list limit')
-    expect(() => assertValidTaskToggleInput({ arbitrary: true })).toThrow(
-      'Invalid task toggle input key'
-    )
-    expect(() =>
-      assertValidTaskToggleInput({
-        sourcePath: '../tasks.md',
-        line: 3,
-        checkboxColumn: 2,
-        checked: true,
-        expectedLine: '- [ ] Follow up'
-      })
-    ).toThrow('Invalid workspace source path')
-    expect(() =>
-      assertValidTaskToggleInput({
-        sourcePath: 'tasks.md',
-        line: 0,
-        checkboxColumn: 2,
-        checked: true,
-        expectedLine: '- [ ] Follow up'
-      })
-    ).toThrow('Invalid task line')
-    expect(() =>
-      assertValidTaskToggleInput({
-        sourcePath: 'tasks.md',
-        line: 3,
-        checkboxColumn: -1,
-        checked: true,
-        expectedLine: '- [ ] Follow up'
-      })
-    ).toThrow('Invalid task checkbox column')
   })
 
   it('accepts a narrow settings patch', () => {

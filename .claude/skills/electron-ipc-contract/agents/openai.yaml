@@ -1,4 +1,4 @@
 interface:
-  display_name: "Ryte Electron IPC Contract"
-  short_description: "Define secure Ryte IPC contracts"
-  default_prompt: "Use $electron-ipc-contract to design or review this Ryte IPC change."
+  display_name: "Ryte API Contract"
+  short_description: "Add, change, or remove Ryte API operations"
+  default_prompt: "Use $electron-ipc-contract to add, change, remove, or migrate this Ryte API operation."
