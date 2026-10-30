@@ -114,11 +114,11 @@
       "executableMode": 0
     },
     "electron-ipc-contract/SKILL.md": {
-      "sha256": "11cdd9bd007192aaa5d42241ad0db2e25015bb3d8f670078dc4b78cc08cbbceb",
+      "sha256": "e886b6557b02360614f0e9443253595d8171edf5de0845c015668a85131fe44f",
       "executableMode": 0
     },
     "electron-ipc-contract/agents/openai.yaml": {
-      "sha256": "fc39b73ba17fb5eaacb1333613e8a993045e9856a4afea335919b73a2dd9e32f",
+      "sha256": "e2a901df85b84c6ed55a2bfaf290f6dbc2be39976d7af36a149571f8451a8bbf",
       "executableMode": 0
     },
     "framing/SKILL.md": {
