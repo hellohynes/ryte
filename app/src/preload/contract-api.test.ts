@@ -55,7 +55,19 @@ describe('createContractApi from the generated manifest', () => {
     const api = createContractApi(ipc)
 
     expect(Object.keys(api)).toEqual(['tasks'])
-    expect(Object.keys(api.tasks).sort()).toEqual(['list', 'onChanged', 'refresh', 'toggle'])
+    // Exactly the manifest, nothing more: a method per operation and an on<Event> per event.
+    const names = manifest.tasks
+    const expected = [
+      ...Object.keys(names.operations),
+      ...Object.keys(names.events).map(
+        (event) => `on${event.charAt(0).toUpperCase()}${event.slice(1)}`
+      )
+    ].sort()
+    expect(Object.keys(api.tasks).sort()).toEqual(expected)
+    // The pre-contract members are all still there.
+    expect(Object.keys(api.tasks)).toEqual(
+      expect.arrayContaining(['list', 'onChanged', 'refresh', 'toggle'])
+    )
   })
 
   it('invokes and subscribes only to the tasks channels recorded before the change', async () => {

@@ -10,8 +10,25 @@ describe('contract is transport-neutral', () => {
     const { contract } = await import('./index')
 
     expect(Object.keys(contract)).toEqual(['tasks'])
-    expect(Object.keys(contract.tasks.operations)).toEqual(['list', 'refresh', 'toggle'])
-    expect(Object.keys(contract.tasks.events)).toEqual(['changed'])
+    expect(Object.keys(contract.tasks.operations)).toEqual(
+      expect.arrayContaining(['list', 'refresh', 'toggle'])
+    )
+    expect(Object.keys(contract.tasks.events)).toEqual(expect.arrayContaining(['changed']))
+  })
+
+  it('validates the example of every operation, in every area, against its own schemas', async () => {
+    const { contract } = await import('./index')
+    for (const [areaName, area] of Object.entries(contract)) {
+      for (const [operationName, operation] of Object.entries(area.operations)) {
+        const name = `${areaName}.${operationName}`
+        expect(operation.input.safeParse(operation.example.input).success, `${name} input`).toBe(
+          true
+        )
+        expect(operation.output.safeParse(operation.example.output).success, `${name} output`).toBe(
+          true
+        )
+      }
+    }
   })
 
   it('defines every operation with a description and a unique channel', async () => {

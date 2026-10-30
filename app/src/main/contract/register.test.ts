@@ -42,7 +42,10 @@ function echoHandlers(): {
   handlers: Handlers<Contract>
   spies: Record<string, ReturnType<typeof vi.fn>>
 } {
-  const spies = { list: echo(), refresh: vi.fn(async () => undefined), toggle: echo() }
+  // One spy per operation in the contract, so adding an operation does not break these tests.
+  const spies: Record<string, ReturnType<typeof vi.fn>> = Object.fromEntries(
+    Object.keys(contract.tasks.operations).map((name) => [name, echo()])
+  )
   return { handlers: { tasks: spies } as unknown as Handlers<Contract>, spies }
 }
 
@@ -90,7 +93,15 @@ describe('registerOperations: validation in front of every handler', () => {
     const { ipc, listeners } = fakeIpc()
     registerOperations(ipc, contract, echoHandlers().handlers)
 
-    expect([...listeners.keys()].sort()).toEqual(TASKS_REQUEST_CHANNELS)
+    const registered = [...listeners.keys()].sort()
+    // Exactly what the contract defines, nothing more...
+    expect(registered).toEqual(
+      Object.values(contract.tasks.operations)
+        .map((operation) => operation.channel)
+        .sort()
+    )
+    // ...and the pre-contract wire strings are still there, unchanged.
+    expect(registered).toEqual(expect.arrayContaining(TASKS_REQUEST_CHANNELS))
     expect(contract.tasks.events.changed.channel).toBe(TASKS_EVENT_CHANNEL)
   })
 

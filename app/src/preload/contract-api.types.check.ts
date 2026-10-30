@@ -28,8 +28,7 @@ export type CompatibilityChecks = [
   Assert<Extends<Awaited<ReturnType<ContractApi['tasks']['list']>>, TaskFactsResponse>>,
   Assert<Extends<TaskFactsResponse, Awaited<ReturnType<ContractApi['tasks']['list']>>>>,
   Assert<Extends<MarkdownTaskFact, TaskFactsResponse['tasks'][number]>>,
-  // The derived `tasks` area exposes exactly these members, nothing more.
-  Assert<Extends<keyof ContractApi['tasks'], 'list' | 'refresh' | 'toggle' | 'onChanged'>>,
+  // Every pre-change member is still exposed (new operations may add more).
   Assert<Extends<'list' | 'refresh' | 'toggle' | 'onChanged', keyof ContractApi['tasks']>>
 ]
 
