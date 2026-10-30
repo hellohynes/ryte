@@ -124,6 +124,7 @@ Never retag a published release. Fix a bad release with the next patch version.
 - **0 valid identities, or "not trusted"**: Apple's Developer ID G2 intermediate is missing from the keychain. Install it as described under One-time setup.
 - **Notarization status "Invalid"**: run `xcrun notarytool log <submission-id> --key … --key-id … --issuer …` to see which file Apple rejected. A native library that is not signed is the usual cause.
 - **The workflow cannot read the secrets**: the `release` environment only allows tags matching `v*`.
+- **The app opens but shows only a menu bar and no window**: the renderer process is crashing at startup (look for `Ryte Helper (Renderer)` reports in `~/Library/Logs/DiagnosticReports`). Under the hardened runtime, each Chromium helper app needs `com.apple.security.cs.allow-jit` and `com.apple.security.cs.allow-unsigned-executable-memory` in its own entitlements; they are not inherited from the main executable. They come from `app/build/entitlements.mac.inherit.plist`, and `scripts/verify-mac-release.mjs` fails a build whose helpers lack the JIT entitlement. A signature that verifies and a notarization that succeeds do not prove the app launches, so always run a dry run and open the downloaded DMG before the real tag.
 
 ## If macOS shows a warning for a release
 
