@@ -29,6 +29,7 @@
     "test:stencil": "node scripts/test-stencil.mjs",
     "check:stencil": "node scripts/check-stencil.mjs",
     "check:site": "node ../scripts/check-site.mjs",
+    "contract:generate": "node --import tsx scripts/generate-contract.ts",
     "stencil:tokens": "node --import tsx scripts/generate-stencil-tokens.ts",
     "stencil:icons": "node --import tsx scripts/generate-stencil-icons.ts",
     "stencil:manifest": "node --import tsx scripts/generate-stencil-manifest.ts",

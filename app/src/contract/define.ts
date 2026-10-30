@@ -58,6 +58,13 @@ export function defineArea<
   return { name, operations: area.operations, events: area.events }
 }
 
+/** The arguments an event carries: none for a payload-less event, one payload otherwise. */
+export type EventPayloadArgs<TEvent extends EventDefinition> = [
+  NonNullable<TEvent['payload']>
+] extends [never]
+  ? []
+  : [payload: z.output<NonNullable<TEvent['payload']> & ZodType>]
+
 /** The type a caller passes to an operation. */
 export type OperationInput<T extends OperationDefinition> = z.input<T['input']>
 /** The validated value a handler receives. */

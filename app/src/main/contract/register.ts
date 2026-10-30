@@ -1,10 +1,9 @@
 import type { WebContents } from 'electron'
-import type { z, ZodType } from 'zod'
-
 import {
   parseOperationInput,
   type AreaDefinition,
   type EventDefinition,
+  type EventPayloadArgs,
   type OperationDefinition,
   type OperationParsedInput,
   type OperationResult
@@ -85,12 +84,6 @@ export interface WindowLike {
     send(channel: string, ...args: unknown[]): void
   }
 }
-
-type EventPayloadArgs<TEvent extends EventDefinition> = [NonNullable<TEvent['payload']>] extends [
-  never
-]
-  ? []
-  : [payload: z.output<NonNullable<TEvent['payload']> & ZodType>]
 
 export type Emit = <TEvent extends EventDefinition>(
   event: TEvent,
