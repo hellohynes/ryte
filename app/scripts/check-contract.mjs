@@ -27,6 +27,22 @@ import ts from 'typescript'
 const CHANNEL = /^[a-z][a-z0-9]*(?:-[a-z0-9]+)*:[a-z][a-z0-9]*(?:-[a-z0-9]+)*$/
 const IPC_NAMES = new Set(['ipcMain', 'ipcRenderer'])
 const SEND_NAMES = new Set(['send', 'sendSync', 'sendToFrame', 'postMessage'])
+// Calls whose channel argument must be a well-formed `area:name`, on a receiver that is IPC.
+const CHANNEL_METHODS = new Set([
+  'handle',
+  'handleOnce',
+  'on',
+  'once',
+  'off',
+  'invoke',
+  'send',
+  'sendSync',
+  'sendToFrame',
+  'removeListener',
+  'removeAllListeners',
+  'removeHandler'
+])
+const CONTENTS_PROPERTIES = new Set(['webContents', 'sender'])
 const INVENTORY_ROOTS = ['src/main/', 'src/preload/', 'src/shared/', 'src/contract/']
 const REGISTRAR = 'src/main/contract/register.ts'
 const BUILDER = 'src/preload/contract-api.ts'
@@ -132,6 +148,22 @@ function scan(sourceFile) {
     if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
       const method = node.expression.name.text
       const target = node.expression.expression
+      // ipcMain, ipcRenderer and `.ipc` carry channels on every method. `webContents` and `sender` only on
+      // the send methods: `webContents.on('will-navigate')` is an Electron event, not a channel.
+      const onIpc =
+        (ts.isIdentifier(target) && IPC_NAMES.has(target.text)) ||
+        (ts.isPropertyAccessExpression(target) && target.name.text === 'ipc')
+      const onContents =
+        ts.isPropertyAccessExpression(target) && CONTENTS_PROPERTIES.has(target.name.text)
+      if (
+        (onIpc && CHANNEL_METHODS.has(method)) ||
+        (onContents && ['send', 'sendSync', 'sendToFrame'].includes(method))
+      ) {
+        const argument = node.arguments[method === 'sendToFrame' ? 1 : 0]
+        if (argument && ts.isStringLiteralLike(argument) && !CHANNEL.test(argument.text)) {
+          access.push({ kind: 'malformed', name: argument.text, line: lineOf(sourceFile, node) })
+        }
+      }
       if ((ts.isIdentifier(target) && IPC_NAMES.has(target.text)) || SEND_NAMES.has(method)) {
         const channelArguments = node.arguments.slice(0, method === 'sendToFrame' ? 2 : 1)
         if (
@@ -145,6 +177,9 @@ function scan(sourceFile) {
     }
     if (ts.isIdentifier(node) && IPC_NAMES.has(node.text)) {
       access.push({ kind: 'ipc', name: node.text, line: lineOf(sourceFile, node) })
+    }
+    if (ts.isPropertyAccessExpression(node) && node.name.text === 'ipc') {
+      access.push({ kind: 'ipc', name: 'ipc', line: lineOf(sourceFile, node) })
     }
     if (ts.isPropertyAccessExpression(node) && SEND_NAMES.has(node.name.text)) {
       access.push({ kind: 'send', name: node.name.text, line: lineOf(sourceFile, node) })
@@ -275,13 +310,22 @@ export function checkContract({ files, legacy, manifestSource }) {
           line,
           inContract(path)
             ? `${channel} is defined in src/contract/ but missing from the generated manifest; run \`pnpm contract:generate\``
-            : `${channel} is not in the contract or scripts/legacy.json; define it in src/contract/ (see docs/api-contract.md)`
+            : `${channel} is not in the contract or scripts/legacy.json; define it in src/contract/ (see docs/api-contract.md). If it is not a channel at all (a DOM event or a cache key), add it to "ignore" in scripts/legacy.json with a reason`
         )
       }
     }
 
     // direct IPC access
     for (const hit of access) {
+      if (hit.kind === 'malformed') {
+        fail(
+          'inventory',
+          path,
+          hit.line,
+          `'${hit.name}' is not a valid channel name; use area:name, lowercase and hyphenated (for example files:read-source)`
+        )
+        continue
+      }
       if (hit.kind === 'dynamic') {
         fail(
           'ipc-access',
@@ -301,7 +345,10 @@ export function checkContract({ files, legacy, manifestSource }) {
         'ipc-access',
         path,
         hit.line,
-        `${hit.name} reaches IPC outside the registrar and preload builder; add an operation to src/contract/ instead`
+        `${hit.name} reaches IPC outside the registrar and preload builder; add an operation to src/contract/ instead` +
+          (hit.kind === 'send'
+            ? ' (if it is not IPC, for example a worker or a WebSocket, list the file in "sendAllowed" in scripts/legacy.json with a reason)'
+            : '')
       )
     }
 

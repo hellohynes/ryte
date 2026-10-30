@@ -60,7 +60,7 @@ const definitionOf = (schema: ZodType): SchemaDefinition =>
   (schema as unknown as { def: SchemaDefinition }).def
 
 /** The object fields of an input or payload schema, like `{ checked?: boolean, limit?: number }`. */
-function describeFields(schema: ZodType | undefined): string {
+export function describeFields(schema: ZodType | undefined): string {
   if (!schema) return 'none'
   const definition = definitionOf(schema)
   // z.preprocess wraps the real schema in a pipe whose input side is a transform; describe the inside.
@@ -73,7 +73,12 @@ function describeFields(schema: ZodType | undefined): string {
     properties?: Record<string, { type?: string }>
     required?: string[]
   }
-  if (!json.properties) return json.type ? json.type : 'none'
+  if (!json.properties) {
+    // z.undefined() is "no input". Anything else the generator cannot describe (a union, say) must not be
+    // documented as taking no input.
+    if (definitionOf(target).type === 'undefined') return 'none'
+    return json.type ?? 'see schema'
+  }
   const required = new Set(json.required ?? [])
   const fields = Object.entries(json.properties).map(
     ([name, property]) => `${name}${required.has(name) ? '' : '?'}: ${property.type ?? 'unknown'}`
@@ -118,27 +123,29 @@ export function renderIndex(): string {
   return `${lines.join('\n')}\n`
 }
 
-const outputs: Array<{ path: string; label: string; next: string }> = [
-  { path: manifestPath, label: 'src/contract/manifest.generated.ts', next: renderManifest() },
-  { path: indexPath, label: 'docs/api-index.md', next: renderIndex() }
-]
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  const outputs: Array<{ path: string; label: string; next: string }> = [
+    { path: manifestPath, label: 'src/contract/manifest.generated.ts', next: renderManifest() },
+    { path: indexPath, label: 'docs/api-index.md', next: renderIndex() }
+  ]
 
-if (process.argv.includes('--check')) {
-  for (const { path, label, next } of outputs) {
-    let current = ''
-    try {
-      current = readFileSync(path, 'utf8')
-    } catch {
-      /* a missing file is stale */
+  if (process.argv.includes('--check')) {
+    for (const { path, label, next } of outputs) {
+      let current = ''
+      try {
+        current = readFileSync(path, 'utf8')
+      } catch {
+        /* a missing file is stale */
+      }
+      if (current !== next) {
+        console.error(`${label} is out of date. Run \`pnpm contract:generate\` and commit it.`)
+        process.exitCode = 1
+      }
     }
-    if (current !== next) {
-      console.error(`${label} is out of date. Run \`pnpm contract:generate\` and commit it.`)
-      process.exitCode = 1
+  } else {
+    for (const { path, label, next } of outputs) {
+      writeFileSync(path, next)
+      console.log(`Wrote ${label}`)
     }
-  }
-} else {
-  for (const { path, label, next } of outputs) {
-    writeFileSync(path, next)
-    console.log(`Wrote ${label}`)
   }
 }

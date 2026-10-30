@@ -22,7 +22,7 @@ const baseLegacy = {
 const baseFiles = {
   'src/contract/manifest.generated.ts': manifestSource,
   'src/contract/tasks.ts': `export const list = { channel: 'tasks:list' }\nexport const changed = { channel: 'tasks:changed' }\n`,
-  'src/main/contract/register.ts': `export const emit = (win: any): void => win.webContents.send('ready')\n`,
+  'src/main/contract/register.ts': `export const emit = (win: any, event: any): void => win.webContents.send(event.channel)\n`,
   'src/preload/contract-api.ts': `import { manifest } from '../contract/manifest.generated'\nexport const api = manifest\n`,
   'src/main/ipc.ts': `import { ipcMain } from 'electron'\nipcMain.handle('app:get-version', () => 1)\n`,
   'src/preload/index.ts': `import { ipcRenderer } from 'electron'\nipcRenderer.invoke('app:get-version')\n`,
@@ -178,6 +178,60 @@ test('rejects a channel built by concatenation or a template, even in a legacy f
   )
 })
 
+test('rejects a malformed channel name in an IPC call, even in a legacy file', () => {
+  for (const code of [
+    `ipcMain.handle('files:readAll', () => 1)`,
+    `ipcMain.handle('files:read_all', () => 1)`,
+    `ipcMain.handle('read', () => 1)`,
+    `ipcRenderer.invoke('files:2fa')`,
+    `ipcRenderer.on('Files:read', cb)`,
+    `event.sender.send('files:a:b')`,
+    `win.webContents.send('Files')`,
+    `win.webContents.sendToFrame(1, 'badName')`,
+    `contents.ipc.handle('files:readAll', () => 1)`
+  ]) {
+    expectViolation(
+      {
+        'src/main/ipc.ts': `import { ipcMain } from 'electron'\nipcMain.handle('app:get-version', () => 1)\n${code}\n`
+      },
+      'inventory',
+      /is not a valid channel name/
+    )
+  }
+})
+
+test('other Electron events on webContents are not channels', () => {
+  assert.deepEqual(
+    run({
+      'src/main/nav.ts': `export const f = (w: any): void => { w.webContents.on('will-navigate', () => 1) }\n`
+    }),
+    []
+  )
+})
+
+test('the webContents .ipc object counts as IPC access', () => {
+  expectViolation(
+    {
+      'src/main/foo.ts': `export const f = (e: any) => e.sender.ipc.handle('files:readall', () => 1)\n`
+    },
+    'ipc-access',
+    /ipc reaches IPC outside/
+  )
+})
+
+test('the messages say what to do about a false positive', () => {
+  expectViolation(
+    { 'src/main/foo.ts': `export const key = 'cache:warm'\n` },
+    'inventory',
+    /add it to "ignore" in scripts\/legacy.json with a reason/
+  )
+  expectViolation(
+    { 'src/main/worker.ts': `export const f = (w: any): void => w.postMessage(1)\n` },
+    'ipc-access',
+    /list the file in "sendAllowed" in scripts\/legacy.json with a reason/
+  )
+})
+
 test('rejects a new channel literal in a legacy file, and one in the preload', () => {
   expectViolation(
     {
@@ -325,17 +379,16 @@ test('a sendAllowed file may call send, and needs a reason', () => {
   )
 })
 
-// The ratchet: scripts/legacy.json can only shrink. Growing it would let a raw channel through, so raising
-// these numbers must be a deliberate edit of this test, reviewed with the change that needs it.
+// The ratchet: scripts/legacy.json can only shrink. The numbers are exact on purpose, so a migration that
+// shrinks the list must lower them here, and nothing can grow the list back to an old ceiling without a
+// deliberate edit of this test. Raising them needs a reason in the change that does it.
 test('legacy.json does not grow', () => {
   const legacy = JSON.parse(
     readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), 'legacy.json'), 'utf8')
   )
-  assert.ok(
-    legacy.channels.request.length <= 42,
-    `request channels: ${legacy.channels.request.length}`
-  )
-  assert.ok(legacy.channels.event.length <= 14, `event channels: ${legacy.channels.event.length}`)
-  assert.ok(legacy.files.length <= 3, `legacy files: ${legacy.files.length}`)
-  assert.deepEqual(legacy.sendAllowed, [])
+  assert.equal(legacy.channels.request.length, 42, 'request channels')
+  assert.equal(legacy.channels.event.length, 14, 'event channels')
+  assert.equal(legacy.files.length, 3, 'legacy files')
+  assert.deepEqual(legacy.sendAllowed, [], 'sendAllowed')
+  assert.deepEqual(legacy.ignore, [], 'ignore')
 })

@@ -98,7 +98,16 @@ export function createEmitter(getWindows: () => readonly WindowLike[]): Emit {
   return (event, ...payload) => {
     for (const win of getWindows()) {
       if (win.webContents.isDestroyed()) continue
-      win.webContents.send(event.channel, ...payload)
+      try {
+        win.webContents.send(event.channel, ...payload)
+      } catch (error) {
+        // One window that cannot receive (a disposed render frame) must not stop delivery to the others,
+        // nor fail the operation that emitted. Log the channel and the reason, never the payload.
+        console.error(
+          `Failed to send ${event.channel} to a window:`,
+          error instanceof Error ? error.message : error
+        )
+      }
     }
   }
 }

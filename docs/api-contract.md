@@ -110,7 +110,8 @@ live window, and the renderer subscribes with `window.ryte.tasks.onChanged(callb
 
 Define it with `defineEvent({ channel, description, payload? })` in the area file and add it to `events`. Run
 `pnpm contract:generate`. In a handler (or a watcher), call the injected `emit(contract.<area>.events.<name>)`, with
-the payload as the second argument when the event has one. The UI subscribes with
+the payload as the second argument when the event has one. A payload is typed at compile time, but nothing
+validates it at runtime (main is trusted), so keep it plain data. The UI subscribes with
 `window.ryte.<area>.on<Name>(callback)`, which returns an unsubscribe function. Never call `webContents.send` yourself.
 
 ## Change an operation
@@ -122,7 +123,9 @@ types change, and so does every caller. Rules:
 - Adding an optional input field or an extra output field is safe. Tightening or reinterpreting an input changes
   behavior: say so in the change.
 - `tasks.list` and `tasks.toggle` are covered by recorded vectors of the behavior they had before the contract
-  (`app/src/contract/tasks.vectors.*`). If you intentionally change what they accept, add an entry with a reason to
+  (`app/src/contract/tasks.vectors.*`, recorded from the pre-contract code at `c4c7b3c`; the one-shot recorder was
+  deleted with the old validators and is in git history at `a9ce30b:app/src/contract/record/record-vectors.ts`). If
+  you intentionally change what they accept, add an entry with a reason to
   `ACCEPTED_DEVIATIONS` in `tasks.vectors.deviations.ts`. Do not edit `tasks.vectors.expected.json`: it is the
   oracle.
 - An error message is not a contract. The UI shows `error.message` for a rejected input, but only for input its own
@@ -161,15 +164,25 @@ listed in `app/scripts/legacy.json`. Rules:
 - Only the legacy files, `register.ts` and `contract-api.ts` may use `ipcMain`, `ipcRenderer`, `.send`, `.sendSync`,
   `.sendToFrame` or `.postMessage`.
 - A channel is never built by concatenation or a template (`'tasks' + ':x'`, `` `tasks:${name}` ``) in an IPC call.
+- A channel name in an IPC call is always `area:name`, lowercase and hyphenated (`files:read-source`, not
+  `files:readAll`), checked on `ipcMain`, `ipcRenderer`, `.ipc` and the send methods of `webContents` and `sender`.
+  `webContents.on('will-navigate')` and similar Electron events are not channels.
 - Every script file under `src/` is scanned (`.ts`, `.tsx`, `.mts`, `.cts`, `.js`, `.jsx`, `.mjs`, `.cjs`), and `.vue`
   files through their `<script>` blocks.
 - `src/contract/` never imports Electron, and is imported by value only from `src/main/` (and, for the manifest, the
   preload builder). The renderer never touches `ipcRenderer` or `electron`.
-- `legacy.json` cannot grow without editing the check's own test.
+- `legacy.json` cannot grow without editing the check's own test, whose numbers are exact: a migration that shrinks
+  the list lowers them.
+
+Two escape hatches exist, both in `app/scripts/legacy.json`, both need a reason and both are held at zero by that
+test, so using one is a deliberate, reviewed edit: `ignore` for a string that merely looks like a channel (a DOM
+event, a cache key), and `sendAllowed` for a file that calls `.send` or `.postMessage` on something that is not IPC
+(a worker, a WebSocket).
 
 It is a guardrail against authoring mistakes, not a security boundary: the renderer is sandboxed and reaches the main
 process only through `window.ryte`. It does not try to stop deliberate
-evasion, for example a computed property name (`e['ipc' + 'Main']`) or a channel name hidden behind a helper.
+evasion, for example a computed property name (`e['ipc' + 'Main']`), a channel name hidden behind a helper, or a
+local alias of `webContents` inside a legacy file.
 Review catches those.
 
 ## Not covered yet

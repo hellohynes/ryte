@@ -220,6 +220,26 @@ describe('createEmitter', () => {
     expect(live.send).toHaveBeenCalledTimes(1)
   })
 
+  it('keeps delivering to the other windows when one window throws, and does not throw itself', () => {
+    const broken = fakeWindow()
+    broken.send.mockImplementation(() => {
+      throw new Error('Render frame was disposed before WebFrameMain could be accessed')
+    })
+    const live = fakeWindow()
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    try {
+      expect(() =>
+        createEmitter(() => [broken.win, live.win])(contract.tasks.events.changed)
+      ).not.toThrow()
+
+      expect(live.send).toHaveBeenCalledTimes(1)
+      expect(logged).toHaveBeenCalledTimes(1)
+      expect(String(logged.mock.calls[0]?.[0])).toContain('tasks:changed')
+    } finally {
+      logged.mockRestore()
+    }
+  })
+
   it('delivers the payload of a payload-bearing event', () => {
     const live = fakeWindow()
     const emit = createEmitter(() => [live.win])
