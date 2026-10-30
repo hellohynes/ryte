@@ -89,6 +89,14 @@ test('rejects a raw handler for a new channel in a new file', () => {
   )
 })
 
+test('a channel defined in src/contract/ but missing from the manifest says to regenerate', () => {
+  expectViolation(
+    { 'src/contract/ping.ts': `export const ping = { channel: 'tasks:ping' }\n` },
+    'inventory',
+    /missing from the generated manifest; run `pnpm contract:generate`/
+  )
+})
+
 test('rejects a raw send of a contract event, outside the contract', () => {
   const violations = run({
     'src/main/foo.ts': `export const f = (win: any): void => win.webContents.send('tasks:changed')\n`

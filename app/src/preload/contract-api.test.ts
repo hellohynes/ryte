@@ -54,7 +54,9 @@ describe('createContractApi from the generated manifest', () => {
     const { ipc } = fakeIpc()
     const api = createContractApi(ipc)
 
-    expect(Object.keys(api)).toEqual(['tasks'])
+    // One object per area in the manifest, nothing else.
+    expect(Object.keys(api).sort()).toEqual(Object.keys(manifest).sort())
+    expect(Object.keys(api)).toEqual(expect.arrayContaining(['tasks']))
     // Exactly the manifest, nothing more: a method per operation and an on<Event> per event.
     const names = manifest.tasks
     const expected = [

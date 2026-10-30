@@ -121,12 +121,11 @@ describe('tasks handlers behind the registrar', () => {
   } {
     const parts = setup(toggleResult)
     const listeners = new Map<string, Parameters<IpcMainLike['handle']>[1]>()
+    // Only the tasks area, so this test does not depend on which other areas exist.
     registerOperations(
       { handle: (channel, listener) => void listeners.set(channel, listener) },
-      contract,
-      {
-        tasks: parts.handlers
-      }
+      { tasks: contract.tasks },
+      { tasks: parts.handlers }
     )
     return {
       ...parts,

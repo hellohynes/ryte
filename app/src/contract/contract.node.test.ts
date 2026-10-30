@@ -9,7 +9,7 @@ describe('contract is transport-neutral', () => {
   it('loads the whole registry in plain Node without Electron', async () => {
     const { contract } = await import('./index')
 
-    expect(Object.keys(contract)).toEqual(['tasks'])
+    expect(Object.keys(contract)).toEqual(expect.arrayContaining(['tasks']))
     expect(Object.keys(contract.tasks.operations)).toEqual(
       expect.arrayContaining(['list', 'refresh', 'toggle'])
     )

@@ -256,7 +256,9 @@ export function checkContract({ files, legacy, manifestSource }) {
           'inventory',
           path,
           line,
-          `${channel} is not in the contract or scripts/legacy.json; define it in src/contract/ (see docs/api-contract.md)`
+          inContract(path)
+            ? `${channel} is defined in src/contract/ but missing from the generated manifest; run \`pnpm contract:generate\``
+            : `${channel} is not in the contract or scripts/legacy.json; define it in src/contract/ (see docs/api-contract.md)`
         )
       }
     }

@@ -18,7 +18,7 @@ The list of everything that exists today is generated: [api-index.md](api-index.
 | What an operation does in the main process | `app/src/main/contract/<area>-handlers.ts` | Yes: one handler per operation |
 | Registration, validation, the event emitter | `app/src/main/contract/register.ts` | Rarely |
 | `window.ryte.<area>` methods and `on<Event>` subscribers | built from the manifest by `app/src/preload/contract-api.ts` | No |
-| Wire types shared with the UI | `app/src/shared/<area>.ts` | No: re-exports types inferred from the definition |
+| Wire types by name, for code that imports them (the `tasks` types live in `app/src/shared/tasks.ts`) | `app/src/shared/<area>.ts` | Only to re-export types inferred from the definition (`export type { ... } from '../contract/<area>'`); never write a type by hand. A new operation does not need one unless code imports its types by name |
 | Operations that have not moved yet | `app/scripts/legacy.json` and the old code in `ipc.ts`, `ipc-validation.ts` and `preload/index.ts` | Only to shrink them |
 | The enforcement | `app/scripts/check-contract.mjs` | Rarely |
 
@@ -57,14 +57,16 @@ live window, and the renderer subscribes with `window.ryte.tasks.onChanged(callb
      `.refine(hasNoExplicitUndefined, ...)` so an explicit `undefined` is rejected too.
    - The `example` is validated against both schemas by a test, so it must be real.
    - A **new area** is a new file `app/src/contract/<area>.ts` exporting `defineArea('<area>', { operations,
-     events })`, added to `contract` in `app/src/contract/index.ts`. A new operation always goes in the contract,
+     events })` (both are required: pass `events: {}` when there are none), added to `contract` in
+     `app/src/contract/index.ts` with an import and an entry. A new operation always goes in the contract,
      even in an area that has not been migrated yet (see [Legacy operations](#legacy-operations)).
 
 2. **Regenerate**: `pnpm contract:generate`. It rewrites `manifest.generated.ts` and `docs/api-index.md`. Commit both.
    Forgetting this fails `pnpm check:contract` and `pnpm contract:generate --check`.
 
 3. **Write the handler** in `app/src/main/contract/<area>-handlers.ts`: add `ping: async (input, ctx) => ...` to the
-   object returned by `create<Area>Handlers`. The type makes a missing or extra handler a compile error. `input` is
+   object returned by `create<Area>Handlers`. The type makes a missing or extra handler a compile error, so run
+   `pnpm typecheck` now: `pnpm check:contract` does not report a missing handler. `input` is
    already validated and typed; `ctx.sender` is the window that called. Take dependencies as parameters (the way
    `createTaskHandlers` takes `service`, `settings` and `emit`) so the handler can be tested without Electron.
    - **New area:** create `<area>-handlers.ts` exporting `create<Area>Handlers(...)` that returns
@@ -73,7 +75,8 @@ live window, and the renderer subscribes with `window.ryte.tasks.onChanged(callb
 
 4. **Test the handler** in `app/src/main/contract/<area>-handlers.test.ts` with fake dependencies: the result, and
    any side effect (for example "emits only when the toggle succeeded"). Validation and the example are already
-   covered for every operation by `app/src/contract/contract.node.test.ts` and `register.test.ts`.
+   covered for every operation by `app/src/contract/contract.node.test.ts` and `register.test.ts`. Those tests derive
+   from the contract, so adding an operation or an area does not need an edit to them.
 
 5. **Call it** from a store or component: `await window.ryte.<area>.ping({ id })`. The types come from the
    definition, so `app/src/preload/index.ts` and `app/src/shared/` need no edit.
@@ -89,8 +92,8 @@ the payload as the second argument when the event has one. The UI subscribes wit
 
 ## Change an operation
 
-Edit the definition, run `pnpm contract:generate`, then follow the compiler: the handler's types change, and so does
-every caller. Rules:
+Edit the definition, run `pnpm contract:generate`, then run `pnpm typecheck` and follow the compiler: the handler's
+types change, and so does every caller. Rules:
 
 - **Never rename a channel.** It is the wire name. Add the new operation, move the callers, then remove the old one.
 - Adding an optional input field or an extra output field is safe. Tightening or reinterpreting an input changes
@@ -105,8 +108,10 @@ every caller. Rules:
 ## Remove an operation or event
 
 Delete the definition and its entry in the area, run `pnpm contract:generate`, then delete the handler, its test and
-every caller; the compiler reports the leftovers (an extra handler is an error). Removing a whole area also removes
-its file, its line in `index.ts`, its handlers file and its entry in the `registerOperations` call.
+every caller. Run `pnpm typecheck` and `pnpm test`: the compiler reports the leftovers (an extra handler is an
+error). Removing a whole area also removes its file, its import and entry in `app/src/contract/index.ts`, its
+handlers file and that file's test, and its import and entry in the `registerOperations` call in
+`app/src/main/ipc.ts`.
 
 ## Legacy operations
 

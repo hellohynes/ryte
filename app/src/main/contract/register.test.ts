@@ -42,11 +42,18 @@ function echoHandlers(): {
   handlers: Handlers<Contract>
   spies: Record<string, ReturnType<typeof vi.fn>>
 } {
-  // One spy per operation in the contract, so adding an operation does not break these tests.
-  const spies: Record<string, ReturnType<typeof vi.fn>> = Object.fromEntries(
-    Object.keys(contract.tasks.operations).map((name) => [name, echo()])
+  // One spy per operation of every area in the contract, so adding an operation or an area does not
+  // break these tests. `spies` is the tasks area, which the golden vectors exercise.
+  const handlers = Object.fromEntries(
+    Object.entries(contract).map(([area, definition]) => [
+      area,
+      Object.fromEntries(Object.keys(definition.operations).map((name) => [name, echo()]))
+    ])
   )
-  return { handlers: { tasks: spies } as unknown as Handlers<Contract>, spies }
+  return {
+    handlers: handlers as unknown as Handlers<Contract>,
+    spies: handlers.tasks as Record<string, ReturnType<typeof vi.fn>>
+  }
 }
 
 // The wire strings, copied from the pre-contract code (recorded at a9ce30b in channels.baseline.json, since
@@ -96,8 +103,8 @@ describe('registerOperations: validation in front of every handler', () => {
     const registered = [...listeners.keys()].sort()
     // Exactly what the contract defines, nothing more...
     expect(registered).toEqual(
-      Object.values(contract.tasks.operations)
-        .map((operation) => operation.channel)
+      Object.values(contract)
+        .flatMap((area) => Object.values(area.operations).map((operation) => operation.channel))
         .sort()
     )
     // ...and the pre-contract wire strings are still there, unchanged.
@@ -132,7 +139,10 @@ describe('registerOperations: validation in front of every handler', () => {
 describe('registerOperations: registration failures', () => {
   it('throws when an operation has no handler', () => {
     const { ipc } = fakeIpc()
-    const partial = { tasks: { list: echo(), refresh: echo() } } as unknown as Handlers<Contract>
+    const partial = {
+      ...echoHandlers().handlers,
+      tasks: { list: echo(), refresh: echo() }
+    } as unknown as Handlers<Contract>
     expect(() => registerOperations(ipc, contract, partial)).toThrow(
       'No handler for contract operation: tasks.toggle'
     )
@@ -141,7 +151,8 @@ describe('registerOperations: registration failures', () => {
   it('throws when a handler has no matching operation', () => {
     const { ipc } = fakeIpc()
     const extra = {
-      tasks: { list: echo(), refresh: echo(), toggle: echo(), bogus: echo() }
+      ...echoHandlers().handlers,
+      tasks: { ...echoHandlers().handlers.tasks, bogus: echo() }
     } as unknown as Handlers<Contract>
     expect(() => registerOperations(ipc, contract, extra)).toThrow(
       'Handler for unknown operation: tasks.bogus'
@@ -150,8 +161,9 @@ describe('registerOperations: registration failures', () => {
 
   it('throws when a whole area has no handlers', () => {
     const { ipc } = fakeIpc()
+    const firstArea = Object.keys(contract)[0]
     expect(() => registerOperations(ipc, contract, {} as unknown as Handlers<Contract>)).toThrow(
-      'No handlers for contract area: tasks'
+      `No handlers for contract area: ${firstArea}`
     )
   })
 

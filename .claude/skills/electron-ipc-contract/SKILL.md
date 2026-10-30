@@ -18,9 +18,10 @@ an `ipcMain` or `ipcRenderer` call, a validator, or a preload method: `pnpm chec
 
 ## Contract
 
-Before editing, record: the operation or event name and channel, the renderer action that starts it, the input
-schema (strict and bounded), the response and error behavior, which windows receive an event and who emits it,
-cancellation or unsubscribe behavior, payload-size bounds, and the test that will prove it.
+Before editing, record (in your report or the pull request description; there is no file for it): the operation
+or event name and channel, the renderer action that starts it, the input schema (strict and bounded), the response
+and error behavior, which windows receive an event and who emits it, cancellation or unsubscribe behavior,
+payload-size bounds, and the test that will prove it.
 
 ## Workflow
 
@@ -34,7 +35,8 @@ cancellation or unsubscribe behavior, payload-size bounds, and the test that wil
    only.
 5. Events go through the injected `emit`, never `webContents.send`. Name the owning window or the broadcast, the
    cleanup trigger, and the cancellation path; do not broadcast to unrelated windows.
-6. After any edit to a definition run `pnpm contract:generate` and commit the generated files.
+6. After any edit to a definition run `pnpm contract:generate`, commit the generated files, and run `pnpm typecheck`
+   (a missing or extra handler is only a compile error; `pnpm check:contract` does not report it).
 7. Test at the handler seam with fake dependencies, then run `pnpm validate`. For a change that crosses processes,
    observe it in the running app with synthetic fixtures (never real notes).
 
