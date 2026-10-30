@@ -61,8 +61,18 @@ live window, and the renderer subscribes with `window.ryte.tasks.onChanged(callb
      `app/src/contract/index.ts` with an import and an entry. A new operation always goes in the contract,
      even in an area that has not been migrated yet (see [Legacy operations](#legacy-operations)).
 
+     ```ts
+     // app/src/contract/indexer.ts
+     export const ping = defineOperation({ /* as above, with input: z.undefined() */ })
+     export const indexer = defineArea('indexer', { operations: { ping }, events: {} })
+
+     // app/src/contract/index.ts: the key is the area name, and `window.ryte.indexer` follows from it
+     export const contract = { indexer, tasks } as const
+     ```
+
 2. **Regenerate**: `pnpm contract:generate`. It rewrites `manifest.generated.ts` and `docs/api-index.md`. Commit both.
-   Forgetting this fails `pnpm check:contract` and `pnpm contract:generate --check`.
+   Forgetting this fails `pnpm check:contract` and `pnpm contract:generate --check`. `pnpm typecheck` fails from here
+   until step 3 is done ("Property 'ping' is missing"): that is the compiler pointing at the missing handler.
 
 3. **Write the handler** in `app/src/main/contract/<area>-handlers.ts`: add `ping: async (input, ctx) => ...` to the
    object returned by `create<Area>Handlers`. The type makes a missing or extra handler a compile error, so run
@@ -71,15 +81,28 @@ live window, and the renderer subscribes with `window.ryte.tasks.onChanged(callb
    `createTaskHandlers` takes `service`, `settings` and `emit`) so the handler can be tested without Electron.
    - **New area:** create `<area>-handlers.ts` exporting `create<Area>Handlers(...)` that returns
      `Handlers<Contract>['<area>']`, and add `<area>: create<Area>Handlers(...)` to the `registerOperations(ipcMain,
-     contract, { ... })` call in `app/src/main/ipc.ts`.
+     contract, { ... })` call in `app/src/main/ipc.ts` (with its import). A handler with no dependencies takes no
+     parameters:
+
+     ```ts
+     // app/src/main/contract/indexer-handlers.ts
+     import type { Contract } from '../../contract'
+     import type { Handlers } from './register'
+
+     export function createIndexerHandlers(): Handlers<Contract>['indexer'] {
+       return { ping: async () => ({ ok: true }) }
+     }
+     ```
 
 4. **Test the handler** in `app/src/main/contract/<area>-handlers.test.ts` with fake dependencies: the result, and
-   any side effect (for example "emits only when the toggle succeeded"). Validation and the example are already
+   any side effect (for example "emits only when the toggle succeeded"). Copy the pattern from
+   `tasks-handlers.test.ts`: call the handler directly, as `handlers.ping(input, { sender: {} as never })`. Validation and the example are already
    covered for every operation by `app/src/contract/contract.node.test.ts` and `register.test.ts`. Those tests derive
    from the contract, so adding an operation or an area does not need an edit to them.
 
 5. **Call it** from a store or component: `await window.ryte.<area>.ping({ id })`. The types come from the
-   definition, so `app/src/preload/index.ts` and `app/src/shared/` need no edit.
+   definition, so `app/src/preload/index.ts` and `app/src/shared/` need no edit. `window.ryte.<area>.<operation>` and its
+   types appear on their own, also in an area that still has hand-written methods.
 
 6. Run `pnpm validate`.
 
@@ -109,7 +132,7 @@ types change, and so does every caller. Rules:
 
 Delete the definition and its entry in the area, run `pnpm contract:generate`, then delete the handler, its test and
 every caller. Run `pnpm typecheck` and `pnpm test`: the compiler reports the leftovers (an extra handler is an
-error). Removing a whole area also removes its file, its import and entry in `app/src/contract/index.ts`, its
+error), so `typecheck` fails between deleting the definition and deleting the handler. Removing a whole area also removes its file, its import and entry in `app/src/contract/index.ts`, its
 handlers file and that file's test, and its import and entry in the `registerOperations` call in
 `app/src/main/ipc.ts`.
 
@@ -160,4 +183,6 @@ process only through `window.ryte`.
 | `pnpm contract:generate --check` | Fail if either is stale |
 | `pnpm check:contract` | The enforcement above |
 | `pnpm test:contract-scripts` | The check's own tests |
+| `pnpm typecheck` | Catches a missing or extra handler and every caller that no longer matches |
+| `pnpm test` | The whole test suite |
 | `pnpm validate` | Everything, including the above |
