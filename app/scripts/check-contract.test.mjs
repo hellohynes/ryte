@@ -130,6 +130,54 @@ test('rejects aliasing ipcMain or ipcRenderer in a new file', () => {
   }
 })
 
+test('scans every script extension, not only .ts', () => {
+  for (const file of [
+    'evil.js',
+    'evil.mjs',
+    'evil.cjs',
+    'evil.mts',
+    'evil.cts',
+    'evil.tsx',
+    'evil.jsx'
+  ]) {
+    expectViolation(
+      { [`src/main/${file}`]: `ipcMain.handle('tasks:evil', () => 1)\n` },
+      'ipc-access',
+      /ipcMain reaches IPC outside/
+    )
+  }
+  assert.deepEqual(
+    run({ 'src/main/skipped.test.js': `ipcMain.handle('tasks:evil', () => 1)\n` }),
+    []
+  )
+  assert.deepEqual(run({ 'src/main/types.d.mts': `export declare const x: string\n` }), [])
+})
+
+test('rejects a channel built by concatenation or a template, even in a legacy file', () => {
+  for (const code of [
+    `ipcMain.handle('tasks' + ':evil', () => 1)`,
+    'ipcMain.handle(`tasks:${name}`, () => 1)',
+    `ipcRenderer.invoke('app:' + name)`,
+    `win.webContents.send('app:' + 'x', 1)`,
+    'wc.sendToFrame(1, `app:${name}`)'
+  ]) {
+    expectViolation(
+      {
+        'src/main/ipc.ts': `import { ipcMain } from 'electron'\nipcMain.handle('app:get-version', () => 1)\n${code}\n`
+      },
+      'ipc-access',
+      /builds its channel with concatenation or a template/
+    )
+  }
+  // A plain identifier or property is a constant, not a built string.
+  assert.deepEqual(
+    run({
+      'src/main/ipc.ts': `import { ipcMain } from 'electron'\nipcMain.handle('app:get-version', () => 1)\nconst name = 'app:get-version'\nipcMain.removeHandler(name)\nwin.webContents.send(event.channel, 1)\n`
+    }),
+    []
+  )
+})
+
 test('rejects a new channel literal in a legacy file, and one in the preload', () => {
   expectViolation(
     {

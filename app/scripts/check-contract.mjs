@@ -33,10 +33,13 @@ const BUILDER = 'src/preload/contract-api.ts'
 const MANIFEST = 'src/contract/manifest.generated.ts'
 
 const isSkipped = (path) =>
-  /\.test\.ts$|\.fixture\.ts$|\.d\.ts$/.test(path) || path.startsWith('src/contract/fixtures/')
+  /\.test\.[cm]?[jt]sx?$|\.fixture\.[cm]?[jt]sx?$|\.d\.[cm]?ts$/.test(path) ||
+  path.startsWith('src/contract/fixtures/')
 
-function parse(path, text) {
-  return ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS)
+const SCRIPT_FILE = /\.(ts|tsx|mts|cts|js|jsx|mjs|cjs)$/
+
+function parse(path, text, kind) {
+  return ts.createSourceFile(path, text, ts.ScriptTarget.Latest, true, kind)
 }
 
 function visit(node, callback) {
@@ -126,6 +129,20 @@ function scan(sourceFile) {
     if (ts.isStringLiteralLike(node) && CHANNEL.test(node.text) && !node.text.startsWith('node:')) {
       channels.push({ channel: node.text, line: lineOf(sourceFile, node) })
     }
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
+      const method = node.expression.name.text
+      const target = node.expression.expression
+      if ((ts.isIdentifier(target) && IPC_NAMES.has(target.text)) || SEND_NAMES.has(method)) {
+        const channelArguments = node.arguments.slice(0, method === 'sendToFrame' ? 2 : 1)
+        if (
+          channelArguments.some(
+            (argument) => ts.isBinaryExpression(argument) || ts.isTemplateExpression(argument)
+          )
+        ) {
+          access.push({ kind: 'dynamic', name: method, line: lineOf(sourceFile, node) })
+        }
+      }
+    }
     if (ts.isIdentifier(node) && IPC_NAMES.has(node.text)) {
       access.push({ kind: 'ipc', name: node.text, line: lineOf(sourceFile, node) })
     }
@@ -150,7 +167,7 @@ function scan(sourceFile) {
 /** A renderer .vue file: parse the contents of its script blocks as TypeScript. */
 function vueScripts(path, text) {
   const blocks = [...text.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)]
-  return blocks.map((block, index) => parse(`${path}#script${index}`, block[1]))
+  return blocks.map((block, index) => parse(`${path}#script${index}`, block[1], ts.ScriptKind.TS))
 }
 
 function resolveSpecifier(from, specifier) {
@@ -197,7 +214,7 @@ export function checkContract({ files, legacy, manifestSource }) {
   const filesWithAccess = new Set()
 
   for (const [path, text] of Object.entries(files)) {
-    const isTs = path.endsWith('.ts')
+    const isTs = SCRIPT_FILE.test(path)
     const isVue = path.endsWith('.vue')
     if (isSkipped(path) || (!isTs && !isVue)) continue
 
@@ -265,6 +282,15 @@ export function checkContract({ files, legacy, manifestSource }) {
 
     // direct IPC access
     for (const hit of access) {
+      if (hit.kind === 'dynamic') {
+        fail(
+          'ipc-access',
+          path,
+          hit.line,
+          `${hit.name} builds its channel with concatenation or a template; use a string literal or a contract operation`
+        )
+        continue
+      }
       const allowed =
         hit.kind === 'ipc' ? ipcAllowed.has(path) : ipcAllowed.has(path) || sendAllowed.has(path)
       if (allowed) {
@@ -368,7 +394,7 @@ function readTree(root) {
     for (const name of readdirSync(directory)) {
       const path = resolve(directory, name)
       if (statSync(path).isDirectory()) walk(path)
-      else if (/\.(ts|vue)$/.test(name))
+      else if (SCRIPT_FILE.test(name) || name.endsWith('.vue'))
         files[relative(root, path).split('\\').join('/')] = readFileSync(path, 'utf8')
     }
   }

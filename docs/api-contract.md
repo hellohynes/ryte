@@ -160,12 +160,17 @@ listed in `app/scripts/legacy.json`. Rules:
   `legacy.json`, and a contract channel is written as a string only inside `src/contract/`.
 - Only the legacy files, `register.ts` and `contract-api.ts` may use `ipcMain`, `ipcRenderer`, `.send`, `.sendSync`,
   `.sendToFrame` or `.postMessage`.
+- A channel is never built by concatenation or a template (`'tasks' + ':x'`, `` `tasks:${name}` ``) in an IPC call.
+- Every script file under `src/` is scanned (`.ts`, `.tsx`, `.mts`, `.cts`, `.js`, `.jsx`, `.mjs`, `.cjs`), and `.vue`
+  files through their `<script>` blocks.
 - `src/contract/` never imports Electron, and is imported by value only from `src/main/` (and, for the manifest, the
   preload builder). The renderer never touches `ipcRenderer` or `electron`.
 - `legacy.json` cannot grow without editing the check's own test.
 
 It is a guardrail against authoring mistakes, not a security boundary: the renderer is sandboxed and reaches the main
-process only through `window.ryte`.
+process only through `window.ryte`. It does not try to stop deliberate
+evasion, for example a computed property name (`e['ipc' + 'Main']`) or a channel name hidden behind a helper.
+Review catches those.
 
 ## Not covered yet
 
