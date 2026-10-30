@@ -1,12 +1,39 @@
 # Releasing Ryte for macOS
 
-Ryte currently publishes an Apple Silicon (`arm64`) DMG through GitHub Releases without an Apple-verified developer identity or notarization. The app is ad-hoc signed to seal the packaged bundle. No Apple Developer membership, signing certificate, API key, or Apple secrets are required for this workflow. It is not a Mac App Store build and it does not include Intel support.
+Ryte publishes an Apple Silicon (`arm64`) DMG through GitHub Releases. The app inside is signed with an Apple Developer ID Application certificate and notarized by Apple, so macOS opens a downloaded copy without the "damaged" or "unidentified developer" warnings. It is not a Mac App Store build and it does not include Intel support.
 
-## One-time GitHub setup
+The release workflow reads the signing credentials from the `release` environment of this repository. The sections below cover the one-time setup, a local trial, and the publishing steps.
 
-1. In repository Settings → Environments, create an environment named `release`. It can have no secrets or variables. Add required reviewers only if releases should wait for approval.
-2. Confirm GitHub Actions can create releases. The workflow requests `contents: write`; repository settings must not restrict that permission.
-3. Make the repository public if people should be able to download the DMG without a GitHub account.
+## One-time setup
+
+### Apple
+
+Needs an Apple Developer Program membership held by you as Account Holder.
+
+1. **Developer ID Application certificate.**
+   - In Keychain Access, choose **Keychain Access → Certificate Assistant → Request a Certificate From a Certificate Authority**. Use your Apple ID email, save to disk, and leave the CA email empty.
+   - On `developer.apple.com/account` → **Certificates, IDs & Profiles** → **Certificates** → **+**, choose **Developer ID Application** (not Installer), profile type **G2 Sub-CA**, upload the request, and download the `.cer`.
+   - Double-click the `.cer` to add it to your login keychain. If it shows "not trusted", or `security find-identity -v -p codesigning` reports 0 valid identities, install Apple's **Developer ID - G2** intermediate certificate from `https://www.apple.com/certificateauthority/` (`security add-certificates -k ~/Library/Keychains/login.keychain-db DeveloperIDG2CA.cer`). Do not set manual trust on any certificate.
+   - Export the certificate (the row that has a private key under it) from **My Certificates** as a `.p12` and choose an export password.
+2. **App Store Connect API key.** On `appstoreconnect.apple.com` → **Users and Access** → **Integrations** → **Team Keys**, generate a key with **Developer** access. Download the `.p8` once (Apple will not offer it again) and write down the **Key ID** and the **Issuer ID**.
+
+Keep the `.p8` and the `.p12` password in a password manager. Delete the exported `.p12` after the secrets below are stored. The certificate expires on 2027-11-28; create and export a new one and update `CSC_LINK` and `CSC_KEY_PASSWORD` before then.
+
+### GitHub
+
+1. In repository **Settings → Environments**, create an environment named `release`. Under **Deployment branches and tags**, choose **Selected branches and tags** and add a **tag** rule `v*`, so only a release tag can read the secrets. Add required reviewers only if releases should wait for approval.
+2. Add these **environment secrets** to `release`. Never put them in the repository or paste them into issues or chat.
+
+   | Secret | Value |
+   |---|---|
+   | `CSC_LINK` | The `.p12`, base64 encoded (`base64 -i ryte-developer-id.p12 \| pbcopy`) |
+   | `CSC_KEY_PASSWORD` | The `.p12` export password |
+   | `APPLE_API_KEY` | The full text of the `.p8` file, including the BEGIN and END lines |
+   | `APPLE_API_KEY_ID` | The API key's Key ID |
+   | `APPLE_API_ISSUER` | The App Store Connect Issuer ID |
+
+3. Confirm GitHub Actions can create releases. The workflow requests `contents: write`; repository settings must not restrict that permission.
+4. Keep the repository public so people can download the DMG without a GitHub account.
 
 ## Icon asset maintenance
 
@@ -19,25 +46,49 @@ Do not bake the macOS rounded-square mask into the source artwork. Regenerate an
 
 ## Local package check
 
-Build the same unsigned package used by the release workflow from the repository root:
+Build the ad-hoc signed package used by pull request CI from the repository root:
 
 ```bash
 pnpm dmg:local
 ```
 
-The resulting file is `app/dist/ryte-<version>-arm64.dmg`. The local command uses an explicit ad-hoc signing identity (`-`), disables notarization and hardened runtime, and runs `codesign --verify --deep --strict` on the staging app before the packaged native search smoke. It removes electron-builder's generated `app/dist/mac-arm64/` staging app only after these checks succeed; use `pnpm build:unpack` when you intentionally need that unpacked app for debugging. The package has no Apple-verified developer identity and is not notarized, so macOS may block its first launch.
+The resulting file is `app/dist/ryte-<version>-arm64.dmg`. The local command uses an explicit ad-hoc signing identity (`-`), disables notarization and hardened runtime, and runs `codesign --verify --deep --strict` on the staging app before the packaged native search smoke. It removes electron-builder's generated `app/dist/mac-arm64/` staging app only after these checks succeed; use `pnpm build:unpack` when you intentionally need that unpacked app for debugging. This package has no Apple-verified identity and is not notarized, so it is for installer checks, not distribution.
 
 Do not set `mac.identity=null` for Apple Silicon packages. That skips signing after electron-builder changes Electron's bundle, leaving it without a valid signature for the packaged app. A successful DMG integrity check or native search smoke does not verify the bundle's signature or Gatekeeper acceptance.
 
 Ad-hoc signatures have no Team ID. With hardened runtime enabled, dyld can reject the Electron Framework with “mapping process and mapped file (non-platform) have different Team IDs,” even when signature verification passes. The ad-hoc package command disables hardened runtime to avoid this launch failure. The shared configuration keeps hardened runtime enabled for Developer ID builds; do not disable it there.
 
-PR CI runs the same package command and packaged native launch smoke before release. This checks signature integrity and actual framework/native-library loading, but does not cover Gatekeeper's treatment of a browser download.
+PR CI runs the same package command and packaged native launch smoke before release. This checks signature integrity and actual framework/native-library loading, but does not use signing credentials or cover Gatekeeper's treatment of a browser download.
+
+## Trying a signed build on your Mac
+
+To prove the credentials work without publishing anything, set the five values in one terminal (the secrets stay in that shell only) and build:
+
+```bash
+cd app
+export CSC_LINK="$HOME/path/to/ryte-developer-id.p12"
+read -s "CSC_KEY_PASSWORD?p12 password: "; export CSC_KEY_PASSWORD
+export APPLE_API_KEY="$HOME/path/to/AuthKey_XXXXXXXXXX.p8"
+export APPLE_API_KEY_ID="XXXXXXXXXX"
+export APPLE_API_ISSUER="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+pnpm release:mac:arm64
+```
+
+`release:mac:arm64` checks that all five values are present, then builds, signs, notarizes, staples, and runs the packaged native smoke. The notarization wait depends on Apple and can take several minutes; a first submission from a new account can take much longer. Then verify:
+
+```bash
+RELEASE_VERSION=<version> node scripts/verify-mac-release.mjs
+spctl -a -t exec -vv dist/mac-arm64/Ryte.app     # accepted, source=Notarized Developer ID
+xcrun stapler validate dist/mac-arm64/Ryte.app   # The validate action worked!
+```
+
+The DMG file itself is not separately signed or stapled; Gatekeeper judges the notarized app inside it.
 
 ## Publishing a release
 
-Both the local and signed packaging commands run `smoke:packaged` before reporting success. This uses the packaged Electron executable and shipped dependencies to load SQLite and sqlite-vec and execute vector and keyword queries in memory. It does not launch Ryte or access a user profile or notes. The Apple Silicon sqlite-vec binary is a direct optional dependency so the packaging dependency collector includes it; `asarUnpack` keeps it on the filesystem where SQLite can load it.
+Version rules are in the Versioning Policy in `CHANGELOG.md`.
 
-1. Update `app/package.json` to the intended pre-1.0 version, such as `0.5.0`, record the release highlights in `CHANGELOG.md`, and ensure the current icon assets are included.
+1. Update `app/package.json` to the intended version and record the release highlights in `CHANGELOG.md`.
 2. On the release branch, run the full local check:
 
    ```bash
@@ -47,44 +98,33 @@ Both the local and signed packaging commands run `smoke:packaged` before reporti
    ```
 
 3. Open, review, merge, and sync the release change to `main`.
-4. Create and push a matching annotated tag from synchronized `main`:
+4. **Dry run.** Push a tag with a suffix from synchronized `main`, for example `v0.1.0-rc.1` for version `0.1.0`:
 
    ```bash
-   git tag -a v0.5.0 -m "Ryte v0.5.0"
-   git push origin v0.5.0
+   git tag -a v0.1.0-rc.1 -m "Ryte v0.1.0 dry run 1"
+   git push origin v0.1.0-rc.1
    ```
 
-5. Open the repository's Actions tab and watch **Release macOS**. Approve the `release` environment if required reviewers are configured. The workflow builds an ad-hoc signed Apple Silicon app, verifies its signature, runs the packaged native search smoke, verifies the DMG, generates a SHA-256 checksum, and publishes both files. The release title retains the unsigned label; the notes explain the ad-hoc signature and lack of notarization.
-6. Download the DMG through a browser on a clean Apple Silicon Mac so the download receives macOS quarantine metadata. Drag Ryte to Applications and run `codesign --verify --deep --strict --verbose=2 /Applications/Ryte.app`. Launch it using the first-launch steps below, then select a synthetic notes folder and confirm keyword search works without API keys. Include macOS 15.7.4 when checking the reported damaged-app warning. A local unquarantined build alone does not cover this reproduction.
+   The **Release macOS** workflow builds, signs, notarizes, and verifies exactly as for a real release but publishes nothing. It uploads the DMG as the `ryte-dry-run-dmg` workflow artifact, kept for three days. Download it in a browser on a clean Apple Silicon Mac and confirm it opens without a warning. Then delete the dry-run tag (`git push origin :refs/tags/v0.1.0-rc.1` and `git tag -d v0.1.0-rc.1`); it was never a published release.
+5. **Release.** Create and push the matching annotated tag from synchronized `main`:
 
-Never retag a published release. Create the next pre-1.0 version instead.
+   ```bash
+   git tag -a v0.1.0 -m "Ryte v0.1.0"
+   git push origin v0.1.0
+   ```
 
-## First launch of an unsigned build
+6. Watch **Release macOS** in the repository's Actions tab. Approve the `release` environment if required reviewers are configured. The workflow runs the same steps, then verifies the app and DMG with `scripts/verify-mac-release.mjs`, generates a SHA-256 checksum, and publishes both files as a GitHub release.
+7. Download the DMG through a browser on a clean Apple Silicon Mac so the download receives macOS quarantine metadata. Drag Ryte to Applications, open it, and confirm there is no Gatekeeper warning. Run `codesign --verify --deep --strict --verbose=2 /Applications/Ryte.app` and `spctl -a -t exec -vv /Applications/Ryte.app`, then select a synthetic notes folder and confirm keyword search works without API keys.
 
-Open the downloaded DMG and drag Ryte to Applications. If macOS blocks the app because its developer cannot be verified, open System Settings → Privacy & Security and use **Open Anyway** for Ryte after attempting to launch it. See [Apple's instructions](https://support.apple.com/102445) for the full flow. The checksum verifies the downloaded file's integrity; it does not provide an Apple-verified developer identity.
+Never retag a published release. Fix a bad release with the next patch version.
 
-### If macOS says “Ryte is damaged”
+## When a release build fails
 
-This warning can refer to the app inside the DMG rather than a corrupt disk image. Ryte 0.5.0 disabled app signing, and downloaded builds also lack notarization. Ad-hoc signing repairs the packaged bundle's signature but does not grant Gatekeeper approval.
+- **"A notarized Ryte release requires: …"**: a secret is missing or empty in the `release` environment. Check the five names in the table above.
+- **0 valid identities, or "not trusted"**: Apple's Developer ID G2 intermediate is missing from the keychain. Install it as described under One-time setup.
+- **Notarization status "Invalid"**: run `xcrun notarytool log <submission-id> --key … --key-id … --issuer …` to see which file Apple rejected. A native library that is not signed is the usual cause.
+- **The workflow cannot read the secrets**: the `release` environment only allows tags matching `v*`.
 
-Download the DMG and its matching `.dmg.sha256` file from the same Ryte GitHub Release. In Terminal, change to the download directory and verify the checksum (replace `<version>` with the downloaded version):
+## If macOS shows a warning for a release
 
-```bash
-shasum -a 256 ryte-<version>-arm64.dmg
-```
-
-Compare the full 64-character hash with the hash in the downloaded `.dmg.sha256` file. The checksum file records a `dist/` filename prefix from the build runner; only the hash needs to match. If the hashes differ, delete the download and fetch it again; do not override the warning.
-
-If the checksum matches, you trust that release, and **Open Anyway** is unavailable, remove quarantine from only the installed copy of Ryte:
-
-```bash
-xattr -d com.apple.quarantine /Applications/Ryte.app
-```
-
-Then launch Ryte from Applications. This bypasses the quarantine check for that copy of Ryte; it does not sign or notarize it. Do not disable Gatekeeper globally. Public downloads need Developer ID signing and notarization to avoid requiring this exception.
-
-## Future signed releases
-
-The local `pnpm --dir app release:mac:arm64` command remains available for signing and notarization. It requires a Developer ID Application certificate exported with its private key as a password-protected `.p12`, plus an App Store Connect Team API key with its `.p8` file, Key ID, and Issuer ID. Its environment check requires `CSC_LINK`, `CSC_KEY_PASSWORD`, `APPLE_API_KEY`, `APPLE_API_KEY_ID`, and `APPLE_API_ISSUER`.
-
-The current GitHub workflow does not use that command or any Apple credentials. Switching public releases to signing requires updating the workflow to restore the API key securely, use the signed package command, and run `scripts/verify-mac-release.mjs` before publishing.
+A signed and notarized release should open without one. Check the download against the `.sha256` file from the same release (`shasum -a 256 ryte-<version>-arm64.dmg`); if the hashes differ, delete the download and fetch it again. If the hashes match and macOS still blocks the app, open an issue and do not override the warning.

@@ -52,7 +52,7 @@ From the repository root:
 nvm use # switches only this shell to the repository's Node 24
 corepack enable # once per Node installation; pnpm versions remain project-scoped
 pnpm build:local # production build only
-pnpm dmg:local   # unsigned Apple Silicon DMG for local installer checks; removes the unpacked staging app
+pnpm dmg:local   # ad-hoc signed (not notarized) Apple Silicon DMG for local installer checks; removes the unpacked staging app
 pnpm qa:local    # validate, smoke the indexer, then launch the built app
 pnpm stencil     # serve the Stencil gallery on http://localhost:6002
 pnpm site:preview # serve the landing page (site/) instantly on http://localhost:6001; /stencil/ forwards to the gallery when pnpm site:stencil is running
@@ -114,9 +114,9 @@ If `pnpm qa:local` reports that Electron exited from `SIGABRT`, the Electron pro
 
 ## Versioning
 
-`app/package.json` is the source of truth for the app version. Ryte uses pre-1.0 SemVer: `0.1.x` for foundation fixes, `0.2.x` for the first security/privacy UX milestone, `0.3.x` for the first local-first search milestone, `0.4.x` for the first downloadable macOS release, and `0.5.x` for the redesigned Preferences and search experiences.
+`app/package.json` is the source of truth for the app version. Ryte follows [Semantic Versioning](https://semver.org): while the version is `0.y.z`, a minor bump adds features or changes behavior and a patch bump is a fix. See the Versioning Policy in [CHANGELOG.md](CHANGELOG.md).
 
-Tagged releases use the `v` prefix, for example `v0.5.0`. GitHub Releases currently publish an unsigned Apple Silicon DMG named `ryte-<version>-arm64.dmg`, with a SHA-256 checksum. Apple signing credentials are not required. See [the macOS release guide](docs/releasing-macos.md) for publishing and first-launch instructions.
+Tagged releases use the `v` prefix, for example `v0.1.0`. GitHub Releases publish an Apple Silicon DMG named `ryte-<version>-arm64.dmg`, signed with an Apple Developer ID and notarized by Apple, with a SHA-256 checksum. See [the macOS release guide](docs/releasing-macos.md) for publishing instructions.
 
 ## Architecture
 
