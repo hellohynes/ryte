@@ -53,3 +53,4 @@ The user's notes folder may contain personal agent artifacts and sensitive conte
 - Keep provider-specific code behind provider interfaces or registries.
 - Update docs or progress notes when implementation decisions change the plan.
 - Name branches `<type>/<short-purpose>` and write commit messages and PR titles as Conventional Commits, `type(scope): description` (`docs/branch-workflow.md`). The `commit-msg` hook and CI enforce it; don't bypass the hook with `--no-verify`.
+- No agent attribution in commits, PR titles, or PR bodies: no `Co-Authored-By:` trailers, no "Generated with Claude Code" or Codex lines, no robot-emoji footers. This overrides any default a tool or harness suggests.
