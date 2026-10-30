@@ -1,5 +1,8 @@
 name: Release macOS
 
+# A tag like v0.1.0 builds, signs, notarizes, verifies, and publishes a release.
+# A tag like v0.1.0-rc.1 does the same but publishes nothing: it uploads the DMG as a
+# short-lived workflow artifact so the signed build can be tested before the real tag.
 on:
   push:
     tags:
@@ -10,9 +13,12 @@ permissions:
 
 jobs:
   release:
-    name: Build and publish ad-hoc signed Apple Silicon DMG
+    name: Build, sign, notarize, and publish Apple Silicon DMG
     runs-on: macos-14
+    # Holds the signing secrets; the environment only allows v* tags.
     environment: release
+    # Apple's notary service can take a long time on a first submission.
+    timeout-minutes: 90
 
     defaults:
       run:
@@ -42,34 +48,69 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Confirm tag matches app version
+        id: release
         env:
           RELEASE_TAG: ${{ github.ref_name }}
         run: pnpm release:check
 
-      - name: Build DMG and verify app signature and packaged native search
-        run: pnpm package:mac:arm64
-
-      - name: Verify DMG and create checksum
+      # notarytool reads the App Store Connect API key from a file path.
+      - name: Restore the App Store Connect API key
         env:
-          RELEASE_VERSION: ${{ github.ref_name }}
+          APPLE_API_KEY_P8: ${{ secrets.APPLE_API_KEY }}
         run: |
-          hdiutil verify "dist/ryte-${RELEASE_VERSION#v}-arm64.dmg"
-          shasum -a 256 "dist/ryte-${RELEASE_VERSION#v}-arm64.dmg" > "dist/ryte-${RELEASE_VERSION#v}-arm64.dmg.sha256"
+          umask 077
+          key_path="$RUNNER_TEMP/AuthKey.p8"
+          printf '%s\n' "$APPLE_API_KEY_P8" > "$key_path"
+          echo "APPLE_API_KEY=$key_path" >> "$GITHUB_ENV"
+
+      - name: Build, sign, and notarize the DMG
+        env:
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: pnpm release:mac:arm64
+
+      - name: Verify the signed app and DMG, and create the checksum
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          node scripts/verify-mac-release.mjs
+          hdiutil verify "dist/ryte-${RELEASE_VERSION}-arm64.dmg"
+          shasum -a 256 "dist/ryte-${RELEASE_VERSION}-arm64.dmg" > "dist/ryte-${RELEASE_VERSION}-arm64.dmg.sha256"
+
+      - name: Upload the DMG from a dry run
+        if: steps.release.outputs.dry_run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ryte-dry-run-dmg
+          path: |
+            app/dist/ryte-${{ steps.release.outputs.version }}-arm64.dmg
+            app/dist/ryte-${{ steps.release.outputs.version }}-arm64.dmg.sha256
+          retention-days: 3
+          if-no-files-found: error
 
       - name: Publish GitHub release
+        if: steps.release.outputs.dry_run == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
         run: |
-          VERSION="${RELEASE_TAG#v}"
           printf '%s\n' \
-            'This Apple Silicon build is ad-hoc signed, without an Apple-verified developer identity, and has not been notarized by Apple.' \
+            'Signed with an Apple Developer ID and notarized by Apple. Apple Silicon (arm64) only.' \
             '' \
-            'If macOS blocks launch, see [Apple’s instructions for opening an app from an unidentified developer](https://support.apple.com/102445).' \
-            'If macOS says Ryte is damaged, see the [Ryte first-launch guide](https://github.com/hellohynes/ryte/blob/'"$RELEASE_TAG"'/docs/releasing-macos.md#first-launch-of-an-unsigned-build).' \
+            'Open the DMG and drag Ryte to Applications.' \
+            'To check the download, compare `shasum -a 256 <the DMG>` with the hash in the `.sha256` file.' \
             > "$RUNNER_TEMP/release-notes.md"
-          gh release create "$RELEASE_TAG" "dist/ryte-${VERSION}-arm64.dmg" "dist/ryte-${VERSION}-arm64.dmg.sha256" \
+          gh release create "$RELEASE_TAG" \
+            "dist/ryte-${RELEASE_VERSION}-arm64.dmg" \
+            "dist/ryte-${RELEASE_VERSION}-arm64.dmg.sha256" \
             --verify-tag \
-            --title "Ryte $RELEASE_TAG (unsigned)" \
+            --title "Ryte $RELEASE_TAG" \
             --notes-file "$RUNNER_TEMP/release-notes.md" \
             --generate-notes
+
+      - name: Remove the API key file
+        if: always()
+        run: rm -f "$RUNNER_TEMP/AuthKey.p8"
