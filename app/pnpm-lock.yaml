@@ -10,7 +10,7 @@ importers:
     dependencies:
       '@anthropic-ai/sdk':
         specifier: ^0.96.0
-        version: 0.96.0
+        version: 0.96.0(zod@4.6.7)
       '@electron-toolkit/utils':
         specifier: ^4.0.0
         version: 4.0.0(electron@41.6.1)
@@ -25,7 +25,7 @@ importers:
         version: 4.0.3
       openai:
         specifier: ^4.77.0
-        version: 4.104.0
+        version: 4.104.0(zod@4.6.7)
       sqlite-vec:
         specifier: ^0.1.6
         version: 0.1.9
@@ -177,6 +177,9 @@ importers:
       vue-tsc:
         specifier: ^3.1.6
         version: 3.2.9(typescript@5.9.3)
+      zod:
+        specifier: ^4.6.7
+        version: 4.6.7
     optionalDependencies:
       sqlite-vec-darwin-arm64:
         specifier: 0.1.9
@@ -3789,6 +3792,9 @@ packages:
     resolution: {integrity: sha512-rVksvsnNCdJ/ohGc6xgPwyN8eheCxsiLM8mxuE/t/mOVqJewPuO1miLpTHQiRgTKCLexL4MeAFVagts7HmNZ2Q==}
     engines: {node: '>=10'}
 
+  zod@4.6.7:
+    resolution: {integrity: sha512-g8W2D2kU6a8untc053fX1uVBKzM7yqAxW/3zwk83+6RyF2+SKOuV+c0wBDhUwzV1PaGapmZH+rmcUzPf+3CGwg==}
+
   zwitch@2.0.4:
     resolution: {integrity: sha512-bXE4cR/kVZhKZX/RjPEflHaKVhUVl85noU3v6b8apfQEc1x4A+zBxjZ4lN8LqGd6WZ3dl98pY4o717VFmoPp+A==}
 
@@ -3801,10 +3807,12 @@ snapshots:
       package-manager-detector: 1.6.0
       tinyexec: 1.2.4
 
-  '@anthropic-ai/sdk@0.96.0':
+  '@anthropic-ai/sdk@0.96.0(zod@4.6.7)':
     dependencies:
       json-schema-to-ts: 3.1.1
       standardwebhooks: 1.0.0
+    optionalDependencies:
+      zod: 4.6.7
 
   '@babel/code-frame@7.29.0':
     dependencies:
@@ -6635,7 +6643,7 @@ snapshots:
       regex: 6.1.0
       regex-recursion: 6.0.2
 
-  openai@4.104.0:
+  openai@4.104.0(zod@4.6.7):
     dependencies:
       '@types/node': 18.19.130
       '@types/node-fetch': 2.6.13
@@ -6644,6 +6652,8 @@ snapshots:
       form-data-encoder: 1.7.2
       formdata-node: 4.4.1
       node-fetch: 2.7.0
+    optionalDependencies:
+      zod: 4.6.7
     transitivePeerDependencies:
       - encoding
 
@@ -7415,5 +7425,7 @@ snapshots:
       fd-slicer: 1.1.0
 
   yocto-queue@0.1.0: {}
+
+  zod@4.6.7: {}
 
   zwitch@2.0.4: {}

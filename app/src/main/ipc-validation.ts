@@ -10,6 +10,7 @@ import type {
 import type { SearchOptions, SearchSnapshotFreshnessInput } from './search/search-service'
 import type { FileRenameInput } from '../shared/files'
 import { isFontId } from '../shared/fonts'
+import { MAX_PATH_LENGTH, normalizeWorkspaceSourcePath } from '../shared/source-path'
 import { isReferenceLinkBase } from '../shared/reference-links'
 import type { TaskListInput, TaskToggleInput } from '../shared/tasks'
 import type {
@@ -38,7 +39,6 @@ import {
   type ProviderId
 } from '../shared/provider-registry'
 
-const MAX_PATH_LENGTH = 4096
 const MAX_FILE_NAME_LENGTH = 255
 const MAX_QUERY_LENGTH = 2000
 const MAX_WINDOW_DIMENSION = 10000
@@ -109,36 +109,8 @@ function assertObjectWithKeys(
   return input
 }
 
-function hasParentTraversal(value: string): boolean {
-  return value.split(/[\\/]+/).some((segment) => segment === '..')
-}
-
 function assertValidWorkspaceSourcePath(value: unknown): string {
-  if (
-    typeof value !== 'string' ||
-    value.length === 0 ||
-    value.length > MAX_PATH_LENGTH ||
-    value.includes('\0') ||
-    isAbsolute(value) ||
-    win32.isAbsolute(value) ||
-    hasParentTraversal(value)
-  ) {
-    throw new Error('Invalid workspace source path')
-  }
-
-  const sourcePath = normalize(value)
-  if (
-    sourcePath === '.' ||
-    sourcePath === '..' ||
-    sourcePath.includes('\0') ||
-    isAbsolute(sourcePath) ||
-    win32.isAbsolute(sourcePath) ||
-    sourcePath.startsWith(`..${sep}`)
-  ) {
-    throw new Error('Invalid workspace source path')
-  }
-
-  return sourcePath
+  return normalizeWorkspaceSourcePath(value)
 }
 
 function assertValidFileName(value: unknown): string {

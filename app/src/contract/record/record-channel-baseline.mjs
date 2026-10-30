@@ -8,6 +8,8 @@ import { join, resolve } from 'node:path'
 
 const srcRoot = resolve(import.meta.dirname, '../..')
 const files = []
+// A plain .mjs one-shot, retired in V4: it cannot carry a TypeScript return type.
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 const walk = (dir) => {
   for (const name of readdirSync(dir)) {
     const path = join(dir, name)
