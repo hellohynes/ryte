@@ -6,6 +6,7 @@ import { describe, expect, it } from 'vitest'
 import { ContractInputError, parseOperationInput } from './define'
 import { list, refresh, toggle } from './tasks'
 import { decode } from './tasks.vectors.codec'
+import { ACCEPTED_DEVIATIONS } from './tasks.vectors.deviations'
 import { taskVectors } from './tasks.vectors.inputs'
 
 interface RecordedVector {
@@ -22,21 +23,6 @@ const recorded = (
 ).vectors
 
 const schemas = { list: list.input, toggle: toggle.input }
-
-// Vectors where the new schema is deliberately stricter than the recorded legacy behavior. Each is
-// asserted (not skipped), so a change in either direction fails the test.
-const ACCEPTED_DEVIATIONS: Record<string, { accepted: false; reason: string }> = {
-  'list: inherited key is ignored': {
-    accepted: false,
-    reason:
-      'Zod strict objects reject inherited enumerable keys, the legacy Object.keys check ignored them. ' +
-      'Structured clone over IPC delivers plain objects, so the input is unreachable.'
-  },
-  'toggle: inherited key is ignored': {
-    accepted: false,
-    reason: 'Same as the list case.'
-  }
-}
 
 describe('tasks contract against the golden vectors recorded from the pre-change validators', () => {
   it('records exactly one expectation for every authored vector', () => {

@@ -6,6 +6,9 @@ import { app, BrowserWindow, clipboard, dialog, ipcMain, shell, type WebContents
 
 import { refreshAppMenu } from './app-menu'
 import { applyColorMode } from './appearance'
+import { createEmitter, registerOperations } from './contract/register'
+import { createTaskHandlers } from './contract/tasks-handlers'
+import { contract } from '../contract'
 import { taskFactsService } from './facts/task-facts-service'
 import { indexerService } from './indexing/indexer-service'
 import { walkNotes } from './indexing/walker'
@@ -20,8 +23,6 @@ import {
   assertValidSearchQuery,
   assertValidSourceFileInput,
   assertValidSettingsPatch,
-  assertValidTaskListInput,
-  assertValidTaskToggleInput,
   assertValidWorkspaceCloseTabInput,
   assertValidWorkspaceFileRefInput,
   assertValidWorkspaceFocusTabInput,
@@ -169,6 +170,8 @@ function getOrCreateSearchService(): SearchService | null {
   }
   return searchService
 }
+
+const emit = createEmitter(() => BrowserWindow.getAllWindows())
 
 /**
  * Register all IPC handlers once during app.whenReady(). Search and indexing
@@ -431,30 +434,8 @@ export function registerIpc(): void {
     return { trashed: true, workspace }
   })
 
-  ipcMain.handle('tasks:list', async (_event, input: unknown) => {
-    const notesRoot = settingsStore.load().notesRoot
-    return taskFactsService.list(notesRoot, assertValidTaskListInput(input))
-  })
-
-  ipcMain.handle('tasks:refresh', async () => {
-    const notesRoot = settingsStore.load().notesRoot
-    const snapshot = await taskFactsService.refresh(notesRoot)
-    return {
-      notesRoot: snapshot.notesRoot,
-      taskCount: snapshot.tasks.length,
-      refreshedAt: snapshot.refreshedAt
-    }
-  })
-
-  ipcMain.handle('tasks:toggle', async (_event, input: unknown) => {
-    const notesRoot = settingsStore.load().notesRoot
-    const result = await taskFactsService.toggle(notesRoot, assertValidTaskToggleInput(input))
-    if (result.ok) {
-      for (const win of BrowserWindow.getAllWindows()) {
-        win.webContents.send('tasks:changed')
-      }
-    }
-    return result
+  registerOperations(ipcMain, contract, {
+    tasks: createTaskHandlers({ service: taskFactsService, settings: settingsStore, emit })
   })
 
   ipcMain.handle('files:read', async (_event, absPath: unknown) => {
@@ -554,9 +535,7 @@ export function registerIpc(): void {
     if (event.notesRoot !== notesRoot) return
 
     taskFactsService.markStale()
-    for (const win of BrowserWindow.getAllWindows()) {
-      win.webContents.send('tasks:changed')
-    }
+    emit(contract.tasks.events.changed)
 
     void (async () => {
       let catalogChange: FileCatalogChangeEvent | undefined
