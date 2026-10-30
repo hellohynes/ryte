@@ -123,3 +123,7 @@ Tagged releases use the `v` prefix, for example `v0.1.0`. GitHub Releases publis
 All storage and native modules live in the **main process**. The renderer communicates exclusively via typed IPC channels (`window.ryte.*`) exposed through a contextBridge preload. Secrets are encrypted via macOS Keychain (`safeStorage`); plaintext keys never touch disk.
 
 Development planning docs may be kept in dated notes folders when requested.
+
+## License
+
+Ryte is created and maintained by [Joshua Hynes](https://joshuahynes.com). It is free to download and use. The source is public for reference and is not licensed for reuse or redistribution, and the name and icon are not licensed either. Contributions are not being accepted for now.
