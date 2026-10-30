@@ -46,12 +46,10 @@ function echoHandlers(): {
   return { handlers: { tasks: spies } as unknown as Handlers<Contract>, spies }
 }
 
-const baseline = JSON.parse(
-  readFileSync(
-    fileURLToPath(new URL('../../contract/channels.baseline.json', import.meta.url)),
-    'utf8'
-  )
-) as { request: string[]; events: string[] }
+// The wire strings, copied from the pre-contract code (recorded at a9ce30b in channels.baseline.json, since
+// retired). They are the contract with the renderer, so they are pinned here as literals.
+const TASKS_REQUEST_CHANNELS = ['tasks:list', 'tasks:refresh', 'tasks:toggle']
+const TASKS_EVENT_CHANNEL = 'tasks:changed'
 
 const recorded = (
   JSON.parse(
@@ -88,17 +86,12 @@ describe('registerOperations: validation in front of every handler', () => {
     }
   })
 
-  it('registers exactly the tasks request channels, equal to the recorded baseline subset', () => {
+  it('registers exactly the tasks request channels and owns the tasks event channel', () => {
     const { ipc, listeners } = fakeIpc()
     registerOperations(ipc, contract, echoHandlers().handlers)
 
-    const registered = [...listeners.keys()].sort()
-    expect(registered).toEqual(['tasks:list', 'tasks:refresh', 'tasks:toggle'])
-    expect(registered).toEqual(baseline.request.filter((channel) => channel.startsWith('tasks:')))
-    expect([contract.tasks.events.changed.channel]).toEqual(
-      baseline.events.filter((channel) => channel.startsWith('tasks:'))
-    )
-    expect(contract.tasks.events.changed.channel).toBe('tasks:changed')
+    expect([...listeners.keys()].sort()).toEqual(TASKS_REQUEST_CHANNELS)
+    expect(contract.tasks.events.changed.channel).toBe(TASKS_EVENT_CHANNEL)
   })
 
   it('passes the calling sender to a sender-aware handler and validates its input', async () => {

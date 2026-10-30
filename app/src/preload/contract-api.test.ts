@@ -1,6 +1,3 @@
-import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
-
 import { describe, expect, it, vi } from 'vitest'
 
 import { manifest } from '../contract/manifest.generated'
@@ -39,12 +36,10 @@ function fakeIpc(): {
   }
 }
 
-const baseline = JSON.parse(
-  readFileSync(
-    fileURLToPath(new URL('../contract/channels.baseline.json', import.meta.url)),
-    'utf8'
-  )
-) as { request: string[]; events: string[] }
+// The wire strings, copied from the pre-contract code (recorded at a9ce30b in channels.baseline.json, since
+// retired). They are the contract with the main process, so they are pinned here as literals.
+const TASKS_REQUEST_CHANNELS = ['tasks:list', 'tasks:refresh', 'tasks:toggle']
+const TASKS_EVENT_CHANNELS = ['tasks:changed']
 
 const toggleInput = {
   sourcePath: 'folder/tasks.md',
@@ -73,13 +68,8 @@ describe('createContractApi from the generated manifest', () => {
     api.tasks.onChanged(() => undefined)
 
     const invoked = invoke.mock.calls.map((call) => call[0]).sort()
-    const tasksRequests = baseline.request.filter((channel) => channel.startsWith('tasks:'))
-    expect(invoked).toEqual(['tasks:list', 'tasks:refresh', 'tasks:toggle'])
-    expect(invoked).toEqual(tasksRequests)
-
-    const subscribed = on.mock.calls.map((call) => call[0])
-    expect(subscribed).toEqual(['tasks:changed'])
-    expect(subscribed).toEqual(baseline.events.filter((channel) => channel.startsWith('tasks:')))
+    expect(invoked).toEqual(TASKS_REQUEST_CHANNELS)
+    expect(on.mock.calls.map((call) => call[0])).toEqual(TASKS_EVENT_CHANNELS)
   })
 
   it('forwards at most the first argument: none for list() and refresh(), the input otherwise', async () => {
