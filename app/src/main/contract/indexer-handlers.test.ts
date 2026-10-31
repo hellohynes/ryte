@@ -90,10 +90,13 @@ describe('indexer clearAndRebuild', () => {
     expect(done).toBe(true)
   })
 
-  it('never calls beforeClear itself: not when the service refuses, fails, or never calls it', async () => {
+  it('never calls beforeClear itself: not when the service returns without calling it, and not when it fails', async () => {
     const beforeClear = vi.fn()
-    const refuse = fakeService({ clearAndRebuild: vi.fn(async () => undefined) })
-    await createIndexerHandlers({ service: refuse, beforeClear }).clearAndRebuild(undefined, ctx)
+    const returnsWithoutCalling = fakeService({ clearAndRebuild: vi.fn(async () => undefined) })
+    await createIndexerHandlers({ service: returnsWithoutCalling, beforeClear }).clearAndRebuild(
+      undefined,
+      ctx
+    )
 
     const fail = fakeService({ clearAndRebuild: vi.fn(async () => Promise.reject(new Error('x'))) })
     await expect(
