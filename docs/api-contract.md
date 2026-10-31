@@ -18,7 +18,7 @@ The list of everything that exists today is generated: [api-index.md](api-index.
 | What an operation does in the main process | `app/src/main/contract/<area>-handlers.ts` | Yes: one handler per operation |
 | Registration, validation, the event emitter | `app/src/main/contract/register.ts` | Rarely |
 | `window.ryte.<area>` methods and `on<Event>` subscribers | built from the manifest by `app/src/preload/contract-api.ts` | No |
-| Wire types by name, for code that imports them (the `tasks` types live in `app/src/shared/tasks.ts`) | `app/src/shared/<area>.ts` | Only to re-export types inferred from the definition (`export type { ... } from '../contract/<area>'`); never write a type by hand. A new operation does not need one unless code imports its types by name |
+| Wire types by name, for code that imports them (for example `app/src/shared/tasks.ts` and `app/src/shared/indexer.ts`) | `app/src/shared/<area>.ts` | Only to re-export types inferred from the definition (`export type { ... } from '../contract/<area>'`); never write a type by hand. A new operation does not need one unless code imports its types by name |
 | Operations that have not moved yet | `app/scripts/legacy.json` and the old code in `ipc.ts`, `ipc-validation.ts` and `preload/index.ts` | Only to shrink them |
 | The enforcement | `app/scripts/check-contract.mjs` | Rarely |
 
