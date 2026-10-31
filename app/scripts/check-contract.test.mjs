@@ -541,8 +541,97 @@ test('fails closed when the generated manifest changes shape', () => {
       'src/contract/manifest.generated.ts': `export const areas = { tasks: { operations: {}, events: {} } }\n`
     },
     'preload-area',
-    /cannot find `const manifest = \{ \.\.\. \}`/
+    /cannot read `const manifest = \{ \.\.\. \}`/
   )
+})
+
+test('an entry that reaches IPC through a helper, an alias, a constant or an opaque value is live', () => {
+  const live = { ...baseLegacy, channels: { request: ['app:get-version'], event: ['viewer:x'] } }
+  const source = (top, entry) =>
+    `import { ipcRenderer } from 'electron'
+${top}
+interface LegacyRyteApi { app: { x(): void }; tasks: { x(): void } }
+const legacyApi: LegacyRyteApi = { app: { x: 1 }, tasks: ${entry} }
+ipcRenderer.invoke('app:get-version')
+`
+  const cases = {
+    'a helper that takes the channel': [
+      `function subscribe(channel: string, cb: () => void): void { ipcRenderer.on(channel, cb) }`,
+      `{ on: (cb) => subscribe('viewer:x', cb) }`
+    ],
+    'an alias of ipcRenderer': [
+      `const ipc = ipcRenderer`,
+      `{ on: (cb) => ipc.on('viewer:x', cb) }`
+    ],
+    'a channel constant': [`const CHANNEL = 'viewer:x'`, `{ channel: () => CHANNEL }`],
+    'a channel string with no call': [``, `{ channel: () => 'viewer:x' }`],
+    'an identifier value': [`const tasksApi = { x: 1 }`, `tasksApi`],
+    'a call value': [`function makeTasks() { return { x: 1 } }`, `makeTasks()`]
+  }
+  for (const [label, [top, entry]] of Object.entries(cases)) {
+    assert.deepEqual(
+      preloadAreaViolations({ 'src/preload/index.ts': source(top, entry) }, live),
+      [],
+      label
+    )
+  }
+  // A shorthand entry is opaque too.
+  const shorthand = `import { ipcRenderer } from 'electron'
+const tasks = { x: 1 }
+interface LegacyRyteApi { app: { x(): void }; tasks: { x(): void } }
+const legacyApi: LegacyRyteApi = { app: { x: 1 }, tasks }
+ipcRenderer.invoke('app:get-version')
+`
+  assert.deepEqual(preloadAreaViolations({ 'src/preload/index.ts': shorthand }), [])
+})
+
+test('an entry that only mentions IPC in a comment, or uses its own parameters, is dead', () => {
+  const dead = `import { ipcRenderer } from 'electron'
+interface LegacyRyteApi { app: { x(): void }; tasks: { x(): void } }
+const legacyApi: LegacyRyteApi = {
+  app: { x: 1 },
+  // used to call ipcRenderer.invoke('tasks:list')
+  tasks: { list: (input) => input }
+}
+ipcRenderer.invoke('app:get-version')
+`
+  assert.match(
+    messages(preloadAreaViolations({ 'src/preload/index.ts': dead })),
+    /tasks is fully in the contract[^\n]*entry in legacyApi/
+  )
+})
+
+test('fails closed on a wrapper the rule does not unwrap', () => {
+  for (const object of [
+    `const legacyApi = <LegacyRyteApi>{ app: { x: 1 }, tasks: { x: 1 } }`,
+    `const legacyApi = Object.freeze({ app: { x: 1 }, tasks: { x: 1 } })`
+  ]) {
+    assert.match(
+      messages(
+        preloadAreaViolations({
+          'src/preload/index.ts': `import { ipcRenderer } from 'electron'\ninterface LegacyRyteApi { app: { x(): void } }\n${object}\nipcRenderer.invoke('app:get-version')\n`
+        })
+      ),
+      /cannot find both a top-level/,
+      object
+    )
+  }
+})
+
+test('fails closed on a manifest with a spread or a computed key, and a deleted manifest is still caught', () => {
+  for (const manifest of [
+    `export const manifest = { ...other } as const\n`,
+    `export const manifest = { ['tasks']: { operations: {}, events: {} } } as const\n`
+  ]) {
+    expectViolation(
+      { 'src/contract/manifest.generated.ts': manifest },
+      'preload-area',
+      /cannot read `const manifest/
+    )
+  }
+  // Without the manifest, the contract channels the code still names have no home: the inventory rule fails.
+  const violations = run({ 'src/contract/manifest.generated.ts': null })
+  assert.ok(rules(violations).includes('inventory'), messages(violations) || '(none)')
 })
 
 test('the preload-area rule needs a contract area and a preload file', () => {

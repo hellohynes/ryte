@@ -177,12 +177,15 @@ listed in `app/scripts/legacy.json`. Rules:
   preload builder). The renderer never touches `ipcRenderer` or `electron`.
 - A contract area with no channel left in `legacy.json` (channels are matched to an area by their prefix) keeps no
   dead entry in `LegacyRyteApi` or `legacyApi` in `app/src/preload/index.ts`. The contract method wins the merge, so
-  a leftover hand-written entry that no longer calls `ipcRenderer` would otherwise go unnoticed. An entry that still
-  calls IPC stays, for example members that use another area's channels, and a half-migrated area keeps its
-  entries. The rule fails instead of skipping when it cannot read something: a renamed declaration (it looks for a
-  top-level `interface LegacyRyteApi` and `const legacyApi = { ... }`, with or without `as` or `satisfies`), a spread,
-  a computed key, an extended interface, or a manifest that no longer has the `const manifest = { ... }` shape.
-  Rename or restructure those and the check's own tests say what to update in `scripts/check-contract.mjs`.
+  a leftover hand-written entry that does nothing would otherwise go unnoticed. An entry counts as dead only when it
+  is an inline object or function that references no IPC, no legacy channel string and nothing declared or imported
+  at the top level of the file (a helper, an alias, a channel constant); a value the rule cannot look into (an
+  identifier, a shorthand, a call) counts as live, so the rule never advises deleting working code. A half-migrated
+  area keeps its entries. The rule fails instead of skipping when it cannot read something: a renamed declaration
+  (it looks for a top-level `interface LegacyRyteApi` and `const legacyApi = { ... }`, with or without `as`,
+  `satisfies` or parentheses), a spread, a computed key, an extended interface, or a manifest that no longer has the
+  `const manifest = { ... }` shape. Rename or restructure those and the check's own tests say what to update in
+  `scripts/check-contract.mjs`.
 - `legacy.json` cannot grow without editing the check's own test, whose numbers are exact: a migration that shrinks
   the list lowers them.
 

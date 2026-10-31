@@ -246,7 +246,8 @@ const topLevelDeclarations = (sourceFile) =>
 
 /**
  * The area names in the generated manifest (the top-level keys of `const manifest = { ... }`), or null when
- * that declaration cannot be found, so a changed manifest shape fails the check instead of disabling the rule.
+ * that declaration cannot be found or has a spread or computed key, so a changed manifest shape fails the
+ * check instead of disabling the rule.
  */
 function manifestAreas(manifestSource) {
   const declaration = topLevelDeclarations(parse(MANIFEST, manifestSource)).find(
@@ -254,15 +255,63 @@ function manifestAreas(manifestSource) {
   )
   const value = declaration && unwrap(declaration.initializer)
   if (!value || !ts.isObjectLiteralExpression(value)) return null
-  return value.properties.map(propertyName).filter(Boolean)
+  const names = value.properties.map(propertyName)
+  return names.includes(null) ? null : names
 }
 
-const callsIpc = (node) => {
-  let found = false
-  visit(node, (child) => {
-    if (ts.isIdentifier(child) && IPC_NAMES.has(child.text)) found = true
+/** Names declared or imported at the top level of the file: helpers, aliases and constants an entry may use. */
+const topLevelNames = (sourceFile) => {
+  const names = new Set()
+  for (const statement of sourceFile.statements) {
+    if (ts.isImportDeclaration(statement) && statement.importClause) {
+      const { name, namedBindings } = statement.importClause
+      if (name) names.add(name.text)
+      if (namedBindings && ts.isNamespaceImport(namedBindings)) names.add(namedBindings.name.text)
+      if (namedBindings && ts.isNamedImports(namedBindings))
+        for (const element of namedBindings.elements) names.add(element.name.text)
+    } else if (ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations)
+        if (ts.isIdentifier(declaration.name)) names.add(declaration.name.text)
+    } else if (
+      (ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) &&
+      statement.name
+    ) {
+      names.add(statement.name.text)
+    }
+  }
+  names.delete('legacyApi')
+  return names
+}
+
+/**
+ * Whether a hand-written `legacyApi` entry may still be doing something. It is dead only when it is an inline
+ * object or function that references no IPC, no legacy channel string and nothing declared or imported at the
+ * top level of the file (a helper, an alias, a channel constant). A value the rule cannot look into (an
+ * identifier, a shorthand, a call) counts as live, so the rule never advises deleting working code.
+ */
+function entryIsLive(property, names, legacyChannels) {
+  if (!ts.isPropertyAssignment(property)) return true
+  const value = unwrap(property.initializer)
+  if (
+    !ts.isObjectLiteralExpression(value) &&
+    !ts.isArrowFunction(value) &&
+    !ts.isFunctionExpression(value)
+  )
+    return true
+  let live = false
+  visit(value, (node) => {
+    if (live) return
+    if (ts.isIdentifier(node)) {
+      const isKey = ts.isPropertyAssignment(node.parent) && node.parent.name === node
+      if (!isKey && (IPC_NAMES.has(node.text) || names.has(node.text))) live = true
+    } else if (
+      (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) &&
+      legacyChannels.has(node.text)
+    ) {
+      live = true
+    }
   })
-  return found
+  return live
 }
 
 /**
@@ -270,8 +319,9 @@ const callsIpc = (node) => {
  * object (top-level declarations only). An object entry is `live` when it still calls ipcRenderer.
  * `unreadable` lists what the rule cannot see: a spread, a computed key, an extended interface.
  */
-function legacyPreloadAreas(path, text) {
+function legacyPreloadAreas(path, text, legacyChannels) {
   const sourceFile = parse(path, text)
+  const names = topLevelNames(sourceFile)
   const found = { interface: false, object: false, entries: [], unreadable: [] }
 
   for (const statement of sourceFile.statements) {
@@ -315,7 +365,7 @@ function legacyPreloadAreas(path, text) {
           name,
           line: lineOf(sourceFile, property),
           where: 'legacyApi',
-          live: callsIpc(property)
+          live: entryIsLive(property, names, legacyChannels)
         })
       } else {
         found.unreadable.push({
@@ -555,7 +605,7 @@ export function checkContract({ files, legacy, manifestSource }) {
         'preload-area',
         MANIFEST,
         0,
-        'cannot find `const manifest = { ... }`; if the generated manifest changed shape, update scripts/check-contract.mjs so stale preload entries are still caught'
+        'cannot read `const manifest = { ... }` (a spread or computed key also fails); if the generated manifest changed shape, update scripts/check-contract.mjs so stale preload entries are still caught'
       )
     }
   } else if (PRELOAD in files) {
@@ -564,13 +614,13 @@ export function checkContract({ files, legacy, manifestSource }) {
     )
     const migratedAreas = areas.filter((area) => !areasWithLegacyChannels.has(area))
     if (migratedAreas.length > 0) {
-      const legacyPreload = legacyPreloadAreas(PRELOAD, files[PRELOAD])
+      const legacyPreload = legacyPreloadAreas(PRELOAD, files[PRELOAD], legacyChannels)
       if (!legacyPreload.interface || !legacyPreload.object) {
         fail(
           'preload-area',
           PRELOAD,
           0,
-          'cannot find both a top-level `interface LegacyRyteApi` and `const legacyApi = { ... }` (a wrapper such as `as` or `satisfies` is fine); if they were renamed, update scripts/check-contract.mjs so stale preload entries are still caught'
+          'cannot find both a top-level `interface LegacyRyteApi` and `const legacyApi = { ... }` (`as`, `satisfies` and parentheses around the object are fine; `<T>{ ... }` and `Object.freeze(...)` are not); if they were renamed or wrapped, update scripts/check-contract.mjs so stale preload entries are still caught'
         )
       }
       for (const { where, line, what } of legacyPreload.unreadable) {
@@ -592,7 +642,7 @@ export function checkContract({ files, legacy, manifestSource }) {
           'preload-area',
           PRELOAD,
           line,
-          `${name} is fully in the contract (no ${name}: channel is left in scripts/legacy.json) and its hand-written entry in ${where} no longer calls IPC, so it is stale; the contract method wins the merge and the old one only hides a mistake. Delete it`
+          `${name} is fully in the contract (no ${name}: channel is left in scripts/legacy.json) and its hand-written entry in ${where} does nothing with IPC, so it is stale; the contract method wins the merge and the old one only hides a mistake. Delete it`
         )
       }
     }
