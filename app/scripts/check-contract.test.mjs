@@ -19,12 +19,11 @@ const baseLegacy = {
 }
 
 // A hand-written preload like the real one: an interface and an object of areas that have not moved yet.
-function preload({ interfaceAreas = ['app'], objectAreas = ['app'], extra = '' } = {}) {
-  const members = (areas) => areas.map((area) => `${area}: { x: 1 }`).join('; ')
+function preload({ iface = 'app: { x(): void }', object = 'app: { x: 1 }', extra = '' } = {}) {
   return [
     `import { ipcRenderer } from 'electron'`,
-    `interface LegacyRyteApi { ${interfaceAreas.map((area) => `${area}: { x(): void }`).join('; ')} }`,
-    `const legacyApi: LegacyRyteApi = { ${members(objectAreas)} }`,
+    `interface LegacyRyteApi { ${iface} }`,
+    `const legacyApi: LegacyRyteApi = { ${object} }`,
     `ipcRenderer.invoke('app:get-version')`,
     extra
   ].join('\n')
@@ -391,55 +390,162 @@ test('a sendAllowed file may call send, and needs a reason', () => {
   )
 })
 
-// The ratchet: scripts/legacy.json can only shrink. The numbers are exact on purpose, so a migration that
-// shrinks the list must lower them here, and nothing can grow the list back to an old ceiling without a
-// deliberate edit of this test. Raising them needs a reason in the change that does it.
-test('rejects a hand-written preload entry for an area that has fully moved into the contract', () => {
-  // `tasks` is in the manifest and has no channel left in legacy.json.
-  expectViolation(
-    { 'src/preload/index.ts': preload({ interfaceAreas: ['app', 'tasks'] }) },
-    'preload-area',
-    /tasks is fully in the contract[^\n]*LegacyRyteApi/
-  )
-  expectViolation(
-    { 'src/preload/index.ts': preload({ objectAreas: ['app', 'tasks'] }) },
-    'preload-area',
-    /tasks is fully in the contract[^\n]*legacyApi/
+const preloadAreaViolations = (changes, legacy) =>
+  run(changes, legacy).filter((violation) => violation.rule === 'preload-area')
+
+test('rejects a dead hand-written preload entry for an area that has fully moved into the contract', () => {
+  // `tasks` is in the manifest and has no channel left in legacy.json; the entry calls no IPC.
+  const stale = {
+    'src/preload/index.ts': preload({
+      iface: 'app: { x(): void }; tasks: { x(): void }',
+      object: 'app: { x: 1 }; tasks: { x: 1 }'
+    })
+  }
+  const text = messages(preloadAreaViolations(stale))
+  assert.match(text, /tasks is fully in the contract[^\n]*LegacyRyteApi/)
+  assert.match(text, /tasks is fully in the contract[^\n]*legacyApi/)
+  // A quoted key is read like any other.
+  assert.equal(
+    preloadAreaViolations({
+      'src/preload/index.ts': preload({
+        iface: `app: { x(): void }; 'tasks': { x(): void }`,
+        object: `app: { x: 1 }; 'tasks': { x: 1 }`
+      })
+    }).length,
+    2
   )
 })
 
-test('a half-migrated area may keep its hand-written preload entry', () => {
-  const halfMigrated = {
+test('rejects an interface entry whose implementation is missing', () => {
+  expectViolation(
+    { 'src/preload/index.ts': preload({ iface: 'app: { x(): void }; tasks: { x(): void }' }) },
+    'preload-area',
+    /tasks is fully in the contract[^\n]*LegacyRyteApi/
+  )
+})
+
+test('a fully migrated area may keep an entry that still calls IPC on another area channel', () => {
+  // files.onChange-style: the area key differs from the channel prefix, and the entry is live.
+  const live = {
     ...baseLegacy,
-    channels: { request: ['app:get-version', 'tasks:old'], event: [] }
+    channels: { request: ['app:get-version'], event: ['viewer:changed'] }
   }
   const violations = run(
     {
       'src/preload/index.ts': preload({
-        interfaceAreas: ['app', 'tasks'],
-        objectAreas: ['app', 'tasks'],
-        extra: `ipcRenderer.invoke('tasks:old')`
+        iface: 'app: { x(): void }; tasks: { onChange(): void }',
+        object: `app: { x: 1 }; tasks: { onChange: () => ipcRenderer.on('viewer:changed', () => 1) }`
       })
     },
-    halfMigrated
+    live
   )
+  assert.deepEqual(violations, [])
+})
+
+test('an area with only a request channel or only an event channel left is half migrated', () => {
+  for (const [channels, extra] of [
+    [{ request: ['app:get-version', 'tasks:old'], event: [] }, `ipcRenderer.invoke('tasks:old')`],
+    [
+      { request: ['app:get-version'], event: ['tasks:old-event'] },
+      `ipcRenderer.on('tasks:old-event', () => 1)`
+    ]
+  ]) {
+    const violations = run(
+      {
+        'src/preload/index.ts': preload({
+          iface: 'app: { x(): void }; tasks: { x(): void }',
+          object: 'app: { x: 1 }; tasks: { x: 1 }',
+          extra
+        })
+      },
+      { ...baseLegacy, channels }
+    )
+    assert.deepEqual(
+      violations.filter((violation) => violation.rule === 'preload-area'),
+      []
+    )
+  }
+})
+
+test('a nested key named like an area is not an area entry', () => {
   assert.deepEqual(
-    rules(violations).filter((rule) => rule === 'preload-area'),
+    preloadAreaViolations({
+      'src/preload/index.ts': preload({
+        iface: 'app: { tasks: { x(): void } }',
+        object: 'app: { tasks: { x: 1 } }'
+      })
+    }),
     []
   )
 })
 
-test('fails closed when the hand-written preload declarations are renamed or missing', () => {
+test('reads the declarations through as and satisfies, and only at the top level', () => {
+  const body = (object) =>
+    `import { ipcRenderer } from 'electron'\ninterface LegacyRyteApi { app: { x(): void }; tasks: { x(): void } }\n${object}\nipcRenderer.invoke('app:get-version')\n`
+  for (const object of [
+    `const legacyApi = { app: { x: 1 }, tasks: { x: 1 } } as LegacyRyteApi`,
+    `const legacyApi = { app: { x: 1 }, tasks: { x: 1 } } satisfies LegacyRyteApi`
+  ]) {
+    const text = messages(preloadAreaViolations({ 'src/preload/index.ts': body(object) }))
+    // The object is found through the wrapper (so no "cannot find" failure) and its entry is the one flagged.
+    assert.doesNotMatch(text, /cannot find/, object)
+    assert.match(text, /tasks is fully in the contract[^\n]*entry in legacyApi/, object)
+  }
+  // A same-named local in a function is not the real object, and does not hide or add an entry.
+  const withLocal = `import { ipcRenderer } from 'electron'
+interface LegacyRyteApi { app: { x(): void } }
+const legacyApi: LegacyRyteApi = { app: { x: 1 } }
+function helper() { const legacyApi = { tasks: { x: 1 } }; return legacyApi }
+ipcRenderer.invoke('app:get-version')
+`
+  assert.deepEqual(preloadAreaViolations({ 'src/preload/index.ts': withLocal }), [])
+})
+
+test('fails closed on what the preload-area rule cannot read', () => {
+  const declare = (iface, object) =>
+    `import { ipcRenderer } from 'electron'\ninterface LegacyRyteApi ${iface}\nconst legacyApi: LegacyRyteApi = ${object}\nipcRenderer.invoke('app:get-version')\n`
+  const cases = [
+    [
+      'renamed declarations',
+      `import { ipcRenderer } from 'electron'\nconst api = { tasks: {} }\nipcRenderer.invoke('app:get-version')\n`,
+      /cannot find both a top-level `interface LegacyRyteApi` and `const legacyApi/
+    ],
+    [
+      'a spread',
+      declare('{ app: { x(): void } }', '{ app: { x: 1 }, ...other }'),
+      /legacyApi spreads another object/
+    ],
+    [
+      'a computed key',
+      declare('{ app: { x(): void } }', `{ app: { x: 1 }, ['tasks']: { x: 1 } }`),
+      /legacyApi has a computed key/
+    ],
+    [
+      'an extended interface',
+      declare('extends Base { app: { x(): void } }', '{ app: { x: 1 } }'),
+      /LegacyRyteApi extends another type/
+    ]
+  ]
+  for (const [label, source, pattern] of cases) {
+    assert.match(
+      messages(preloadAreaViolations({ 'src/preload/index.ts': source })),
+      pattern,
+      label
+    )
+  }
+})
+
+test('fails closed when the generated manifest changes shape', () => {
   expectViolation(
     {
-      'src/preload/index.ts': `import { ipcRenderer } from 'electron'\nconst api = { tasks: {} }\nipcRenderer.invoke('app:get-version')\n`
+      'src/contract/manifest.generated.ts': `export const areas = { tasks: { operations: {}, events: {} } }\n`
     },
     'preload-area',
-    /cannot find both `interface LegacyRyteApi` and `const legacyApi/
+    /cannot find `const manifest = \{ \.\.\. \}`/
   )
 })
 
-test('the preload-area rule needs a fully migrated area and a preload file', () => {
+test('the preload-area rule needs a contract area and a preload file', () => {
   // No contract area at all: nothing to be stale, and no complaint about missing declarations.
   const empty = run({
     'src/contract/manifest.generated.ts': 'export const manifest = {} as const\n',
@@ -448,20 +554,23 @@ test('the preload-area rule needs a fully migrated area and a preload file', () 
     'src/preload/index.ts': `import { ipcRenderer } from 'electron'\nipcRenderer.invoke('app:get-version')\n`
   })
   assert.deepEqual(
-    rules(empty).filter((rule) => rule === 'preload-area'),
+    empty.filter((violation) => violation.rule === 'preload-area'),
     []
   )
-  // No preload file in the tree: skipped.
+  // No preload file in the tree: skipped (a missing legacy file is reported by the legacy-file rule).
   const noPreload = run(
     { 'src/preload/index.ts': null },
     { ...baseLegacy, files: ['src/main/ipc.ts'] }
   )
   assert.deepEqual(
-    rules(noPreload).filter((rule) => rule === 'preload-area'),
+    noPreload.filter((violation) => violation.rule === 'preload-area'),
     []
   )
 })
 
+// The ratchet: scripts/legacy.json can only shrink. The numbers are exact on purpose, so a migration that
+// shrinks the list must lower them here, and nothing can grow the list back to an old ceiling without a
+// deliberate edit of this test. Raising them needs a reason in the change that does it.
 test('legacy.json does not grow', () => {
   const legacy = JSON.parse(
     readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), 'legacy.json'), 'utf8')

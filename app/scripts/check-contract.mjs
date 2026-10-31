@@ -15,9 +15,13 @@
 //   imports      nothing under src/contract/ imports electron, and the generated manifest imports nothing;
 //                src/contract/ is value-imported only from src/main/ and, for the manifest alone, the
 //                preload builder; the renderer references neither ipcRenderer nor electron.
-//   preload-area a contract area with no channel left in legacy.json has no entry in the hand-written
-//                LegacyRyteApi interface or legacyApi object of src/preload/index.ts. The contract method wins
-//                the merge, so a leftover entry would otherwise sit there unnoticed.
+//   preload-area a contract area with no channel left in legacy.json (channels are matched by their prefix) must
+//                not keep an entry in the hand-written LegacyRyteApi interface or legacyApi object of
+//                src/preload/index.ts that no longer calls ipcRenderer. The contract method wins the merge, so
+//                a dead leftover would otherwise sit there unnoticed; an entry that still calls IPC (for
+//                example files.onChange on a viewer:* channel) is live and stays. Anything the rule cannot read
+//                (a spread, a computed key, an extended interface, a renamed declaration, a changed manifest)
+//                fails the check instead of being skipped.
 //
 // The check is a pure function over a map of file paths to source text, so every counterexample is a test
 // (check-contract.test.mjs).
@@ -223,50 +227,105 @@ const propertyName = (member) =>
     ? member.name.text
     : null
 
-/** The top-level keys of the `manifest` object in the generated manifest: one per contract area. */
-function manifestAreas(manifestSource) {
-  const areas = []
-  visit(parse(MANIFEST, manifestSource), (node) => {
-    if (!ts.isVariableDeclaration(node) || node.name.getText() !== 'manifest' || !node.initializer)
-      return
-    let value = node.initializer
-    while (ts.isAsExpression(value) || ts.isSatisfiesExpression(value)) value = value.expression
-    if (!ts.isObjectLiteralExpression(value)) return
-    for (const property of value.properties) {
-      const name = propertyName(property)
-      if (name) areas.push(name)
-    }
-  })
-  return areas
+const unwrap = (expression) => {
+  let value = expression
+  while (
+    ts.isAsExpression(value) ||
+    ts.isSatisfiesExpression(value) ||
+    ts.isParenthesizedExpression(value)
+  )
+    value = value.expression
+  return value
 }
 
-/** The area keys of the hand-written preload API, from its interface and its object, with their lines. */
+/** The top-level statements' variable declarations, so a same-named local deeper in the file is ignored. */
+const topLevelDeclarations = (sourceFile) =>
+  sourceFile.statements.flatMap((statement) =>
+    ts.isVariableStatement(statement) ? [...statement.declarationList.declarations] : []
+  )
+
+/**
+ * The area names in the generated manifest (the top-level keys of `const manifest = { ... }`), or null when
+ * that declaration cannot be found, so a changed manifest shape fails the check instead of disabling the rule.
+ */
+function manifestAreas(manifestSource) {
+  const declaration = topLevelDeclarations(parse(MANIFEST, manifestSource)).find(
+    (candidate) => candidate.name.getText() === 'manifest' && candidate.initializer
+  )
+  const value = declaration && unwrap(declaration.initializer)
+  if (!value || !ts.isObjectLiteralExpression(value)) return null
+  return value.properties.map(propertyName).filter(Boolean)
+}
+
+const callsIpc = (node) => {
+  let found = false
+  visit(node, (child) => {
+    if (ts.isIdentifier(child) && IPC_NAMES.has(child.text)) found = true
+  })
+  return found
+}
+
+/**
+ * The area keys of the hand-written preload API, from the `LegacyRyteApi` interface and the `legacyApi`
+ * object (top-level declarations only). An object entry is `live` when it still calls ipcRenderer.
+ * `unreadable` lists what the rule cannot see: a spread, a computed key, an extended interface.
+ */
 function legacyPreloadAreas(path, text) {
   const sourceFile = parse(path, text)
-  const found = { interface: false, object: false, entries: [] }
-  visit(sourceFile, (node) => {
-    if (ts.isInterfaceDeclaration(node) && node.name.text === 'LegacyRyteApi') {
-      found.interface = true
-      for (const member of node.members) {
-        const name = propertyName(member)
-        if (name)
-          found.entries.push({ name, line: lineOf(sourceFile, member), where: 'LegacyRyteApi' })
+  const found = { interface: false, object: false, entries: [], unreadable: [] }
+
+  for (const statement of sourceFile.statements) {
+    if (!ts.isInterfaceDeclaration(statement) || statement.name.text !== 'LegacyRyteApi') continue
+    found.interface = true
+    if (statement.heritageClauses?.length) {
+      found.unreadable.push({
+        where: 'LegacyRyteApi',
+        line: lineOf(sourceFile, statement),
+        what: 'extends another type'
+      })
+    }
+    for (const member of statement.members) {
+      const name = propertyName(member)
+      if (name) {
+        found.entries.push({
+          name,
+          line: lineOf(sourceFile, member),
+          where: 'LegacyRyteApi',
+          live: false
+        })
+      } else {
+        found.unreadable.push({
+          where: 'LegacyRyteApi',
+          line: lineOf(sourceFile, member),
+          what: 'has a computed or unnamed member'
+        })
       }
     }
-    if (
-      ts.isVariableDeclaration(node) &&
-      node.name.getText() === 'legacyApi' &&
-      node.initializer &&
-      ts.isObjectLiteralExpression(node.initializer)
-    ) {
-      found.object = true
-      for (const property of node.initializer.properties) {
-        const name = propertyName(property)
-        if (name)
-          found.entries.push({ name, line: lineOf(sourceFile, property), where: 'legacyApi' })
+  }
+
+  for (const declaration of topLevelDeclarations(sourceFile)) {
+    if (declaration.name.getText() !== 'legacyApi' || !declaration.initializer) continue
+    const value = unwrap(declaration.initializer)
+    if (!ts.isObjectLiteralExpression(value)) continue
+    found.object = true
+    for (const property of value.properties) {
+      const name = propertyName(property)
+      if (name) {
+        found.entries.push({
+          name,
+          line: lineOf(sourceFile, property),
+          where: 'legacyApi',
+          live: callsIpc(property)
+        })
+      } else {
+        found.unreadable.push({
+          where: 'legacyApi',
+          line: lineOf(sourceFile, property),
+          what: ts.isSpreadAssignment(property) ? 'spreads another object' : 'has a computed key'
+        })
       }
     }
-  })
+  }
   return found
 }
 
@@ -488,31 +547,54 @@ export function checkContract({ files, legacy, manifestSource }) {
       )
   }
 
-  // preload-area: a fully migrated area has no hand-written preload entry left.
-  const areasWithLegacyChannels = new Set(
-    [...legacyChannels].map((channel) => channel.split(':')[0])
-  )
-  const migratedAreas = manifestAreas(manifestSource).filter(
-    (area) => !areasWithLegacyChannels.has(area)
-  )
-  if (migratedAreas.length > 0 && PRELOAD in files) {
-    const legacyPreload = legacyPreloadAreas(PRELOAD, files[PRELOAD])
-    if (!legacyPreload.interface || !legacyPreload.object) {
+  // preload-area: a fully migrated area keeps no dead hand-written preload entry.
+  const areas = manifestAreas(manifestSource)
+  if (areas === null) {
+    if (manifestSource.trim() !== '') {
       fail(
         'preload-area',
-        PRELOAD,
+        MANIFEST,
         0,
-        'cannot find both `interface LegacyRyteApi` and `const legacyApi = { ... }`; if they were renamed, update scripts/check-contract.mjs so stale preload entries are still caught'
+        'cannot find `const manifest = { ... }`; if the generated manifest changed shape, update scripts/check-contract.mjs so stale preload entries are still caught'
       )
     }
-    for (const { name, line, where } of legacyPreload.entries) {
-      if (!migratedAreas.includes(name)) continue
-      fail(
-        'preload-area',
-        PRELOAD,
-        line,
-        `${name} is fully in the contract (no ${name}: channel is left in scripts/legacy.json), so its hand-written entry in ${where} is stale; the contract method wins the merge and the old one only hides a mistake. Delete it`
+  } else if (PRELOAD in files) {
+    const areasWithLegacyChannels = new Set(
+      [...legacyChannels].map((channel) => channel.split(':')[0])
+    )
+    const migratedAreas = areas.filter((area) => !areasWithLegacyChannels.has(area))
+    if (migratedAreas.length > 0) {
+      const legacyPreload = legacyPreloadAreas(PRELOAD, files[PRELOAD])
+      if (!legacyPreload.interface || !legacyPreload.object) {
+        fail(
+          'preload-area',
+          PRELOAD,
+          0,
+          'cannot find both a top-level `interface LegacyRyteApi` and `const legacyApi = { ... }` (a wrapper such as `as` or `satisfies` is fine); if they were renamed, update scripts/check-contract.mjs so stale preload entries are still caught'
+        )
+      }
+      for (const { where, line, what } of legacyPreload.unreadable) {
+        fail(
+          'preload-area',
+          PRELOAD,
+          line,
+          `${where} ${what}, which this rule cannot read; list the areas directly so a stale entry can be found`
+        )
+      }
+      const live = new Set(
+        legacyPreload.entries
+          .filter((entry) => entry.where === 'legacyApi' && entry.live)
+          .map((entry) => entry.name)
       )
+      for (const { name, line, where } of legacyPreload.entries) {
+        if (!migratedAreas.includes(name) || live.has(name)) continue
+        fail(
+          'preload-area',
+          PRELOAD,
+          line,
+          `${name} is fully in the contract (no ${name}: channel is left in scripts/legacy.json) and its hand-written entry in ${where} no longer calls IPC, so it is stale; the contract method wins the merge and the old one only hides a mistake. Delete it`
+        )
+      }
     }
   }
 
