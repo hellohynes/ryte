@@ -152,7 +152,9 @@ listed in `app/scripts/legacy.json`. Rules:
   1. Record what the old validator accepts and rejects first (authored inputs, expectations recorded from the old
      code) so the new schema is checked against behavior it cannot influence. `tasks.vectors.*` is the example.
   2. Define it in the contract, write the handler, and delete the old `ipcMain.handle`, the `assertValid*`
-     function and its test, and the preload method and type.
+     function and its test, and the preload method and type. When the last operation of an area moves, also
+     delete the area's key from `LegacyRyteApi` and `legacyApi` unless it still calls IPC for another area's
+     channels; `check:contract` fails on a dead one.
   3. Delete its channel from `legacy.json`. When a legacy file no longer reaches IPC at all, delete it from the
      list too. `check:contract` fails on a stale entry, so the list only ever shrinks.
 - A half-migrated area works: contract methods are merged into the hand-written `window.ryte.<area>` object.
@@ -173,6 +175,18 @@ listed in `app/scripts/legacy.json`. Rules:
   files through their `<script>` blocks.
 - `src/contract/` never imports Electron, and is imported by value only from `src/main/` (and, for the manifest, the
   preload builder). The renderer never touches `ipcRenderer` or `electron`.
+- A contract area with no channel left in `legacy.json` (channels are matched to an area by their prefix) keeps no
+  dead entry in `LegacyRyteApi` or `legacyApi` in `app/src/preload/index.ts`. The contract method wins the merge, so
+  a leftover hand-written entry that does nothing would otherwise go unnoticed. An entry counts as dead only when it
+  is an inline object or function that references no IPC, no legacy channel string and nothing declared or imported
+  at the top level of the file (a helper, an alias, a constant, an enum or a namespace) and uses no browser global
+  such as `window` or `process`; a value the rule cannot look into (an
+  identifier, a shorthand, a call) counts as live, so the rule never advises deleting working code. A half-migrated
+  area keeps its entries. The rule fails instead of skipping when it cannot read something: a renamed declaration
+  (it looks for a top-level `interface LegacyRyteApi` and `const legacyApi = { ... }`, with or without `as`,
+  `satisfies` or parentheses), a spread, a computed key, an extended interface, or a manifest that no longer has the
+  `const manifest = { ... }` shape. Rename or restructure those and the check's own tests say what to update in
+  `scripts/check-contract.mjs`.
 - `legacy.json` cannot grow without editing the check's own test, whose numbers are exact: a migration that shrinks
   the list lowers them.
 
