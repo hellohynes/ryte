@@ -18,6 +18,18 @@ const baseLegacy = {
   channels: { request: ['app:get-version'], event: [] }
 }
 
+// A hand-written preload like the real one: an interface and an object of areas that have not moved yet.
+function preload({ interfaceAreas = ['app'], objectAreas = ['app'], extra = '' } = {}) {
+  const members = (areas) => areas.map((area) => `${area}: { x: 1 }`).join('; ')
+  return [
+    `import { ipcRenderer } from 'electron'`,
+    `interface LegacyRyteApi { ${interfaceAreas.map((area) => `${area}: { x(): void }`).join('; ')} }`,
+    `const legacyApi: LegacyRyteApi = { ${members(objectAreas)} }`,
+    `ipcRenderer.invoke('app:get-version')`,
+    extra
+  ].join('\n')
+}
+
 // A small tree that follows every rule. Each test changes one thing and expects the matching violation.
 const baseFiles = {
   'src/contract/manifest.generated.ts': manifestSource,
@@ -25,7 +37,7 @@ const baseFiles = {
   'src/main/contract/register.ts': `export const emit = (win: any, event: any): void => win.webContents.send(event.channel)\n`,
   'src/preload/contract-api.ts': `import { manifest } from '../contract/manifest.generated'\nexport const api = manifest\n`,
   'src/main/ipc.ts': `import { ipcMain } from 'electron'\nipcMain.handle('app:get-version', () => 1)\n`,
-  'src/preload/index.ts': `import { ipcRenderer } from 'electron'\nipcRenderer.invoke('app:get-version')\n`,
+  'src/preload/index.ts': preload(),
   'src/shared/tasks.ts': `export type { A } from '../contract/tasks'\n`,
   'src/renderer/src/App.vue': `<script setup lang="ts">\nconst emit = defineEmits<{ 'update:open': [boolean] }>()\nemit('update:open', true)\n</script>\n`
 }
@@ -382,6 +394,74 @@ test('a sendAllowed file may call send, and needs a reason', () => {
 // The ratchet: scripts/legacy.json can only shrink. The numbers are exact on purpose, so a migration that
 // shrinks the list must lower them here, and nothing can grow the list back to an old ceiling without a
 // deliberate edit of this test. Raising them needs a reason in the change that does it.
+test('rejects a hand-written preload entry for an area that has fully moved into the contract', () => {
+  // `tasks` is in the manifest and has no channel left in legacy.json.
+  expectViolation(
+    { 'src/preload/index.ts': preload({ interfaceAreas: ['app', 'tasks'] }) },
+    'preload-area',
+    /tasks is fully in the contract[^\n]*LegacyRyteApi/
+  )
+  expectViolation(
+    { 'src/preload/index.ts': preload({ objectAreas: ['app', 'tasks'] }) },
+    'preload-area',
+    /tasks is fully in the contract[^\n]*legacyApi/
+  )
+})
+
+test('a half-migrated area may keep its hand-written preload entry', () => {
+  const halfMigrated = {
+    ...baseLegacy,
+    channels: { request: ['app:get-version', 'tasks:old'], event: [] }
+  }
+  const violations = run(
+    {
+      'src/preload/index.ts': preload({
+        interfaceAreas: ['app', 'tasks'],
+        objectAreas: ['app', 'tasks'],
+        extra: `ipcRenderer.invoke('tasks:old')`
+      })
+    },
+    halfMigrated
+  )
+  assert.deepEqual(
+    rules(violations).filter((rule) => rule === 'preload-area'),
+    []
+  )
+})
+
+test('fails closed when the hand-written preload declarations are renamed or missing', () => {
+  expectViolation(
+    {
+      'src/preload/index.ts': `import { ipcRenderer } from 'electron'\nconst api = { tasks: {} }\nipcRenderer.invoke('app:get-version')\n`
+    },
+    'preload-area',
+    /cannot find both `interface LegacyRyteApi` and `const legacyApi/
+  )
+})
+
+test('the preload-area rule needs a fully migrated area and a preload file', () => {
+  // No contract area at all: nothing to be stale, and no complaint about missing declarations.
+  const empty = run({
+    'src/contract/manifest.generated.ts': 'export const manifest = {} as const\n',
+    'src/contract/tasks.ts': '',
+    'src/shared/tasks.ts': '',
+    'src/preload/index.ts': `import { ipcRenderer } from 'electron'\nipcRenderer.invoke('app:get-version')\n`
+  })
+  assert.deepEqual(
+    rules(empty).filter((rule) => rule === 'preload-area'),
+    []
+  )
+  // No preload file in the tree: skipped.
+  const noPreload = run(
+    { 'src/preload/index.ts': null },
+    { ...baseLegacy, files: ['src/main/ipc.ts'] }
+  )
+  assert.deepEqual(
+    rules(noPreload).filter((rule) => rule === 'preload-area'),
+    []
+  )
+})
+
 test('legacy.json does not grow', () => {
   const legacy = JSON.parse(
     readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), 'legacy.json'), 'utf8')

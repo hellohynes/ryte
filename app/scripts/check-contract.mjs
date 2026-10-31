@@ -15,6 +15,9 @@
 //   imports      nothing under src/contract/ imports electron, and the generated manifest imports nothing;
 //                src/contract/ is value-imported only from src/main/ and, for the manifest alone, the
 //                preload builder; the renderer references neither ipcRenderer nor electron.
+//   preload-area a contract area with no channel left in legacy.json has no entry in the hand-written
+//                LegacyRyteApi interface or legacyApi object of src/preload/index.ts. The contract method wins
+//                the merge, so a leftover entry would otherwise sit there unnoticed.
 //
 // The check is a pure function over a map of file paths to source text, so every counterexample is a test
 // (check-contract.test.mjs).
@@ -47,6 +50,7 @@ const INVENTORY_ROOTS = ['src/main/', 'src/preload/', 'src/shared/', 'src/contra
 const REGISTRAR = 'src/main/contract/register.ts'
 const BUILDER = 'src/preload/contract-api.ts'
 const MANIFEST = 'src/contract/manifest.generated.ts'
+const PRELOAD = 'src/preload/index.ts'
 
 const isSkipped = (path) =>
   /\.test\.[cm]?[jt]sx?$|\.fixture\.[cm]?[jt]sx?$|\.d\.[cm]?ts$/.test(path) ||
@@ -213,6 +217,58 @@ function resolveSpecifier(from, specifier) {
 
 const stripExtension = (path) => path.replace(/\.(ts|mts|js|mjs)$/, '')
 const inContract = (path) => path === 'src/contract' || path.startsWith('src/contract/')
+
+const propertyName = (member) =>
+  member.name && (ts.isIdentifier(member.name) || ts.isStringLiteral(member.name))
+    ? member.name.text
+    : null
+
+/** The top-level keys of the `manifest` object in the generated manifest: one per contract area. */
+function manifestAreas(manifestSource) {
+  const areas = []
+  visit(parse(MANIFEST, manifestSource), (node) => {
+    if (!ts.isVariableDeclaration(node) || node.name.getText() !== 'manifest' || !node.initializer)
+      return
+    let value = node.initializer
+    while (ts.isAsExpression(value) || ts.isSatisfiesExpression(value)) value = value.expression
+    if (!ts.isObjectLiteralExpression(value)) return
+    for (const property of value.properties) {
+      const name = propertyName(property)
+      if (name) areas.push(name)
+    }
+  })
+  return areas
+}
+
+/** The area keys of the hand-written preload API, from its interface and its object, with their lines. */
+function legacyPreloadAreas(path, text) {
+  const sourceFile = parse(path, text)
+  const found = { interface: false, object: false, entries: [] }
+  visit(sourceFile, (node) => {
+    if (ts.isInterfaceDeclaration(node) && node.name.text === 'LegacyRyteApi') {
+      found.interface = true
+      for (const member of node.members) {
+        const name = propertyName(member)
+        if (name)
+          found.entries.push({ name, line: lineOf(sourceFile, member), where: 'LegacyRyteApi' })
+      }
+    }
+    if (
+      ts.isVariableDeclaration(node) &&
+      node.name.getText() === 'legacyApi' &&
+      node.initializer &&
+      ts.isObjectLiteralExpression(node.initializer)
+    ) {
+      found.object = true
+      for (const property of node.initializer.properties) {
+        const name = propertyName(property)
+        if (name)
+          found.entries.push({ name, line: lineOf(sourceFile, property), where: 'legacyApi' })
+      }
+    }
+  })
+  return found
+}
 
 /**
  * @param {{ files: Record<string, string>, legacy: object, manifestSource: string }} input
@@ -430,6 +486,34 @@ export function checkContract({ files, legacy, manifestSource }) {
         0,
         `sendAllowed entry for ${entry.file} needs a reason`
       )
+  }
+
+  // preload-area: a fully migrated area has no hand-written preload entry left.
+  const areasWithLegacyChannels = new Set(
+    [...legacyChannels].map((channel) => channel.split(':')[0])
+  )
+  const migratedAreas = manifestAreas(manifestSource).filter(
+    (area) => !areasWithLegacyChannels.has(area)
+  )
+  if (migratedAreas.length > 0 && PRELOAD in files) {
+    const legacyPreload = legacyPreloadAreas(PRELOAD, files[PRELOAD])
+    if (!legacyPreload.interface || !legacyPreload.object) {
+      fail(
+        'preload-area',
+        PRELOAD,
+        0,
+        'cannot find both `interface LegacyRyteApi` and `const legacyApi = { ... }`; if they were renamed, update scripts/check-contract.mjs so stale preload entries are still caught'
+      )
+    }
+    for (const { name, line, where } of legacyPreload.entries) {
+      if (!migratedAreas.includes(name)) continue
+      fail(
+        'preload-area',
+        PRELOAD,
+        line,
+        `${name} is fully in the contract (no ${name}: channel is left in scripts/legacy.json), so its hand-written entry in ${where} is stale; the contract method wins the merge and the old one only hides a mistake. Delete it`
+      )
+    }
   }
 
   return violations

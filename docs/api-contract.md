@@ -152,7 +152,8 @@ listed in `app/scripts/legacy.json`. Rules:
   1. Record what the old validator accepts and rejects first (authored inputs, expectations recorded from the old
      code) so the new schema is checked against behavior it cannot influence. `tasks.vectors.*` is the example.
   2. Define it in the contract, write the handler, and delete the old `ipcMain.handle`, the `assertValid*`
-     function and its test, and the preload method and type.
+     function and its test, and the preload method and type. When the last operation of an area moves, also
+     delete the area's key from `LegacyRyteApi` and `legacyApi`; `check:contract` fails if it stays.
   3. Delete its channel from `legacy.json`. When a legacy file no longer reaches IPC at all, delete it from the
      list too. `check:contract` fails on a stale entry, so the list only ever shrinks.
 - A half-migrated area works: contract methods are merged into the hand-written `window.ryte.<area>` object.
@@ -173,6 +174,10 @@ listed in `app/scripts/legacy.json`. Rules:
   files through their `<script>` blocks.
 - `src/contract/` never imports Electron, and is imported by value only from `src/main/` (and, for the manifest, the
   preload builder). The renderer never touches `ipcRenderer` or `electron`.
+- A contract area with no channel left in `legacy.json` has no entry in `LegacyRyteApi` or `legacyApi` in
+  `app/src/preload/index.ts`. The contract method wins the merge, so a leftover hand-written entry would otherwise
+  go unnoticed. An area that is only partly migrated keeps its entries. The rule finds those two declarations by
+  name and fails if it cannot, so renaming them means updating `scripts/check-contract.mjs`.
 - `legacy.json` cannot grow without editing the check's own test, whose numbers are exact: a migration that shrinks
   the list lowers them.
 
