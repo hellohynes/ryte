@@ -16,7 +16,7 @@ change or remove one.
 
 | Event | Channel | What it means | Payload |
 | --- | --- | --- | --- |
-| `indexer.status` | `indexer:status-event` | The index state changed; sent to every open window as indexing progresses. | `{ phase: string, filesTotal: number, filesDone: number, chunksTotal: number, chunksDone: number, lastIndexedAt: string,null, error?: string }` |
+| `indexer.status` | `indexer:status-event` | The index state changed; sent to every open window as indexing progresses. | `{ phase: string, filesTotal: number, filesDone: number, chunksTotal: number, chunksDone: number, lastIndexedAt: string \| null, error?: string }` |
 
 ## tasks
 

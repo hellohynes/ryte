@@ -12,7 +12,8 @@ const mocks = vi.hoisted(() => ({
   clearAndRebuild: vi.fn(),
   getIndexerStatus: vi.fn(),
   triggerReindex: vi.fn(),
-  indexerSubscriber: undefined as ((status: unknown) => void) | undefined,
+  indexerSubscribers: [] as Array<(status: unknown) => void>,
+  indexerSubscribe: vi.fn(),
   applyColorMode: vi.fn(),
   listModels: vi.fn(),
   getSecret: vi.fn(),
@@ -55,10 +56,11 @@ vi.mock('./indexing/indexer-service', () => ({
     getStatus: mocks.getIndexerStatus,
     getVectorStore: () => ({}),
     init: mocks.init,
-    subscribe: vi.fn((callback: (status: unknown) => void) => {
-      mocks.indexerSubscriber = callback
+    subscribe: (callback: (status: unknown) => void) => {
+      mocks.indexerSubscribe()
+      mocks.indexerSubscribers.push(callback)
       return vi.fn()
-    }),
+    },
     triggerReindex: mocks.triggerReindex
   }
 }))
@@ -162,7 +164,8 @@ describe('search IPC request lifecycle', () => {
     mocks.clearAndRebuild.mockReset().mockResolvedValue(undefined)
     mocks.getIndexerStatus.mockReset()
     mocks.triggerReindex.mockReset().mockResolvedValue(undefined)
-    mocks.indexerSubscriber = undefined
+    mocks.indexerSubscribers = []
+    mocks.indexerSubscribe.mockReset()
     mocks.init.mockReset().mockReturnValue(true)
     mocks.watcherStop.mockReset().mockResolvedValue(undefined)
     mocks.watcherStart.mockReset()
@@ -273,6 +276,13 @@ describe('search IPC request lifecycle', () => {
     expect(mocks.cancel).toHaveBeenCalledWith(requestId)
     callbacks.onToken('late token')
     expect(requester.send).not.toHaveBeenCalled()
+
+    // The cached search service is discarded too: the next query builds a new one over the rebuilt index.
+    const { SearchService } = await import('./search/search-service')
+    const built = vi.mocked(SearchService).mock.calls.length
+    handler('search:query')({ sender: requester }, 'after the rebuild', {})
+    await vi.runAllTimersAsync()
+    expect(vi.mocked(SearchService).mock.calls.length).toBe(built + 1)
   })
 
   it('cancels a request when its requesting webContents is destroyed', async () => {
@@ -383,7 +393,9 @@ describe('search IPC request lifecycle', () => {
       error: 'partial'
     }
 
-    mocks.indexerSubscriber?.(status)
+    // Every subscriber is called, as the real service does, so a second forwarder or a stray send would show.
+    expect(mocks.indexerSubscribe, 'one subscription forwards the status').toHaveBeenCalledTimes(1)
+    for (const subscriber of mocks.indexerSubscribers) subscriber(status)
 
     for (const live of [first, second]) {
       expect(live.send).toHaveBeenCalledTimes(1)

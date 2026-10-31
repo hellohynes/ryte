@@ -4,6 +4,12 @@ import { z } from 'zod'
 import { describeFields } from '../../scripts/generate-contract'
 
 describe('describeFields (the input column of docs/api-index.md)', () => {
+  it('renders a nullable field as a union, not a comma list', () => {
+    expect(describeFields(z.object({ at: z.string().nullable(), n: z.number() }))).toBe(
+      '{ at: string | null, n: number }'
+    )
+  })
+
   it('lists the fields of an object, marking optional ones', () => {
     expect(describeFields(z.strictObject({ a: z.string(), b: z.number().optional() }))).toBe(
       '{ a: string, b?: number }'
