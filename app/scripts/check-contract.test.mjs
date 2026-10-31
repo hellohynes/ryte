@@ -566,7 +566,22 @@ ipcRenderer.invoke('app:get-version')
     'a channel constant': [`const CHANNEL = 'viewer:x'`, `{ channel: () => CHANNEL }`],
     'a channel string with no call': [``, `{ channel: () => 'viewer:x' }`],
     'an identifier value': [`const tasksApi = { x: 1 }`, `tasksApi`],
-    'a call value': [`function makeTasks() { return { x: 1 } }`, `makeTasks()`]
+    'a call value': [`function makeTasks() { return { x: 1 } }`, `makeTasks()`],
+    'a destructured helper': [
+      `const helpers = { sub: (cb: () => void) => cb() }\nconst { sub } = helpers`,
+      `{ on: (cb) => sub(cb) }`
+    ],
+    'an array-destructured helper': [
+      `const helpers = [(cb: () => void) => cb()]\nconst [sub] = helpers`,
+      `{ on: (cb) => sub(cb) }`
+    ],
+    'an enum': [`enum Channel { Changed = 1 }`, `{ channel: () => Channel.Changed }`],
+    'a namespace': [
+      `namespace Bus { export const send = (): void => undefined }`,
+      `{ on: () => Bus.send() }`
+    ],
+    'a browser global': [``, `{ on: (cb) => window.addEventListener('message', cb) }`],
+    'a process global': [``, `{ platform: () => process.platform }`]
   }
   for (const [label, [top, entry]] of Object.entries(cases)) {
     assert.deepEqual(

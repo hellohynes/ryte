@@ -179,7 +179,8 @@ listed in `app/scripts/legacy.json`. Rules:
   dead entry in `LegacyRyteApi` or `legacyApi` in `app/src/preload/index.ts`. The contract method wins the merge, so
   a leftover hand-written entry that does nothing would otherwise go unnoticed. An entry counts as dead only when it
   is an inline object or function that references no IPC, no legacy channel string and nothing declared or imported
-  at the top level of the file (a helper, an alias, a channel constant); a value the rule cannot look into (an
+  at the top level of the file (a helper, an alias, a constant, an enum or a namespace) and uses no browser global
+  such as `window` or `process`; a value the rule cannot look into (an
   identifier, a shorthand, a call) counts as live, so the rule never advises deleting working code. A half-migrated
   area keeps its entries. The rule fails instead of skipping when it cannot read something: a renamed declaration
   (it looks for a top-level `interface LegacyRyteApi` and `const legacyApi = { ... }`, with or without `as`,

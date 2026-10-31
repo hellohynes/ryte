@@ -259,9 +259,21 @@ function manifestAreas(manifestSource) {
   return names.includes(null) ? null : names
 }
 
+// Globals an entry may use without declaring them; the preload runs in a browser-like context.
+const GLOBAL_NAMES = new Set(['window', 'document', 'process', 'globalThis', 'self', 'navigator'])
+
+const bindingNames = (name, names) => {
+  if (ts.isIdentifier(name)) {
+    names.add(name.text)
+    return
+  }
+  for (const element of name.elements)
+    if (!ts.isOmittedExpression(element)) bindingNames(element.name, names)
+}
+
 /** Names declared or imported at the top level of the file: helpers, aliases and constants an entry may use. */
 const topLevelNames = (sourceFile) => {
-  const names = new Set()
+  const names = new Set(GLOBAL_NAMES)
   for (const statement of sourceFile.statements) {
     if (ts.isImportDeclaration(statement) && statement.importClause) {
       const { name, namedBindings } = statement.importClause
@@ -271,10 +283,14 @@ const topLevelNames = (sourceFile) => {
         for (const element of namedBindings.elements) names.add(element.name.text)
     } else if (ts.isVariableStatement(statement)) {
       for (const declaration of statement.declarationList.declarations)
-        if (ts.isIdentifier(declaration.name)) names.add(declaration.name.text)
+        bindingNames(declaration.name, names)
     } else if (
-      (ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) &&
-      statement.name
+      (ts.isFunctionDeclaration(statement) ||
+        ts.isClassDeclaration(statement) ||
+        ts.isEnumDeclaration(statement) ||
+        ts.isModuleDeclaration(statement)) &&
+      statement.name &&
+      ts.isIdentifier(statement.name)
     ) {
       names.add(statement.name.text)
     }
