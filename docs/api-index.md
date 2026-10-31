@@ -6,6 +6,18 @@ Every operation and event that crosses between the main process and the UI is li
 definitions in `app/src/contract/` are the source; see [api-contract.md](api-contract.md) for how to add,
 change or remove one.
 
+## indexer
+
+| Operation | Channel | What it does | Input |
+| --- | --- | --- | --- |
+| `indexer.getStatus` | `indexer:get-status` | The current state of the notes index: phase, progress and when it last finished. | `none` |
+| `indexer.triggerReindex` | `indexer:trigger-reindex` | Start indexing changed notes and return at once; progress arrives as status events. | `none` |
+| `indexer.clearAndRebuild` | `indexer:clear-and-rebuild` | Empty the index and rebuild it from the notes folder, stopping running searches once the rebuild is certain. | `none` |
+
+| Event | Channel | What it means | Payload |
+| --- | --- | --- | --- |
+| `indexer.status` | `indexer:status-event` | The index state changed; sent to every open window as indexing progresses. | `{ phase: string, filesTotal: number, filesDone: number, chunksTotal: number, chunksDone: number, lastIndexedAt: string \| null, error?: string }` |
+
 ## tasks
 
 | Operation | Channel | What it does | Input |

@@ -18,7 +18,7 @@ The list of everything that exists today is generated: [api-index.md](api-index.
 | What an operation does in the main process | `app/src/main/contract/<area>-handlers.ts` | Yes: one handler per operation |
 | Registration, validation, the event emitter | `app/src/main/contract/register.ts` | Rarely |
 | `window.ryte.<area>` methods and `on<Event>` subscribers | built from the manifest by `app/src/preload/contract-api.ts` | No |
-| Wire types by name, for code that imports them (the `tasks` types live in `app/src/shared/tasks.ts`) | `app/src/shared/<area>.ts` | Only to re-export types inferred from the definition (`export type { ... } from '../contract/<area>'`); never write a type by hand. A new operation does not need one unless code imports its types by name |
+| Wire types by name, for code that imports them (for example `app/src/shared/tasks.ts` and `app/src/shared/indexer.ts`) | `app/src/shared/<area>.ts` | Only to re-export types inferred from the definition (`export type { ... } from '../contract/<area>'`); never write a type by hand. A new operation does not need one unless code imports its types by name |
 | Operations that have not moved yet | `app/scripts/legacy.json` and the old code in `ipc.ts`, `ipc-validation.ts` and `preload/index.ts` | Only to shrink them |
 | The enforcement | `app/scripts/check-contract.mjs` | Rarely |
 
@@ -62,12 +62,12 @@ live window, and the renderer subscribes with `window.ryte.tasks.onChanged(callb
      even in an area that has not been migrated yet (see [Legacy operations](#legacy-operations)).
 
      ```ts
-     // app/src/contract/indexer.ts
+     // app/src/contract/reports.ts
      export const ping = defineOperation({ /* as above, with input: z.undefined() */ })
-     export const indexer = defineArea('indexer', { operations: { ping }, events: {} })
+     export const reports = defineArea('reports', { operations: { ping }, events: {} })
 
-     // app/src/contract/index.ts: the key is the area name, and `window.ryte.indexer` follows from it
-     export const contract = { indexer, tasks } as const
+     // app/src/contract/index.ts: the key is the area name, and `window.ryte.reports` follows from it
+     export const contract = { indexer, reports, tasks } as const
      ```
 
 2. **Regenerate**: `pnpm contract:generate`. It rewrites `manifest.generated.ts` and `docs/api-index.md`. Commit both.
@@ -85,11 +85,11 @@ live window, and the renderer subscribes with `window.ryte.tasks.onChanged(callb
      parameters:
 
      ```ts
-     // app/src/main/contract/indexer-handlers.ts
+     // app/src/main/contract/reports-handlers.ts
      import type { Contract } from '../../contract'
      import type { Handlers } from './register'
 
-     export function createIndexerHandlers(): Handlers<Contract>['indexer'] {
+     export function createReportsHandlers(): Handlers<Contract>['reports'] {
        return { ping: async () => ({ ok: true }) }
      }
      ```
@@ -113,6 +113,8 @@ Define it with `defineEvent({ channel, description, payload? })` in the area fil
 the payload as the second argument when the event has one. A payload is typed at compile time, but nothing
 validates it at runtime (main is trusted), so keep it plain data. The UI subscribes with
 `window.ryte.<area>.on<Name>(callback)`, which returns an unsubscribe function. Never call `webContents.send` yourself.
+`app/src/contract/indexer.ts` (the `status` event) and `forwardIndexerStatus` in
+`app/src/main/contract/indexer-handlers.ts` are a worked example of an event with a payload.
 
 ## Change an operation
 

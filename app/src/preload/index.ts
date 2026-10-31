@@ -46,15 +46,7 @@ export type SearchRetrievalMode = MainSearchRetrievalMode
 export type SearchAnswerMode = MainSearchAnswerMode
 export type SearchStage = MainSearchStage
 
-export interface IndexerStatus {
-  phase: 'idle' | 'walking' | 'indexing' | 'done' | 'error'
-  filesTotal: number
-  filesDone: number
-  chunksTotal: number
-  chunksDone: number
-  lastIndexedAt: string | null
-  error?: string
-}
+export type { IndexerStatus } from '../shared/indexer'
 
 export interface SearchSource {
   index: number
@@ -116,12 +108,6 @@ interface LegacyRyteApi {
   dialog: {
     openFolder(): Promise<string | null>
     openFile(): Promise<WorkspaceOpenRecentFileInput | null>
-  }
-  indexer: {
-    triggerReindex(): Promise<void>
-    clearAndRebuild(): Promise<void>
-    getStatus(): Promise<IndexerStatus>
-    onStatus(cb: (status: IndexerStatus) => void): () => void
   }
   files: {
     listTree(): Promise<FileTreeResponse>
@@ -196,16 +182,6 @@ const legacyApi: LegacyRyteApi = {
   dialog: {
     openFolder: () => ipcRenderer.invoke('dialog:open-folder'),
     openFile: () => ipcRenderer.invoke('dialog:open-file')
-  },
-  indexer: {
-    triggerReindex: () => ipcRenderer.invoke('indexer:trigger-reindex'),
-    clearAndRebuild: () => ipcRenderer.invoke('indexer:clear-and-rebuild'),
-    getStatus: () => ipcRenderer.invoke('indexer:get-status'),
-    onStatus: (cb) => {
-      const listener = (_: unknown, status: IndexerStatus): void => cb(status)
-      ipcRenderer.on('indexer:status-event', listener)
-      return () => ipcRenderer.removeListener('indexer:status-event', listener)
-    }
   },
   files: {
     listTree: () => ipcRenderer.invoke('files:list-tree'),

@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { contract } from '../contract'
+
 const mocks = vi.hoisted(() => ({
   handlers: new Map<string, (...args: unknown[]) => unknown>(),
   windows: [] as Array<{ webContents: { send: ReturnType<typeof vi.fn> } }>,
@@ -8,6 +10,10 @@ const mocks = vi.hoisted(() => ({
   cancel: vi.fn(),
   close: vi.fn(),
   clearAndRebuild: vi.fn(),
+  getIndexerStatus: vi.fn(),
+  triggerReindex: vi.fn(),
+  indexerSubscribers: [] as Array<(status: unknown) => void>,
+  indexerSubscribe: vi.fn(),
   applyColorMode: vi.fn(),
   listModels: vi.fn(),
   getSecret: vi.fn(),
@@ -47,9 +53,15 @@ vi.mock('./indexing/indexer-service', () => ({
   indexerService: {
     close: mocks.close,
     clearAndRebuild: mocks.clearAndRebuild,
+    getStatus: mocks.getIndexerStatus,
     getVectorStore: () => ({}),
     init: mocks.init,
-    subscribe: vi.fn()
+    subscribe: (callback: (status: unknown) => void) => {
+      mocks.indexerSubscribe()
+      mocks.indexerSubscribers.push(callback)
+      return vi.fn()
+    },
+    triggerReindex: mocks.triggerReindex
   }
 }))
 vi.mock('./indexing/walker', () => ({ walkNotes: vi.fn() }))
@@ -150,6 +162,10 @@ describe('search IPC request lifecycle', () => {
     mocks.getSecret.mockReset().mockReturnValue('sk-test')
     mocks.recordModels.mockReset()
     mocks.clearAndRebuild.mockReset().mockResolvedValue(undefined)
+    mocks.getIndexerStatus.mockReset()
+    mocks.triggerReindex.mockReset().mockResolvedValue(undefined)
+    mocks.indexerSubscribers = []
+    mocks.indexerSubscribe.mockReset()
     mocks.init.mockReset().mockReturnValue(true)
     mocks.watcherStop.mockReset().mockResolvedValue(undefined)
     mocks.watcherStart.mockReset()
@@ -255,11 +271,18 @@ describe('search IPC request lifecycle', () => {
       expect(mocks.cancel).not.toHaveBeenCalled()
       beforeClear?.()
     })
-    await handler('indexer:clear-and-rebuild')()
+    await handler(contract.indexer.operations.clearAndRebuild.channel)({ sender: requester })
 
     expect(mocks.cancel).toHaveBeenCalledWith(requestId)
     callbacks.onToken('late token')
     expect(requester.send).not.toHaveBeenCalled()
+
+    // The cached search service is discarded too: the next query builds a new one over the rebuilt index.
+    const { SearchService } = await import('./search/search-service')
+    const built = vi.mocked(SearchService).mock.calls.length
+    handler('search:query')({ sender: requester }, 'after the rebuild', {})
+    await vi.runAllTimersAsync()
+    expect(vi.mocked(SearchService).mock.calls.length).toBe(built + 1)
   })
 
   it('cancels a request when its requesting webContents is destroyed', async () => {
@@ -317,6 +340,68 @@ describe('search IPC request lifecycle', () => {
       generatedAt: 100,
       sourcePaths: ['plans/jira.md']
     })
+  })
+
+  it('leaves running searches alone when the index service refuses to rebuild', async () => {
+    const requester = makeWebContents()
+    mocks.windows = [{ webContents: requester }]
+
+    handler('search:query')({ sender: requester }, 'release plan', {})
+    await vi.runAllTimersAsync()
+    mocks.clearAndRebuild.mockRejectedValue(new Error('rebuild refused'))
+
+    await expect(
+      handler(contract.indexer.operations.clearAndRebuild.channel)({ sender: requester })
+    ).rejects.toThrow('rebuild refused')
+    expect(mocks.cancel).not.toHaveBeenCalled()
+  })
+
+  it('answers getStatus and triggerReindex through the registered indexer channels', async () => {
+    const requester = makeWebContents()
+    const status = {
+      phase: 'idle',
+      filesTotal: 2,
+      filesDone: 2,
+      chunksTotal: 5,
+      chunksDone: 5,
+      lastIndexedAt: null
+    }
+    mocks.getIndexerStatus.mockReturnValue(status)
+
+    await expect(
+      handler(contract.indexer.operations.getStatus.channel)({ sender: requester })
+    ).resolves.toEqual(status)
+    await expect(
+      handler(contract.indexer.operations.triggerReindex.channel)({ sender: requester })
+    ).resolves.toBeUndefined()
+    expect(mocks.triggerReindex).toHaveBeenCalledTimes(1)
+  })
+
+  it('sends each indexer status once to every live window and to no destroyed window', () => {
+    const first = makeWebContents()
+    const second = makeWebContents()
+    const closed = makeWebContents()
+    closed.destroyed()
+    mocks.windows = [{ webContents: first }, { webContents: closed }, { webContents: second }]
+    const status = {
+      phase: 'indexing',
+      filesTotal: 4,
+      filesDone: 1,
+      chunksTotal: 20,
+      chunksDone: 3,
+      lastIndexedAt: '2026-10-30T00:00:00.000Z',
+      error: 'partial'
+    }
+
+    // Every subscriber is called, as the real service does, so a second forwarder or a stray send would show.
+    expect(mocks.indexerSubscribe, 'one subscription forwards the status').toHaveBeenCalledTimes(1)
+    for (const subscriber of mocks.indexerSubscribers) subscriber(status)
+
+    for (const live of [first, second]) {
+      expect(live.send).toHaveBeenCalledTimes(1)
+      expect(live.send).toHaveBeenCalledWith(contract.indexer.events.status.channel, status)
+    }
+    expect(closed.send).not.toHaveBeenCalled()
   })
 
   it('cancels active requests before replacing the search service for indexer settings', async () => {

@@ -70,7 +70,7 @@ export function describeFields(schema: ZodType | undefined): string {
       : schema
   const json = z.toJSONSchema(target, { io: 'input', unrepresentable: 'any' }) as {
     type?: string
-    properties?: Record<string, { type?: string }>
+    properties?: Record<string, { type?: string | string[] }>
     required?: string[]
   }
   if (!json.properties) {
@@ -81,7 +81,10 @@ export function describeFields(schema: ZodType | undefined): string {
   }
   const required = new Set(json.required ?? [])
   const fields = Object.entries(json.properties).map(
-    ([name, property]) => `${name}${required.has(name) ? '' : '?'}: ${property.type ?? 'unknown'}`
+    ([name, property]) =>
+      `${name}${required.has(name) ? '' : '?'}: ${
+        Array.isArray(property.type) ? property.type.join(' | ') : (property.type ?? 'unknown')
+      }`
   )
   return fields.length > 0 ? `{ ${fields.join(', ')} }` : 'none'
 }
