@@ -60,6 +60,13 @@ function echoHandlers(): {
 // retired). They are the contract with the renderer, so they are pinned here as literals.
 const TASKS_REQUEST_CHANNELS = ['tasks:list', 'tasks:refresh', 'tasks:toggle']
 const TASKS_EVENT_CHANNEL = 'tasks:changed'
+// The indexer wire strings, copied from the pre-migration code (ipc.ts at bc66b4e) before the area moved.
+const INDEXER_REQUEST_CHANNELS = [
+  'indexer:clear-and-rebuild',
+  'indexer:get-status',
+  'indexer:trigger-reindex'
+]
+const INDEXER_EVENT_CHANNEL = 'indexer:status-event'
 
 const recorded = (
   JSON.parse(
@@ -110,6 +117,14 @@ describe('registerOperations: validation in front of every handler', () => {
     // ...and the pre-contract wire strings are still there, unchanged.
     expect(registered).toEqual(expect.arrayContaining(TASKS_REQUEST_CHANNELS))
     expect(contract.tasks.events.changed.channel).toBe(TASKS_EVENT_CHANNEL)
+  })
+
+  it('owns the indexer wire strings recorded before the migration, unchanged', () => {
+    const { ipc, listeners } = fakeIpc()
+    registerOperations(ipc, contract, echoHandlers().handlers)
+
+    expect([...listeners.keys()]).toEqual(expect.arrayContaining(INDEXER_REQUEST_CHANNELS))
+    expect(contract.indexer.events.status.channel).toBe(INDEXER_EVENT_CHANNEL)
   })
 
   it('passes the calling sender to a sender-aware handler and validates its input', async () => {

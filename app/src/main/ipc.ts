@@ -6,6 +6,7 @@ import { app, BrowserWindow, clipboard, dialog, ipcMain, shell, type WebContents
 
 import { refreshAppMenu } from './app-menu'
 import { applyColorMode } from './appearance'
+import { createIndexerHandlers, forwardIndexerStatus } from './contract/indexer-handlers'
 import { createEmitter, registerOperations } from './contract/register'
 import { createTaskHandlers } from './contract/tasks-handlers'
 import { contract } from '../contract'
@@ -351,28 +352,14 @@ export function registerIpc(): void {
     return fileRefForPickedMarkdownFile(result.filePaths[0]!, notesRoot)
   })
 
-  ipcMain.handle('indexer:get-status', () => indexerService.getStatus())
+  // A search still running would read from the store while it is emptied. The indexer calls this only once
+  // the rebuild is certain, so a refused or failed rebuild never kills the user's search.
+  const stopSearchesBeforeClear = (): void => {
+    cancelAllActiveSearchRequests()
+    searchService = null
+  }
 
-  ipcMain.handle('indexer:trigger-reindex', () => {
-    // Fire-and-forget. Renderer subscribes via indexer:status-event for progress.
-    void indexerService.triggerReindex()
-  })
-
-  ipcMain.handle('indexer:clear-and-rebuild', async () => {
-    await indexerService.clearAndRebuild(() => {
-      // A search still running would read from the store while it is emptied. This runs only once
-      // the rebuild is certain, so a refused or failed rebuild never kills the user's search.
-      cancelAllActiveSearchRequests()
-      searchService = null
-    })
-  })
-
-  // Push status events to all renderer windows.
-  indexerService.subscribe((status) => {
-    for (const win of BrowserWindow.getAllWindows()) {
-      win.webContents.send('indexer:status-event', status)
-    }
-  })
+  forwardIndexerStatus(indexerService, emit)
 
   ipcMain.handle('files:list-tree', async () => {
     const notesRoot = settingsStore.load().notesRoot
@@ -435,6 +422,10 @@ export function registerIpc(): void {
   })
 
   registerOperations(ipcMain, contract, {
+    indexer: createIndexerHandlers({
+      service: indexerService,
+      beforeClear: stopSearchesBeforeClear
+    }),
     tasks: createTaskHandlers({ service: taskFactsService, settings: settingsStore, emit })
   })
 

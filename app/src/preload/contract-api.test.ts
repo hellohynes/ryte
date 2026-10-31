@@ -40,6 +40,15 @@ function fakeIpc(): {
 // retired). They are the contract with the main process, so they are pinned here as literals.
 const TASKS_REQUEST_CHANNELS = ['tasks:list', 'tasks:refresh', 'tasks:toggle']
 const TASKS_EVENT_CHANNELS = ['tasks:changed']
+// The indexer wire strings and `window.ryte.indexer` members, copied from the hand-written preload
+// (preload/index.ts at bc66b4e) before the area moved.
+const INDEXER_REQUEST_CHANNELS = [
+  'indexer:clear-and-rebuild',
+  'indexer:get-status',
+  'indexer:trigger-reindex'
+]
+const INDEXER_EVENT_CHANNELS = ['indexer:status-event']
+const INDEXER_MEMBERS = ['clearAndRebuild', 'getStatus', 'onStatus', 'triggerReindex']
 
 const toggleInput = {
   sourcePath: 'folder/tasks.md',
@@ -84,6 +93,23 @@ describe('createContractApi from the generated manifest', () => {
     const invoked = invoke.mock.calls.map((call) => call[0]).sort()
     expect(invoked).toEqual(TASKS_REQUEST_CHANNELS)
     expect(on.mock.calls.map((call) => call[0])).toEqual(TASKS_EVENT_CHANNELS)
+  })
+
+  it('builds window.ryte.indexer with the members and channels recorded before the migration', async () => {
+    const { ipc, invoke, on } = fakeIpc()
+    const api = createContractApi(ipc)
+
+    expect(Object.keys(api.indexer).sort()).toEqual(INDEXER_MEMBERS)
+
+    await api.indexer.getStatus()
+    await api.indexer.triggerReindex()
+    await api.indexer.clearAndRebuild()
+    api.indexer.onStatus(() => undefined)
+
+    expect(invoke.mock.calls.map((call) => call[0]).sort()).toEqual(INDEXER_REQUEST_CHANNELS)
+    // Called with no argument, as the legacy preload did.
+    expect(invoke.mock.calls.every((call) => call.length === 1)).toBe(true)
+    expect(on.mock.calls.map((call) => call[0])).toEqual(INDEXER_EVENT_CHANNELS)
   })
 
   it('forwards at most the first argument: none for list() and refresh(), the input otherwise', async () => {
