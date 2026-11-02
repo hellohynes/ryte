@@ -19,8 +19,11 @@ export interface SettingsHandlerDependencies {
     | 'recordDiscoveredOpenAIModels'
   >
   applyColorMode: (mode: ColorMode) => void
-  /** Re-initialises the indexer and restarts the watcher; see `createIndexerRestarter`. */
-  restartIndexing: () => Promise<void>
+  /**
+   * Re-initialises the indexer and restarts the watcher; see `createIndexerRestarter`. `reindex` asks it to start an index
+   * pass afterwards, which a different notes folder needs and the caller no longer has to arrange.
+   */
+  restartIndexing: (options: { reindex: boolean }) => Promise<void>
   validateProviderKey: (
     provider: ProviderId,
     apiKey: string
@@ -62,9 +65,11 @@ export function createSettingsHandlers({
       const previousSettings = store.load()
       const next = store.update(patch)
       if (patch.colorMode !== undefined) applyColorMode(patch.colorMode)
-      if (settingsPatchRequiresIndexerRestart(patch, previousSettings, store.load())) {
-        // Re-init indexer and restart watcher so new notesRoot / embedding settings take effect.
-        await restartIndexing()
+      const savedSettings = store.load()
+      if (settingsPatchRequiresIndexerRestart(patch, previousSettings, savedSettings)) {
+        // Re-init indexer and restart watcher so new notesRoot / embedding settings take effect. A different folder is
+        // compared as written, like the restart itself: the same folder spelled another way restarts and reindexes once.
+        await restartIndexing({ reindex: previousSettings.notesRoot !== savedSettings.notesRoot })
       }
       return next
     },

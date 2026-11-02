@@ -351,7 +351,8 @@ export function registerIpc(): void {
     resetSearchService: () => {
       searchService = null // vectorStore is replaced; recreate on next search
     },
-    notesRoot: () => settingsStore.load().notesRoot
+    notesRoot: () => settingsStore.load().notesRoot,
+    startReindex: () => indexerService.triggerReindex()
   })
 
   registerOperations(ipcMain, contract, {

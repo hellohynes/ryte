@@ -661,6 +661,40 @@ describe('IndexerService index location', () => {
     expect(new Set(roots.slice(1))).toEqual(new Set([notesA]))
   })
 
+  it('runs exactly one more pass, on the new folder, when the folder changes while a pass is running', async () => {
+    const { IndexerService } = await import('./indexer-service')
+    const { Indexer } = await import('./indexer')
+    await useNotesRoot(notesA)
+    const svc = new IndexerService()
+    svc.init()
+    let failOldPass!: (error: Error) => void
+    mocks.indexerIndexAll.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          failOldPass = reject
+        })
+    )
+    const oldPass = svc.triggerReindex()
+    await vi.waitFor(() => expect(mocks.indexerIndexAll).toHaveBeenCalledTimes(1))
+
+    // What the restart does after the folder changed, then the reindex it asks for.
+    svc.close()
+    await useNotesRoot(notesB)
+    svc.init()
+    await svc.triggerReindex()
+    expect(mocks.indexerIndexAll).toHaveBeenCalledTimes(1)
+
+    // The old pass fails on its closed store; the queued request then runs once, on the new indexer.
+    failOldPass(new Error('The database connection is not open'))
+    await oldPass
+    await vi.waitFor(() => expect(mocks.indexerIndexAll).toHaveBeenCalledTimes(2))
+    await new Promise((resolve) => setTimeout(resolve, 20))
+
+    expect(mocks.indexerIndexAll).toHaveBeenCalledTimes(2)
+    const roots = vi.mocked(Indexer).mock.calls.map((call) => call[0].notesRoot)
+    expect(roots.at(-1)).toBe(notesB)
+  })
+
   it('does not let a failed cleanup stop the start', async () => {
     const { IndexerService } = await import('./indexer-service')
     const errors = vi.spyOn(console, 'error').mockImplementation(() => {})

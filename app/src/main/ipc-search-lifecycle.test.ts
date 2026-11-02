@@ -261,6 +261,34 @@ describe('search IPC request lifecycle', () => {
     expect(mocks.applyColorMode).not.toHaveBeenCalled()
   })
 
+  describe('the index pass after a settings save', () => {
+    it('starts one, once, after the indexer and watcher are running again, when the notes folder changed', async () => {
+      await handler('settings:save')({}, { notesRoot: '/elsewhere' })
+
+      expect(mocks.triggerReindex).toHaveBeenCalledTimes(1)
+      const after = (call: { mock: { invocationCallOrder: number[] } }): number =>
+        call.mock.invocationCallOrder[0] ?? 0
+      expect(after(mocks.triggerReindex)).toBeGreaterThan(after(mocks.init))
+      expect(after(mocks.triggerReindex)).toBeGreaterThan(after(mocks.watcherStart))
+    })
+
+    it('starts none for a restart that is not a folder change', async () => {
+      await handler('settings:save')({}, { semanticIndexEnabled: true })
+
+      expect(mocks.watcherStart).toHaveBeenCalledTimes(1)
+      expect(mocks.triggerReindex).not.toHaveBeenCalled()
+    })
+
+    it('starts none, and initialises once, when the indexer cannot initialise', async () => {
+      mocks.init.mockReturnValue(false)
+
+      await handler('settings:save')({}, { notesRoot: '/elsewhere' })
+
+      expect(mocks.init).toHaveBeenCalledTimes(1)
+      expect(mocks.triggerReindex).not.toHaveBeenCalled()
+    })
+  })
+
   it('cancels running searches when the index is about to be cleared and rebuilt', async () => {
     const requester = makeWebContents()
     mocks.windows = [{ webContents: requester }]
