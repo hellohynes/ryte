@@ -1,0 +1,2172 @@
+{
+  "header": {
+    "recordedFrom": "272d8a2f62c210eb285ce59e23fdcccd44bc0b0c",
+    "baseSha": "322bfd76f485fa0526ce09742623f70acd4a7309",
+    "command": "node --import tsx src/contract/record/record-settings-vectors.ts",
+    "note": "Recorded from the pre-change validators (assertValidSettingsPatch, assertValidProviderId). The validators and shared/ are unchanged from baseSha. Expectations are the oracle; do not regenerate from new code."
+  },
+  "vectors": [
+    {
+      "id": "save: empty object",
+      "op": "save",
+      "accepted": true,
+      "output": {}
+    },
+    {
+      "id": "save: undefined",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid settings patch"
+    },
+    {
+      "id": "save: null",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid settings patch"
+    },
+    {
+      "id": "save: string",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid settings patch"
+    },
+    {
+      "id": "save: number",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid settings patch"
+    },
+    {
+      "id": "save: boolean",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid settings patch"
+    },
+    {
+      "id": "save: empty array",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid settings patch"
+    },
+    {
+      "id": "save: array holding a patch",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid settings patch"
+    },
+    {
+      "id": "save: Date instance",
+      "op": "save",
+      "accepted": true,
+      "output": {}
+    },
+    {
+      "id": "save: Map instance",
+      "op": "save",
+      "accepted": true,
+      "output": {}
+    },
+    {
+      "id": "save: class instance with a valid own field",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "colorMode": "dark"
+      }
+    },
+    {
+      "id": "save: null-prototype object with a valid key",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "colorMode": "dark"
+      }
+    },
+    {
+      "id": "save: symbol key is ignored",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "colorMode": "dark"
+      }
+    },
+    {
+      "id": "save: every key valid at once",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "notesRoot": "/Users/synthetic/Notes",
+        "model": "gpt-5.2",
+        "cloudAnswersEnabled": true,
+        "semanticIndexEnabled": false,
+        "firstCloudUseAcknowledgedAt": "2026-01-01T00:00:00.000Z",
+        "cloudAnswersAcknowledgement": {
+          "acknowledgedAt": "2026-01-01T00:00:00.000Z",
+          "provider": "openai",
+          "model": "gpt-5.2"
+        },
+        "semanticIndexAcknowledgement": null,
+        "answerProvider": "anthropic",
+        "answerModel": "claude-synthetic",
+        "embeddingProvider": "openai",
+        "embeddingModel": "text-embedding-3-small",
+        "searchHistoryRetention": "30-days",
+        "searchHistoryIncludesAnswers": false,
+        "scrollbarVisibility": "always",
+        "fontFamily": "ibm-plex",
+        "colorMode": "dark",
+        "ticketLinkBase": "https://example.atlassian.net/browse/",
+        "pullRequestLinkBase": "https://github.com/example/repo/pull/",
+        "anthropicKey": "synthetic-anthropic-value",
+        "openaiKey": "synthetic-openai-value",
+        "geminiKey": "synthetic-gemini-value",
+        "deleteProviderKeys": [
+          "gemini"
+        ]
+      }
+    },
+    {
+      "id": "save: two valid keys",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "fontFamily": "geist",
+        "colorMode": "light"
+      }
+    },
+    {
+      "id": "save: valid key with an invalid key",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid font"
+    },
+    {
+      "id": "save: valid key with an unknown key",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid settings key: arbitrary"
+    },
+    {
+      "id": "save: only an unknown key",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid settings key: arbitrary"
+    },
+    {
+      "id": "save: constructor as a key",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid settings key: constructor"
+    },
+    {
+      "id": "save: toString as a key",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid settings key: toString"
+    },
+    {
+      "id": "save: own __proto__ key",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid settings key: __proto__"
+    },
+    {
+      "id": "save: own __proto__ key with a valid key",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid settings key: __proto__"
+    },
+    {
+      "id": "save: inherited valid key only",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "colorMode": "dark"
+      }
+    },
+    {
+      "id": "save: inherited valid key beside an own key",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "fontFamily": "geist",
+        "colorMode": "dark"
+      }
+    },
+    {
+      "id": "save: inherited invalid key only",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid color mode"
+    },
+    {
+      "id": "save: inherited unknown key only",
+      "op": "save",
+      "accepted": true,
+      "output": {}
+    },
+    {
+      "id": "save: notesRoot explicit undefined",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid file path"
+    },
+    {
+      "id": "save: model explicit undefined",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid model"
+    },
+    {
+      "id": "save: cloudAnswersEnabled explicit undefined",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid cloudAnswersEnabled"
+    },
+    {
+      "id": "save: semanticIndexEnabled explicit undefined",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid semanticIndexEnabled"
+    },
+    {
+      "id": "save: firstCloudUseAcknowledgedAt explicit undefined",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid first cloud acknowledgement"
+    },
+    {
+      "id": "save: cloudAnswersAcknowledgement explicit undefined",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid cloud answers acknowledgement"
+    },
+    {
+      "id": "save: semanticIndexAcknowledgement explicit undefined",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid semantic index acknowledgement"
+    },
+    {
+      "id": "save: answerProvider explicit undefined",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid answer provider"
+    },
+    {
+      "id": "save: answerModel explicit undefined",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid answer model"
+    },
+    {
+      "id": "save: embeddingProvider explicit undefined",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid embedding provider"
+    },
+    {
+      "id": "save: embeddingModel explicit undefined",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid embedding model"
+    },
+    {
+      "id": "save: searchHistoryRetention explicit undefined",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid search history retention"
+    },
+    {
+      "id": "save: searchHistoryIncludesAnswers explicit undefined",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid searchHistoryIncludesAnswers"
+    },
+    {
+      "id": "save: scrollbarVisibility explicit undefined",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid scrollbar visibility"
+    },
+    {
+      "id": "save: fontFamily explicit undefined",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid font"
+    },
+    {
+      "id": "save: colorMode explicit undefined",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid color mode"
+    },
+    {
+      "id": "save: ticketLinkBase explicit undefined",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid ticket link base"
+    },
+    {
+      "id": "save: pullRequestLinkBase explicit undefined",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid pull request link base"
+    },
+    {
+      "id": "save: anthropicKey explicit undefined",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid anthropicKey"
+    },
+    {
+      "id": "save: openaiKey explicit undefined",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid openaiKey"
+    },
+    {
+      "id": "save: geminiKey explicit undefined",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid geminiKey"
+    },
+    {
+      "id": "save: deleteProviderKeys explicit undefined",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid deleteProviderKeys"
+    },
+    {
+      "id": "save: notesRoot absolute",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "notesRoot": "/Users/synthetic/Notes"
+      }
+    },
+    {
+      "id": "save: notesRoot root only",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "notesRoot": "/"
+      }
+    },
+    {
+      "id": "save: notesRoot with parent segments",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "notesRoot": "/Users/synthetic/../Notes"
+      }
+    },
+    {
+      "id": "save: notesRoot with a trailing space",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "notesRoot": "/Users/synthetic/Notes "
+      }
+    },
+    {
+      "id": "save: notesRoot with unicode",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "notesRoot": "/Users/synthetic/Notizen/日本語"
+      }
+    },
+    {
+      "id": "save: notesRoot at 4096 characters",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "notesRoot": "/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    {
+      "id": "save: notesRoot at 4097 characters",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid file path"
+    },
+    {
+      "id": "save: notesRoot with a NUL",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "notesRoot": "/Users/synthetic/a\u0000b"
+      }
+    },
+    {
+      "id": "save: notesRoot relative",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid file path"
+    },
+    {
+      "id": "save: notesRoot dot relative",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid file path"
+    },
+    {
+      "id": "save: notesRoot tilde",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid file path"
+    },
+    {
+      "id": "save: notesRoot windows drive path",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid file path"
+    },
+    {
+      "id": "save: notesRoot empty",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid file path"
+    },
+    {
+      "id": "save: notesRoot number",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid file path"
+    },
+    {
+      "id": "save: notesRoot NaN",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid file path"
+    },
+    {
+      "id": "save: notesRoot null",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid file path"
+    },
+    {
+      "id": "save: notesRoot array",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid file path"
+    },
+    {
+      "id": "save: notesRoot object",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid file path"
+    },
+    {
+      "id": "save: model typical",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "model": "gpt-5.2"
+      }
+    },
+    {
+      "id": "save: model one character",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "model": "m"
+      }
+    },
+    {
+      "id": "save: model 200 characters",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "model": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      }
+    },
+    {
+      "id": "save: model 201 characters",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid model"
+    },
+    {
+      "id": "save: model padded is kept untrimmed",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "model": "  gpt-5.2  "
+      }
+    },
+    {
+      "id": "save: model trimmed length 1 with a long raw length",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "model": "     m                                                                                                                                                                                                                                                                                                            "
+      }
+    },
+    {
+      "id": "save: model 200 characters plus padding",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "model": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx   "
+      }
+    },
+    {
+      "id": "save: model empty",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid model"
+    },
+    {
+      "id": "save: model whitespace only",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid model"
+    },
+    {
+      "id": "save: model number",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid model"
+    },
+    {
+      "id": "save: model null",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid model"
+    },
+    {
+      "id": "save: model array",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid model"
+    },
+    {
+      "id": "save: answerModel typical",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "answerModel": "gpt-5.2"
+      }
+    },
+    {
+      "id": "save: answerModel one character",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "answerModel": "m"
+      }
+    },
+    {
+      "id": "save: answerModel 200 characters",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "answerModel": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      }
+    },
+    {
+      "id": "save: answerModel 201 characters",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid answer model"
+    },
+    {
+      "id": "save: answerModel padded is kept untrimmed",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "answerModel": "  gpt-5.2  "
+      }
+    },
+    {
+      "id": "save: answerModel trimmed length 1 with a long raw length",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "answerModel": "     m                                                                                                                                                                                                                                                                                                            "
+      }
+    },
+    {
+      "id": "save: answerModel 200 characters plus padding",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "answerModel": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx   "
+      }
+    },
+    {
+      "id": "save: answerModel empty",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid answer model"
+    },
+    {
+      "id": "save: answerModel whitespace only",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid answer model"
+    },
+    {
+      "id": "save: answerModel number",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid answer model"
+    },
+    {
+      "id": "save: answerModel null",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid answer model"
+    },
+    {
+      "id": "save: answerModel array",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid answer model"
+    },
+    {
+      "id": "save: cloudAnswersEnabled true",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "cloudAnswersEnabled": true
+      }
+    },
+    {
+      "id": "save: cloudAnswersEnabled false",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "cloudAnswersEnabled": false
+      }
+    },
+    {
+      "id": "save: cloudAnswersEnabled string true",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid cloudAnswersEnabled"
+    },
+    {
+      "id": "save: cloudAnswersEnabled number 1",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid cloudAnswersEnabled"
+    },
+    {
+      "id": "save: cloudAnswersEnabled number 0",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid cloudAnswersEnabled"
+    },
+    {
+      "id": "save: cloudAnswersEnabled NaN",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid cloudAnswersEnabled"
+    },
+    {
+      "id": "save: cloudAnswersEnabled null",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid cloudAnswersEnabled"
+    },
+    {
+      "id": "save: semanticIndexEnabled true",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "semanticIndexEnabled": true
+      }
+    },
+    {
+      "id": "save: semanticIndexEnabled false",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "semanticIndexEnabled": false
+      }
+    },
+    {
+      "id": "save: semanticIndexEnabled string true",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid semanticIndexEnabled"
+    },
+    {
+      "id": "save: semanticIndexEnabled number 1",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid semanticIndexEnabled"
+    },
+    {
+      "id": "save: semanticIndexEnabled number 0",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid semanticIndexEnabled"
+    },
+    {
+      "id": "save: semanticIndexEnabled NaN",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid semanticIndexEnabled"
+    },
+    {
+      "id": "save: semanticIndexEnabled null",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid semanticIndexEnabled"
+    },
+    {
+      "id": "save: searchHistoryIncludesAnswers true",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "searchHistoryIncludesAnswers": true
+      }
+    },
+    {
+      "id": "save: searchHistoryIncludesAnswers false",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "searchHistoryIncludesAnswers": false
+      }
+    },
+    {
+      "id": "save: searchHistoryIncludesAnswers string true",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid searchHistoryIncludesAnswers"
+    },
+    {
+      "id": "save: searchHistoryIncludesAnswers number 1",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid searchHistoryIncludesAnswers"
+    },
+    {
+      "id": "save: searchHistoryIncludesAnswers number 0",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid searchHistoryIncludesAnswers"
+    },
+    {
+      "id": "save: searchHistoryIncludesAnswers NaN",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid searchHistoryIncludesAnswers"
+    },
+    {
+      "id": "save: searchHistoryIncludesAnswers null",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid searchHistoryIncludesAnswers"
+    },
+    {
+      "id": "save: firstCloudUseAcknowledgedAt null",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "firstCloudUseAcknowledgedAt": null
+      }
+    },
+    {
+      "id": "save: firstCloudUseAcknowledgedAt a string",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "firstCloudUseAcknowledgedAt": "2026-01-01"
+      }
+    },
+    {
+      "id": "save: firstCloudUseAcknowledgedAt empty string",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "firstCloudUseAcknowledgedAt": ""
+      }
+    },
+    {
+      "id": "save: firstCloudUseAcknowledgedAt number",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid first cloud acknowledgement"
+    },
+    {
+      "id": "save: firstCloudUseAcknowledgedAt boolean",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid first cloud acknowledgement"
+    },
+    {
+      "id": "save: firstCloudUseAcknowledgedAt object",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid first cloud acknowledgement"
+    },
+    {
+      "id": "save: cloudAnswersAcknowledgement null",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "cloudAnswersAcknowledgement": null
+      }
+    },
+    {
+      "id": "save: cloudAnswersAcknowledgement complete",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "cloudAnswersAcknowledgement": {
+          "acknowledgedAt": "2026-01-01T00:00:00.000Z",
+          "provider": "openai",
+          "model": "gpt-5.2"
+        }
+      }
+    },
+    {
+      "id": "save: cloudAnswersAcknowledgement complete with another provider",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "cloudAnswersAcknowledgement": {
+          "acknowledgedAt": "2026-01-01T00:00:00.000Z",
+          "provider": "gemini",
+          "model": "gpt-5.2"
+        }
+      }
+    },
+    {
+      "id": "save: cloudAnswersAcknowledgement with an extra key",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "cloudAnswersAcknowledgement": {
+          "acknowledgedAt": "2026-01-01T00:00:00.000Z",
+          "provider": "openai",
+          "model": "gpt-5.2",
+          "extra": "x"
+        }
+      }
+    },
+    {
+      "id": "save: cloudAnswersAcknowledgement with an own __proto__ key",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "cloudAnswersAcknowledgement": {
+          "acknowledgedAt": "2026-01-01T00:00:00.000Z",
+          "provider": "openai",
+          "model": "m",
+          "__proto__": {
+            "x": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "save: cloudAnswersAcknowledgement null-prototype complete",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "cloudAnswersAcknowledgement": {
+          "acknowledgedAt": "2026-01-01T00:00:00.000Z",
+          "provider": "openai",
+          "model": "gpt-5.2"
+        }
+      }
+    },
+    {
+      "id": "save: cloudAnswersAcknowledgement missing acknowledgedAt",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid cloud answers acknowledgement"
+    },
+    {
+      "id": "save: cloudAnswersAcknowledgement missing provider",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid cloud answers acknowledgement"
+    },
+    {
+      "id": "save: cloudAnswersAcknowledgement missing model",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid cloud answers acknowledgement"
+    },
+    {
+      "id": "save: cloudAnswersAcknowledgement empty model",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid cloud answers acknowledgement"
+    },
+    {
+      "id": "save: cloudAnswersAcknowledgement whitespace model",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "cloudAnswersAcknowledgement": {
+          "acknowledgedAt": "2026-01-01T00:00:00.000Z",
+          "provider": "openai",
+          "model": "   "
+        }
+      }
+    },
+    {
+      "id": "save: cloudAnswersAcknowledgement model number",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid cloud answers acknowledgement"
+    },
+    {
+      "id": "save: cloudAnswersAcknowledgement unknown provider",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid cloud answers acknowledgement"
+    },
+    {
+      "id": "save: cloudAnswersAcknowledgement acknowledgedAt number",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid cloud answers acknowledgement"
+    },
+    {
+      "id": "save: cloudAnswersAcknowledgement empty object",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid cloud answers acknowledgement"
+    },
+    {
+      "id": "save: cloudAnswersAcknowledgement array",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid cloud answers acknowledgement"
+    },
+    {
+      "id": "save: cloudAnswersAcknowledgement string",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid cloud answers acknowledgement"
+    },
+    {
+      "id": "save: cloudAnswersAcknowledgement number",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid cloud answers acknowledgement"
+    },
+    {
+      "id": "save: cloudAnswersAcknowledgement Date instance",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid cloud answers acknowledgement"
+    },
+    {
+      "id": "save: semanticIndexAcknowledgement null",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "semanticIndexAcknowledgement": null
+      }
+    },
+    {
+      "id": "save: semanticIndexAcknowledgement complete",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "semanticIndexAcknowledgement": {
+          "acknowledgedAt": "2026-01-01T00:00:00.000Z",
+          "provider": "openai",
+          "model": "gpt-5.2"
+        }
+      }
+    },
+    {
+      "id": "save: semanticIndexAcknowledgement complete with another provider",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "semanticIndexAcknowledgement": {
+          "acknowledgedAt": "2026-01-01T00:00:00.000Z",
+          "provider": "gemini",
+          "model": "gpt-5.2"
+        }
+      }
+    },
+    {
+      "id": "save: semanticIndexAcknowledgement with an extra key",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "semanticIndexAcknowledgement": {
+          "acknowledgedAt": "2026-01-01T00:00:00.000Z",
+          "provider": "openai",
+          "model": "gpt-5.2",
+          "extra": "x"
+        }
+      }
+    },
+    {
+      "id": "save: semanticIndexAcknowledgement with an own __proto__ key",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "semanticIndexAcknowledgement": {
+          "acknowledgedAt": "2026-01-01T00:00:00.000Z",
+          "provider": "openai",
+          "model": "m",
+          "__proto__": {
+            "x": 1
+          }
+        }
+      }
+    },
+    {
+      "id": "save: semanticIndexAcknowledgement null-prototype complete",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "semanticIndexAcknowledgement": {
+          "acknowledgedAt": "2026-01-01T00:00:00.000Z",
+          "provider": "openai",
+          "model": "gpt-5.2"
+        }
+      }
+    },
+    {
+      "id": "save: semanticIndexAcknowledgement missing acknowledgedAt",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid semantic index acknowledgement"
+    },
+    {
+      "id": "save: semanticIndexAcknowledgement missing provider",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid semantic index acknowledgement"
+    },
+    {
+      "id": "save: semanticIndexAcknowledgement missing model",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid semantic index acknowledgement"
+    },
+    {
+      "id": "save: semanticIndexAcknowledgement empty model",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid semantic index acknowledgement"
+    },
+    {
+      "id": "save: semanticIndexAcknowledgement whitespace model",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "semanticIndexAcknowledgement": {
+          "acknowledgedAt": "2026-01-01T00:00:00.000Z",
+          "provider": "openai",
+          "model": "   "
+        }
+      }
+    },
+    {
+      "id": "save: semanticIndexAcknowledgement model number",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid semantic index acknowledgement"
+    },
+    {
+      "id": "save: semanticIndexAcknowledgement unknown provider",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid semantic index acknowledgement"
+    },
+    {
+      "id": "save: semanticIndexAcknowledgement acknowledgedAt number",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid semantic index acknowledgement"
+    },
+    {
+      "id": "save: semanticIndexAcknowledgement empty object",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid semantic index acknowledgement"
+    },
+    {
+      "id": "save: semanticIndexAcknowledgement array",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid semantic index acknowledgement"
+    },
+    {
+      "id": "save: semanticIndexAcknowledgement string",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid semantic index acknowledgement"
+    },
+    {
+      "id": "save: semanticIndexAcknowledgement number",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid semantic index acknowledgement"
+    },
+    {
+      "id": "save: semanticIndexAcknowledgement Date instance",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid semantic index acknowledgement"
+    },
+    {
+      "id": "save: answerProvider \"anthropic\"",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "answerProvider": "anthropic"
+      }
+    },
+    {
+      "id": "save: answerProvider \"openai\"",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "answerProvider": "openai"
+      }
+    },
+    {
+      "id": "save: answerProvider \"gemini\"",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid answer provider"
+    },
+    {
+      "id": "save: answerProvider \"\"",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid answer provider"
+    },
+    {
+      "id": "save: answerProvider \"OpenAI\"",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid answer provider"
+    },
+    {
+      "id": "save: answerProvider \" openai\"",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid answer provider"
+    },
+    {
+      "id": "save: answerProvider 5",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid answer provider"
+    },
+    {
+      "id": "save: answerProvider null",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid answer provider"
+    },
+    {
+      "id": "save: embeddingProvider \"openai\"",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "embeddingProvider": "openai"
+      }
+    },
+    {
+      "id": "save: embeddingProvider \"anthropic\"",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid embedding provider"
+    },
+    {
+      "id": "save: embeddingProvider \"\"",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid embedding provider"
+    },
+    {
+      "id": "save: embeddingProvider 5",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid embedding provider"
+    },
+    {
+      "id": "save: embeddingModel \"text-embedding-3-small\"",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "embeddingModel": "text-embedding-3-small"
+      }
+    },
+    {
+      "id": "save: embeddingModel \"text-embedding-3-large\"",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid embedding model"
+    },
+    {
+      "id": "save: embeddingModel \"\"",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid embedding model"
+    },
+    {
+      "id": "save: embeddingModel 5",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid embedding model"
+    },
+    {
+      "id": "save: searchHistoryRetention \"off\"",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "searchHistoryRetention": "off"
+      }
+    },
+    {
+      "id": "save: searchHistoryRetention \"session\"",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "searchHistoryRetention": "session"
+      }
+    },
+    {
+      "id": "save: searchHistoryRetention \"7-days\"",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "searchHistoryRetention": "7-days"
+      }
+    },
+    {
+      "id": "save: searchHistoryRetention \"30-days\"",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "searchHistoryRetention": "30-days"
+      }
+    },
+    {
+      "id": "save: searchHistoryRetention \"forever\"",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "searchHistoryRetention": "forever"
+      }
+    },
+    {
+      "id": "save: searchHistoryRetention \"forever \"",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid search history retention"
+    },
+    {
+      "id": "save: searchHistoryRetention \"30 days\"",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid search history retention"
+    },
+    {
+      "id": "save: searchHistoryRetention \"\"",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid search history retention"
+    },
+    {
+      "id": "save: searchHistoryRetention 30",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid search history retention"
+    },
+    {
+      "id": "save: searchHistoryRetention null",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid search history retention"
+    },
+    {
+      "id": "save: scrollbarVisibility \"auto\"",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "scrollbarVisibility": "auto"
+      }
+    },
+    {
+      "id": "save: scrollbarVisibility \"always\"",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "scrollbarVisibility": "always"
+      }
+    },
+    {
+      "id": "save: scrollbarVisibility \"visible\"",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid scrollbar visibility"
+    },
+    {
+      "id": "save: scrollbarVisibility \"Auto\"",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid scrollbar visibility"
+    },
+    {
+      "id": "save: scrollbarVisibility \"\"",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid scrollbar visibility"
+    },
+    {
+      "id": "save: scrollbarVisibility true",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid scrollbar visibility"
+    },
+    {
+      "id": "save: fontFamily \"geist\"",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "fontFamily": "geist"
+      }
+    },
+    {
+      "id": "save: fontFamily \"system\"",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "fontFamily": "system"
+      }
+    },
+    {
+      "id": "save: fontFamily \"ibm-plex\"",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "fontFamily": "ibm-plex"
+      }
+    },
+    {
+      "id": "save: fontFamily \"papyrus\"",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid font"
+    },
+    {
+      "id": "save: fontFamily \"\"",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid font"
+    },
+    {
+      "id": "save: fontFamily \"Geist\"",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid font"
+    },
+    {
+      "id": "save: fontFamily 5",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid font"
+    },
+    {
+      "id": "save: colorMode \"system\"",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "colorMode": "system"
+      }
+    },
+    {
+      "id": "save: colorMode \"light\"",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "colorMode": "light"
+      }
+    },
+    {
+      "id": "save: colorMode \"dark\"",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "colorMode": "dark"
+      }
+    },
+    {
+      "id": "save: colorMode \"sepia\"",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid color mode"
+    },
+    {
+      "id": "save: colorMode \"Dark\"",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid color mode"
+    },
+    {
+      "id": "save: colorMode \"\"",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid color mode"
+    },
+    {
+      "id": "save: colorMode 5",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid color mode"
+    },
+    {
+      "id": "save: colorMode null",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid color mode"
+    },
+    {
+      "id": "save: ticketLinkBase empty switches linking off",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "ticketLinkBase": ""
+      }
+    },
+    {
+      "id": "save: ticketLinkBase https host",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "ticketLinkBase": "https://example.atlassian.net"
+      }
+    },
+    {
+      "id": "save: ticketLinkBase https path",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "ticketLinkBase": "https://github.com/example/repo/pull/"
+      }
+    },
+    {
+      "id": "save: ticketLinkBase https 300 characters",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "ticketLinkBase": "https://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    {
+      "id": "save: ticketLinkBase https 301 characters",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid ticket link base"
+    },
+    {
+      "id": "save: ticketLinkBase http",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid ticket link base"
+    },
+    {
+      "id": "save: ticketLinkBase javascript scheme",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid ticket link base"
+    },
+    {
+      "id": "save: ticketLinkBase ftp",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid ticket link base"
+    },
+    {
+      "id": "save: ticketLinkBase credentials",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid ticket link base"
+    },
+    {
+      "id": "save: ticketLinkBase user only",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid ticket link base"
+    },
+    {
+      "id": "save: ticketLinkBase whitespace inside",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid ticket link base"
+    },
+    {
+      "id": "save: ticketLinkBase leading space",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid ticket link base"
+    },
+    {
+      "id": "save: ticketLinkBase not a url",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid ticket link base"
+    },
+    {
+      "id": "save: ticketLinkBase number",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid ticket link base"
+    },
+    {
+      "id": "save: ticketLinkBase null",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid ticket link base"
+    },
+    {
+      "id": "save: pullRequestLinkBase empty switches linking off",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "pullRequestLinkBase": ""
+      }
+    },
+    {
+      "id": "save: pullRequestLinkBase https host",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "pullRequestLinkBase": "https://example.atlassian.net"
+      }
+    },
+    {
+      "id": "save: pullRequestLinkBase https path",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "pullRequestLinkBase": "https://github.com/example/repo/pull/"
+      }
+    },
+    {
+      "id": "save: pullRequestLinkBase https 300 characters",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "pullRequestLinkBase": "https://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      }
+    },
+    {
+      "id": "save: pullRequestLinkBase https 301 characters",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid pull request link base"
+    },
+    {
+      "id": "save: pullRequestLinkBase http",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid pull request link base"
+    },
+    {
+      "id": "save: pullRequestLinkBase javascript scheme",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid pull request link base"
+    },
+    {
+      "id": "save: pullRequestLinkBase ftp",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid pull request link base"
+    },
+    {
+      "id": "save: pullRequestLinkBase credentials",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid pull request link base"
+    },
+    {
+      "id": "save: pullRequestLinkBase user only",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid pull request link base"
+    },
+    {
+      "id": "save: pullRequestLinkBase whitespace inside",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid pull request link base"
+    },
+    {
+      "id": "save: pullRequestLinkBase leading space",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid pull request link base"
+    },
+    {
+      "id": "save: pullRequestLinkBase not a url",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid pull request link base"
+    },
+    {
+      "id": "save: pullRequestLinkBase number",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid pull request link base"
+    },
+    {
+      "id": "save: pullRequestLinkBase null",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid pull request link base"
+    },
+    {
+      "id": "save: anthropicKey typical",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "anthropicKey": "synthetic-key-value"
+      }
+    },
+    {
+      "id": "save: anthropicKey padded is trimmed",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "anthropicKey": "synthetic-key-value"
+      }
+    },
+    {
+      "id": "save: anthropicKey inner whitespace kept",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "anthropicKey": "synthetic key value"
+      }
+    },
+    {
+      "id": "save: anthropicKey 10000 characters",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "anthropicKey": "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
+      }
+    },
+    {
+      "id": "save: anthropicKey empty",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid anthropicKey"
+    },
+    {
+      "id": "save: anthropicKey whitespace only",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid anthropicKey"
+    },
+    {
+      "id": "save: anthropicKey tab and newline only",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid anthropicKey"
+    },
+    {
+      "id": "save: anthropicKey number",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid anthropicKey"
+    },
+    {
+      "id": "save: anthropicKey null",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid anthropicKey"
+    },
+    {
+      "id": "save: anthropicKey array",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid anthropicKey"
+    },
+    {
+      "id": "save: openaiKey typical",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "openaiKey": "synthetic-key-value"
+      }
+    },
+    {
+      "id": "save: openaiKey padded is trimmed",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "openaiKey": "synthetic-key-value"
+      }
+    },
+    {
+      "id": "save: openaiKey inner whitespace kept",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "openaiKey": "synthetic key value"
+      }
+    },
+    {
+      "id": "save: openaiKey 10000 characters",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "openaiKey": "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
+      }
+    },
+    {
+      "id": "save: openaiKey empty",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid openaiKey"
+    },
+    {
+      "id": "save: openaiKey whitespace only",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid openaiKey"
+    },
+    {
+      "id": "save: openaiKey tab and newline only",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid openaiKey"
+    },
+    {
+      "id": "save: openaiKey number",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid openaiKey"
+    },
+    {
+      "id": "save: openaiKey null",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid openaiKey"
+    },
+    {
+      "id": "save: openaiKey array",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid openaiKey"
+    },
+    {
+      "id": "save: geminiKey typical",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "geminiKey": "synthetic-key-value"
+      }
+    },
+    {
+      "id": "save: geminiKey padded is trimmed",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "geminiKey": "synthetic-key-value"
+      }
+    },
+    {
+      "id": "save: geminiKey inner whitespace kept",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "geminiKey": "synthetic key value"
+      }
+    },
+    {
+      "id": "save: geminiKey 10000 characters",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "geminiKey": "kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk"
+      }
+    },
+    {
+      "id": "save: geminiKey empty",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid geminiKey"
+    },
+    {
+      "id": "save: geminiKey whitespace only",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid geminiKey"
+    },
+    {
+      "id": "save: geminiKey tab and newline only",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid geminiKey"
+    },
+    {
+      "id": "save: geminiKey number",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid geminiKey"
+    },
+    {
+      "id": "save: geminiKey null",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid geminiKey"
+    },
+    {
+      "id": "save: geminiKey array",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid geminiKey"
+    },
+    {
+      "id": "save: all three keys at once",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "anthropicKey": "a",
+        "openaiKey": "b",
+        "geminiKey": "c"
+      }
+    },
+    {
+      "id": "save: a key and its deletion together",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "openaiKey": "synthetic-key-value",
+        "deleteProviderKeys": [
+          "openai"
+        ]
+      }
+    },
+    {
+      "id": "save: deleteProviderKeys empty",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "deleteProviderKeys": []
+      }
+    },
+    {
+      "id": "save: deleteProviderKeys one",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "deleteProviderKeys": [
+          "openai"
+        ]
+      }
+    },
+    {
+      "id": "save: deleteProviderKeys all three",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "deleteProviderKeys": [
+          "anthropic",
+          "openai",
+          "gemini"
+        ]
+      }
+    },
+    {
+      "id": "save: deleteProviderKeys repeated",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "deleteProviderKeys": [
+          "openai",
+          "openai"
+        ]
+      }
+    },
+    {
+      "id": "save: deleteProviderKeys 100 long",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "deleteProviderKeys": [
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai",
+          "openai"
+        ]
+      }
+    },
+    {
+      "id": "save: deleteProviderKeys sparse",
+      "op": "save",
+      "accepted": true,
+      "output": {
+        "deleteProviderKeys": {
+          "$sparse": {
+            "length": 2,
+            "entries": [
+              [
+                1,
+                "openai"
+              ]
+            ]
+          }
+        }
+      }
+    },
+    {
+      "id": "save: deleteProviderKeys unknown provider",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid provider"
+    },
+    {
+      "id": "save: deleteProviderKeys valid then invalid",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid provider"
+    },
+    {
+      "id": "save: deleteProviderKeys null element",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid provider"
+    },
+    {
+      "id": "save: deleteProviderKeys number element",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid provider"
+    },
+    {
+      "id": "save: deleteProviderKeys a string",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid deleteProviderKeys"
+    },
+    {
+      "id": "save: deleteProviderKeys an object",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid deleteProviderKeys"
+    },
+    {
+      "id": "save: deleteProviderKeys null",
+      "op": "save",
+      "accepted": false,
+      "legacyMessage": "Invalid deleteProviderKeys"
+    },
+    {
+      "id": "provider: anthropic",
+      "op": "provider",
+      "accepted": true,
+      "output": "anthropic"
+    },
+    {
+      "id": "provider: openai",
+      "op": "provider",
+      "accepted": true,
+      "output": "openai"
+    },
+    {
+      "id": "provider: gemini",
+      "op": "provider",
+      "accepted": true,
+      "output": "gemini"
+    },
+    {
+      "id": "provider: unknown",
+      "op": "provider",
+      "accepted": false,
+      "legacyMessage": "Invalid provider"
+    },
+    {
+      "id": "provider: empty string",
+      "op": "provider",
+      "accepted": false,
+      "legacyMessage": "Invalid provider"
+    },
+    {
+      "id": "provider: capitalised",
+      "op": "provider",
+      "accepted": false,
+      "legacyMessage": "Invalid provider"
+    },
+    {
+      "id": "provider: leading space",
+      "op": "provider",
+      "accepted": false,
+      "legacyMessage": "Invalid provider"
+    },
+    {
+      "id": "provider: trailing NUL",
+      "op": "provider",
+      "accepted": false,
+      "legacyMessage": "Invalid provider"
+    },
+    {
+      "id": "provider: undefined",
+      "op": "provider",
+      "accepted": false,
+      "legacyMessage": "Invalid provider"
+    },
+    {
+      "id": "provider: null",
+      "op": "provider",
+      "accepted": false,
+      "legacyMessage": "Invalid provider"
+    },
+    {
+      "id": "provider: number",
+      "op": "provider",
+      "accepted": false,
+      "legacyMessage": "Invalid provider"
+    },
+    {
+      "id": "provider: NaN",
+      "op": "provider",
+      "accepted": false,
+      "legacyMessage": "Invalid provider"
+    },
+    {
+      "id": "provider: boolean",
+      "op": "provider",
+      "accepted": false,
+      "legacyMessage": "Invalid provider"
+    },
+    {
+      "id": "provider: empty object",
+      "op": "provider",
+      "accepted": false,
+      "legacyMessage": "Invalid provider"
+    },
+    {
+      "id": "provider: object with a provider field",
+      "op": "provider",
+      "accepted": false,
+      "legacyMessage": "Invalid provider"
+    },
+    {
+      "id": "provider: array holding a provider",
+      "op": "provider",
+      "accepted": false,
+      "legacyMessage": "Invalid provider"
+    },
+    {
+      "id": "provider: Date instance",
+      "op": "provider",
+      "accepted": false,
+      "legacyMessage": "Invalid provider"
+    }
+  ]
+}
