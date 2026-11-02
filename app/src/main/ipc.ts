@@ -11,6 +11,7 @@ import { createEmitter, registerOperations } from './contract/register'
 import { createTaskHandlers } from './contract/tasks-handlers'
 import { contract } from '../contract'
 import { taskFactsService } from './facts/task-facts-service'
+import { createIndexerRestarter } from './indexer-restart'
 import { indexerService } from './indexing/indexer-service'
 import { walkNotes } from './indexing/walker'
 import { watcher } from './indexing/watcher'
@@ -264,6 +265,16 @@ export function registerIpc(): void {
     return next
   })
 
+  const restartIndexer = createIndexerRestarter({
+    watcher,
+    indexer: indexerService,
+    cancelSearches: cancelAllActiveSearchRequests,
+    resetSearchService: () => {
+      searchService = null // vectorStore is replaced; recreate on next search
+    },
+    notesRoot: () => settingsStore.load().notesRoot
+  })
+
   ipcMain.handle('settings:save', async (_, patch: unknown) => {
     const validatedPatch = assertValidSettingsPatch(patch)
     const previousSettings = settingsStore.load()
@@ -273,14 +284,7 @@ export function registerIpc(): void {
       settingsPatchRequiresIndexerRestart(validatedPatch, previousSettings, settingsStore.load())
     ) {
       // Re-init indexer and restart watcher so new notesRoot / embedding settings take effect.
-      await watcher.stop()
-      cancelAllActiveSearchRequests()
-      indexerService.close()
-      searchService = null // vectorStore is replaced; recreate on next search
-      const ready = indexerService.init()
-      if (ready) {
-        watcher.start(settingsStore.load().notesRoot)
-      }
+      await restartIndexer()
     }
     return next
   })
