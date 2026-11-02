@@ -34,4 +34,30 @@ describe('describeFields (the input column of docs/api-index.md)', () => {
     expect(describeFields(union)).toBe('see schema')
     expect(describeFields(z.string())).toBe('string')
   })
+
+  it('renders enum values, literals, array items, unions and nested objects', () => {
+    const schema = z.strictObject({
+      mode: z.enum(['light', 'dark']).optional(),
+      only: z.literal('x'),
+      names: z.array(z.string()),
+      kinds: z.array(z.enum(['a', 'b'])).optional(),
+      maybe: z.string().nullable(),
+      holder: z
+        .strictObject({ id: z.string(), kind: z.enum(['a', 'b']) })
+        .nullable()
+        .optional(),
+      loose: z.object({}).optional()
+    })
+
+    expect(describeFields(schema)).toBe(
+      "{ mode?: 'light' | 'dark', only: 'x', names: string[], kinds?: ('a' | 'b')[], maybe: string | null, " +
+        "holder?: { id: string, kind: 'a' | 'b' } | null, loose?: object }"
+    )
+  })
+
+  it('says unknown for a field it cannot represent', () => {
+    expect(describeFields(z.object({ custom: z.custom<string>(() => true) }))).toBe(
+      '{ custom: unknown }'
+    )
+  })
 })

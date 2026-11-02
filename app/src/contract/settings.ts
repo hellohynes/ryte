@@ -13,7 +13,8 @@ const scrollbarVisibility = z.enum(['auto', 'always'])
 const searchHistoryRetention = z.enum(['off', 'session', '7-days', '30-days', 'forever'])
 const embeddingProviderId = z.literal('openai')
 const embeddingModelId = z.literal('text-embedding-3-small')
-const fontId = z.custom<FontId>(isFontId, 'Expected a font')
+// A custom check Zod cannot describe on its own; the metadata only tells the generated index it is a string.
+const fontId = z.custom<FontId>(isFontId, 'Expected a font').meta({ type: 'string' })
 
 /** A model id: trimmed length 1 to 200, and kept exactly as given (the legacy validator did not trim it). */
 const modelId = z.string().refine((value) => {
@@ -161,8 +162,7 @@ export const save = defineOperation({
 
 export const validateKey = defineOperation({
   channel: 'settings:validate-key',
-  description:
-    'Check the saved key for a provider with that provider and record when it last passed.',
+  description: 'Check the saved key by calling its provider, and record when it last passed.',
   input: providerInput,
   output: keyValidationResult,
   example: {
