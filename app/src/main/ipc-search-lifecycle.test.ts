@@ -88,10 +88,11 @@ vi.mock('./settings/settings-store', () => ({
     recordDiscoveredOpenAIModels: mocks.recordModels,
     load: () => ({ ...mocks.settings }),
     publicState: vi.fn(),
-    update: (patch: { semanticIndexEnabled?: boolean }) => {
+    update: (patch: { semanticIndexEnabled?: boolean; notesRoot?: string }) => {
       if (patch.semanticIndexEnabled !== undefined) {
         mocks.settings.semanticIndexEnabled = patch.semanticIndexEnabled
       }
+      if (patch.notesRoot !== undefined) mocks.settings.notesRoot = patch.notesRoot
       return mocks.settings
     }
   }
@@ -413,6 +414,140 @@ describe('search IPC request lifecycle', () => {
     await handler('settings:save')({ sender: requester }, { semanticIndexEnabled: true })
 
     expect(mocks.cancel).toHaveBeenCalledWith(requestId)
+  })
+
+  describe('restarting the indexer after a settings change', () => {
+    // Every step of the restart writes to one shared log, so the tests see the order and not only the calls.
+    function logRestartSteps(options: { initReady?: boolean } = {}): string[] {
+      const calls: string[] = []
+      mocks.watcherStop.mockImplementation(async () => {
+        calls.push('watcher.stop:begin')
+        await Promise.resolve()
+        await Promise.resolve()
+        calls.push('watcher.stop:end')
+      })
+      mocks.cancel.mockImplementation(() => {
+        calls.push('searches.cancel')
+      })
+      mocks.close.mockImplementation(() => {
+        calls.push('indexer.close')
+      })
+      mocks.init.mockImplementation(() => {
+        calls.push('indexer.init')
+        return options.initReady ?? true
+      })
+      mocks.watcherStart.mockImplementation((root: string) => {
+        calls.push(`watcher.start:${root}`)
+      })
+      return calls
+    }
+
+    async function startSearch(): Promise<ReturnType<typeof makeWebContents>> {
+      const requester = makeWebContents()
+      mocks.windows = [{ webContents: requester }]
+      handler('search:query')({ sender: requester }, 'release plan', {})
+      await vi.runAllTimersAsync()
+      return requester
+    }
+
+    const RESTART_ORDER = [
+      'watcher.stop:begin',
+      'watcher.stop:end',
+      'searches.cancel',
+      'indexer.close',
+      'indexer.init'
+    ]
+
+    it('stops the watcher, then cancels searches, closes and re-initialises the indexer, then restarts the watcher on the new notes root', async () => {
+      const requester = await startSearch()
+      const calls = logRestartSteps()
+
+      await handler('settings:save')({ sender: requester }, { notesRoot: '/synthetic/new-root' })
+
+      expect(calls).toEqual([...RESTART_ORDER, 'watcher.start:/synthetic/new-root'])
+    })
+
+    it('builds a new search service for the next query after a restart', async () => {
+      const requester = await startSearch()
+      logRestartSteps()
+      const { SearchService } = await import('./search/search-service')
+      const built = vi.mocked(SearchService).mock.calls.length
+
+      await handler('settings:save')({ sender: requester }, { notesRoot: '/synthetic/new-root' })
+      handler('search:query')({ sender: requester }, 'after the restart', {})
+      await vi.runAllTimersAsync()
+
+      expect(vi.mocked(SearchService).mock.calls.length).toBe(built + 1)
+    })
+
+    it('does not start the watcher when the indexer cannot initialise', async () => {
+      const requester = await startSearch()
+      const calls = logRestartSteps({ initReady: false })
+
+      await handler('settings:save')({ sender: requester }, { notesRoot: '/synthetic/new-root' })
+
+      expect(calls).toEqual(RESTART_ORDER)
+    })
+
+    it.each([
+      ['a different notes root', { notesRoot: '/synthetic/new-root' }, true],
+      ['the same notes root', { notesRoot: '/notes' }, false],
+      ['the semantic index switched on', { semanticIndexEnabled: true }, true],
+      ['the semantic index left off', { semanticIndexEnabled: false }, false],
+      ['a new OpenAI key', { openaiKey: 'synthetic-key-value' }, true],
+      ['a new Anthropic key', { anthropicKey: 'synthetic-key-value' }, false],
+      ['a new Gemini key', { geminiKey: 'synthetic-key-value' }, false],
+      ['deleting the OpenAI key', { deleteProviderKeys: ['openai'] }, true],
+      [
+        'deleting the OpenAI key with another',
+        { deleteProviderKeys: ['anthropic', 'openai'] },
+        true
+      ],
+      ['deleting another key', { deleteProviderKeys: ['anthropic'] }, false],
+      ['a color mode', { colorMode: 'dark' }, false],
+      ['a font', { fontFamily: 'geist' }, false],
+      ['an empty patch', {}, false]
+    ] as const)('restarts the indexer for %s: %s', async (_label, patch, restarts) => {
+      const requester = await startSearch()
+      const calls = logRestartSteps()
+
+      await handler('settings:save')({ sender: requester }, patch)
+
+      expect(calls.length > 0, `restart for ${JSON.stringify(patch)}`).toBe(restarts)
+    })
+
+    it('rejects with the settings already saved when stopping the watcher fails, and goes no further', async () => {
+      const requester = await startSearch()
+      const calls = logRestartSteps()
+      mocks.watcherStop.mockRejectedValue(new Error('stop failed'))
+
+      await expect(
+        handler('settings:save')(
+          { sender: requester },
+          { notesRoot: '/synthetic/new-root', colorMode: 'dark' }
+        )
+      ).rejects.toThrow('stop failed')
+
+      expect(mocks.settings.notesRoot).toBe('/synthetic/new-root')
+      expect(mocks.applyColorMode).toHaveBeenCalledWith('dark')
+      expect(calls).toEqual([])
+    })
+
+    it('rejects with the settings already saved when the indexer fails to initialise, and starts no watcher', async () => {
+      const requester = await startSearch()
+      const calls = logRestartSteps()
+      mocks.init.mockImplementation(() => {
+        calls.push('indexer.init')
+        throw new Error('init failed')
+      })
+
+      await expect(
+        handler('settings:save')({ sender: requester }, { notesRoot: '/synthetic/new-root' })
+      ).rejects.toThrow('init failed')
+
+      expect(mocks.settings.notesRoot).toBe('/synthetic/new-root')
+      expect(calls).toEqual([...RESTART_ORDER])
+    })
   })
 
   it('test_catalog_change_sends_one_typed_file_patch_to_each_window', async () => {
