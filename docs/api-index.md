@@ -16,7 +16,16 @@ change or remove one.
 
 | Event | Channel | What it means | Payload |
 | --- | --- | --- | --- |
-| `indexer.status` | `indexer:status-event` | The index state changed; sent to every open window as indexing progresses. | `{ phase: string, filesTotal: number, filesDone: number, chunksTotal: number, chunksDone: number, lastIndexedAt: string \| null, error?: string }` |
+| `indexer.status` | `indexer:status-event` | The index state changed; sent to every open window as indexing progresses. | `{ phase: 'idle' \| 'walking' \| 'indexing' \| 'done' \| 'error', filesTotal: number, filesDone: number, chunksTotal: number, chunksDone: number, lastIndexedAt: string \| null, error?: string }` |
+
+## settings
+
+| Operation | Channel | What it does | Input |
+| --- | --- | --- | --- |
+| `settings.getState` | `settings:get-state` | The current settings, with whether each provider key exists and never the key itself. | `none` |
+| `settings.save` | `settings:save` | Change some settings and return the new state. A change that affects indexing restarts the indexer. Provider keys are write-only. | `{ notesRoot?: string, model?: string, cloudAnswersEnabled?: boolean, semanticIndexEnabled?: boolean, firstCloudUseAcknowledgedAt?: string \| null, cloudAnswersAcknowledgement?: { acknowledgedAt: string, provider: 'anthropic' \| 'openai' \| 'gemini', model: string } \| null, semanticIndexAcknowledgement?: { acknowledgedAt: string, provider: 'anthropic' \| 'openai' \| 'gemini', model: string } \| null, answerProvider?: 'anthropic' \| 'openai', answerModel?: string, embeddingProvider?: 'openai', embeddingModel?: 'text-embedding-3-small', searchHistoryRetention?: 'off' \| 'session' \| '7-days' \| '30-days' \| 'forever', searchHistoryIncludesAnswers?: boolean, scrollbarVisibility?: 'auto' \| 'always', fontFamily?: string, colorMode?: 'system' \| 'light' \| 'dark', ticketLinkBase?: string, pullRequestLinkBase?: string, anthropicKey?: string, openaiKey?: string, geminiKey?: string, deleteProviderKeys?: ('anthropic' \| 'openai' \| 'gemini')[] }` |
+| `settings.validateKey` | `settings:validate-key` | Check the saved key by calling its provider, and record when it last passed. | `{ provider: 'anthropic' \| 'openai' \| 'gemini' }` |
+| `settings.listModels` | `settings:list-models` | List the models the saved OpenAI key can use, and remember the list. | `{ provider: 'anthropic' \| 'openai' \| 'gemini' }` |
 
 ## tasks
 

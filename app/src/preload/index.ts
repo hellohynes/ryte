@@ -1,7 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
-import type { PublicSettingsState, SettingsUpdate } from '../main/settings/settings-store'
-import type { ProviderKeyValidationResult } from '../main/settings/key-validation'
 import type {
   FileCatalogResponse,
   FileCatalogChangeEvent,
@@ -33,7 +31,6 @@ import type {
   SearchSnapshotFreshness,
   SearchSnapshotFreshnessInput
 } from '../main/search/search-service'
-import type { ProviderId } from '../shared/provider-registry'
 import { APP_MENU_COMMAND_CHANNEL, type AppMenuCommand } from '../shared/app-menu'
 import {
   createContractApi,
@@ -82,12 +79,6 @@ interface LegacyRyteApi {
   app: {
     getVersion(): Promise<string>
     onMenuCommand(cb: (command: AppMenuCommand) => void): () => void
-  }
-  settings: {
-    getState(): Promise<PublicSettingsState>
-    save(patch: SettingsUpdate): Promise<PublicSettingsState>
-    validateKey(provider: ProviderId): Promise<ProviderKeyValidationResult>
-    listModels(provider: ProviderId): Promise<string[]>
   }
   workspace: {
     getState(): Promise<WorkspaceState>
@@ -156,12 +147,6 @@ const legacyApi: LegacyRyteApi = {
       ipcRenderer.on(APP_MENU_COMMAND_CHANNEL, listener)
       return () => ipcRenderer.removeListener(APP_MENU_COMMAND_CHANNEL, listener)
     }
-  },
-  settings: {
-    getState: () => ipcRenderer.invoke('settings:get-state'),
-    save: (patch) => ipcRenderer.invoke('settings:save', patch),
-    validateKey: (provider) => ipcRenderer.invoke('settings:validate-key', provider),
-    listModels: (provider) => ipcRenderer.invoke('settings:list-models', provider)
   },
   workspace: {
     getState: () => ipcRenderer.invoke('workspace:get-state'),

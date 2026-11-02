@@ -59,6 +59,42 @@ interface SchemaDefinition {
 const definitionOf = (schema: ZodType): SchemaDefinition =>
   (schema as unknown as { def: SchemaDefinition }).def
 
+interface JsonSchemaNode {
+  type?: string | string[]
+  enum?: unknown[]
+  const?: unknown
+  anyOf?: JsonSchemaNode[]
+  oneOf?: JsonSchemaNode[]
+  items?: JsonSchemaNode
+  properties?: Record<string, JsonSchemaNode>
+  required?: string[]
+}
+
+const literal = (value: unknown): string =>
+  typeof value === 'string' ? `'${value}'` : String(value)
+
+/** A short TypeScript-like description of one JSON Schema node: enum values, array items, unions and nested objects. */
+function describeNode(node: JsonSchemaNode): string {
+  if (node.enum) return node.enum.map(literal).join(' | ')
+  if ('const' in node) return literal(node.const)
+  const union = node.anyOf ?? node.oneOf
+  if (union) return union.map(describeNode).join(' | ')
+  if (Array.isArray(node.type)) return node.type.join(' | ')
+  if (node.type === 'array') {
+    const item = node.items ? describeNode(node.items) : 'unknown'
+    return item.includes(' | ') ? `(${item})[]` : `${item}[]`
+  }
+  if (node.type === 'object') {
+    if (!node.properties) return 'object'
+    const required = new Set(node.required ?? [])
+    const fields = Object.entries(node.properties).map(
+      ([name, property]) => `${name}${required.has(name) ? '' : '?'}: ${describeNode(property)}`
+    )
+    return fields.length > 0 ? `{ ${fields.join(', ')} }` : 'object'
+  }
+  return node.type ?? 'unknown'
+}
+
 /** The object fields of an input or payload schema, like `{ checked?: boolean, limit?: number }`. */
 export function describeFields(schema: ZodType | undefined): string {
   if (!schema) return 'none'
@@ -68,23 +104,16 @@ export function describeFields(schema: ZodType | undefined): string {
     definition.type === 'pipe' && definition.in?.def?.type === 'transform' && definition.out
       ? definition.out
       : schema
-  const json = z.toJSONSchema(target, { io: 'input', unrepresentable: 'any' }) as {
-    type?: string
-    properties?: Record<string, { type?: string | string[] }>
-    required?: string[]
-  }
+  const json = z.toJSONSchema(target, { io: 'input', unrepresentable: 'any' }) as JsonSchemaNode
   if (!json.properties) {
     // z.undefined() is "no input". Anything else the generator cannot describe (a union, say) must not be
     // documented as taking no input.
     if (definitionOf(target).type === 'undefined') return 'none'
-    return json.type ?? 'see schema'
+    return typeof json.type === 'string' ? json.type : 'see schema'
   }
   const required = new Set(json.required ?? [])
   const fields = Object.entries(json.properties).map(
-    ([name, property]) =>
-      `${name}${required.has(name) ? '' : '?'}: ${
-        Array.isArray(property.type) ? property.type.join(' | ') : (property.type ?? 'unknown')
-      }`
+    ([name, property]) => `${name}${required.has(name) ? '' : '?'}: ${describeNode(property)}`
   )
   return fields.length > 0 ? `{ ${fields.join(', ')} }` : 'none'
 }

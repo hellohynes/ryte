@@ -67,6 +67,13 @@ const INDEXER_REQUEST_CHANNELS = [
   'indexer:trigger-reindex'
 ]
 const INDEXER_EVENT_CHANNEL = 'indexer:status-event'
+// The settings wire strings, copied from the pre-migration code (ipc.ts at 322bfd7) before the area moved.
+const SETTINGS_REQUEST_CHANNELS = [
+  'settings:get-state',
+  'settings:list-models',
+  'settings:save',
+  'settings:validate-key'
+]
 
 const recorded = (
   JSON.parse(
@@ -125,6 +132,13 @@ describe('registerOperations: validation in front of every handler', () => {
 
     expect([...listeners.keys()]).toEqual(expect.arrayContaining(INDEXER_REQUEST_CHANNELS))
     expect(contract.indexer.events.status.channel).toBe(INDEXER_EVENT_CHANNEL)
+  })
+
+  it('owns the settings wire strings recorded before the migration, unchanged', () => {
+    const { ipc, listeners } = fakeIpc()
+    registerOperations(ipc, contract, echoHandlers().handlers)
+
+    expect([...listeners.keys()]).toEqual(expect.arrayContaining(SETTINGS_REQUEST_CHANNELS))
   })
 
   it('passes the calling sender to a sender-aware handler and validates its input', async () => {

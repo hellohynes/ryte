@@ -20,6 +20,15 @@ import {
   type ModelId,
   type ProviderId
 } from '../../shared/provider-registry'
+import type {
+  ColorMode,
+  DataFlowAcknowledgement,
+  ProviderKeyMetadata,
+  PublicSettingsState,
+  ScrollbarVisibility,
+  SearchHistoryRetention,
+  SettingsUpdate
+} from '../../contract/settings'
 import { keychain } from './keychain'
 
 export const SETTINGS_SCHEMA_VERSION = 4
@@ -33,18 +42,16 @@ export type {
   ProviderId
 }
 
-export type SearchHistoryRetention = 'off' | 'session' | '7-days' | '30-days' | 'forever'
-export type ScrollbarVisibility = 'auto' | 'always'
-export type ColorMode = 'system' | 'light' | 'dark'
-
-export interface DataFlowAcknowledgement {
-  acknowledgedAt: string
-  provider: ProviderId
-  model: string
-}
-
-export interface ProviderKeyMetadata {
-  lastValidatedAt: string | null
+// The wire types are defined once, in the contract (`src/contract/settings.ts`). They are re-exported here under
+// their old names so the renderer and the main code keep importing them from this module.
+export type {
+  ColorMode,
+  DataFlowAcknowledgement,
+  ProviderKeyMetadata,
+  PublicSettingsState,
+  ScrollbarVisibility,
+  SearchHistoryRetention,
+  SettingsUpdate
 }
 
 export interface SettingsFile {
@@ -69,59 +76,6 @@ export interface SettingsFile {
   providerKeyMetadata: Partial<Record<ProviderId, ProviderKeyMetadata>>
   /** What the last "Refresh models" found for the saved OpenAI key; null until one has run. */
   discoveredOpenAIModels: string[] | null
-}
-
-export interface PublicSettingsState {
-  notesRoot: string
-  model: ModelId
-  cloudAnswersEnabled: boolean
-  semanticIndexEnabled: boolean
-  firstCloudUseAcknowledgedAt: string | null
-  cloudAnswersAcknowledgement: DataFlowAcknowledgement | null
-  semanticIndexAcknowledgement: DataFlowAcknowledgement | null
-  answerProvider: AnswerProviderId
-  answerModel: AnswerModelId
-  embeddingProvider: EmbeddingProviderId
-  embeddingModel: EmbeddingModelId
-  searchHistoryRetention: SearchHistoryRetention
-  searchHistoryIncludesAnswers: boolean
-  scrollbarVisibility: ScrollbarVisibility
-  fontFamily: FontId
-  colorMode: ColorMode
-  ticketLinkBase: string
-  pullRequestLinkBase: string
-  hasAnthropicKey: boolean
-  hasOpenAIKey: boolean
-  hasGeminiKey: boolean
-  providerKeyMetadata: Partial<Record<ProviderId, ProviderKeyMetadata>>
-  /** The model IDs the last refresh found for the OpenAI key, in the order returned. */
-  discoveredOpenAIModels: string[] | null
-  keychainAvailable: boolean
-}
-
-export interface SettingsUpdate {
-  notesRoot?: string
-  model?: ModelId
-  cloudAnswersEnabled?: boolean
-  semanticIndexEnabled?: boolean
-  firstCloudUseAcknowledgedAt?: string | null
-  cloudAnswersAcknowledgement?: DataFlowAcknowledgement | null
-  semanticIndexAcknowledgement?: DataFlowAcknowledgement | null
-  answerProvider?: AnswerProviderId
-  answerModel?: AnswerModelId
-  embeddingProvider?: EmbeddingProviderId
-  embeddingModel?: EmbeddingModelId
-  searchHistoryRetention?: SearchHistoryRetention
-  searchHistoryIncludesAnswers?: boolean
-  scrollbarVisibility?: ScrollbarVisibility
-  fontFamily?: FontId
-  colorMode?: ColorMode
-  ticketLinkBase?: string
-  pullRequestLinkBase?: string
-  anthropicKey?: string
-  openaiKey?: string
-  geminiKey?: string
-  deleteProviderKeys?: ProviderId[]
 }
 
 function defaultSettings(): SettingsFile {

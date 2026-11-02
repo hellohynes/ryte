@@ -1,17 +1,8 @@
 import { extname, isAbsolute, normalize, sep, win32 } from 'node:path'
 
-import type {
-  ColorMode,
-  DataFlowAcknowledgement,
-  ScrollbarVisibility,
-  SearchHistoryRetention,
-  SettingsUpdate
-} from './settings/settings-store'
 import type { SearchOptions, SearchSnapshotFreshnessInput } from './search/search-service'
 import type { FileRenameInput } from '../shared/files'
-import { isFontId } from '../shared/fonts'
 import { MAX_PATH_LENGTH, normalizeWorkspaceSourcePath } from '../shared/source-path'
-import { isReferenceLinkBase } from '../shared/reference-links'
 import type {
   WorkspaceCloseTabInput,
   WorkspaceFileRef,
@@ -29,14 +20,6 @@ import type {
   WorkspaceViewMode,
   WorkspaceWindowUpdate
 } from '../shared/workspace'
-import {
-  isAnswerModelId,
-  isAnswerProviderId,
-  isEmbeddingModelId,
-  isEmbeddingProviderId,
-  isProviderId,
-  type ProviderId
-} from '../shared/provider-registry'
 
 const MAX_FILE_NAME_LENGTH = 255
 const MAX_QUERY_LENGTH = 2000
@@ -46,31 +29,6 @@ const MAX_DOCUMENT_OUTLINE_WIDTH = 1000
 const MAX_TAB_ID_LENGTH = 200
 const REQUEST_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 const WORKSPACE_TAB_ID_RE = /^[A-Za-z0-9][A-Za-z0-9:_.-]{0,199}$/
-
-const SETTINGS_KEYS = new Set([
-  'notesRoot',
-  'model',
-  'cloudAnswersEnabled',
-  'semanticIndexEnabled',
-  'firstCloudUseAcknowledgedAt',
-  'cloudAnswersAcknowledgement',
-  'semanticIndexAcknowledgement',
-  'answerProvider',
-  'answerModel',
-  'embeddingProvider',
-  'embeddingModel',
-  'searchHistoryRetention',
-  'searchHistoryIncludesAnswers',
-  'scrollbarVisibility',
-  'fontFamily',
-  'colorMode',
-  'ticketLinkBase',
-  'pullRequestLinkBase',
-  'anthropicKey',
-  'openaiKey',
-  'geminiKey',
-  'deleteProviderKeys'
-])
 
 export function assertValidRequestId(value: unknown): string {
   if (typeof value !== 'string' || !REQUEST_ID_RE.test(value)) {
@@ -279,166 +237,9 @@ export function assertValidSearchSnapshotFreshnessInput(
   }
 }
 
-export function assertValidProviderId(value: unknown): ProviderId {
-  if (!isProviderId(value)) throw new Error('Invalid provider')
-  return value
-}
-
-function isSearchHistoryRetention(value: unknown): value is SearchHistoryRetention {
-  return (
-    value === 'off' ||
-    value === 'session' ||
-    value === '7-days' ||
-    value === '30-days' ||
-    value === 'forever'
-  )
-}
-
-function isScrollbarVisibility(value: unknown): value is ScrollbarVisibility {
-  return value === 'auto' || value === 'always'
-}
-
-function isColorMode(value: unknown): value is ColorMode {
-  return value === 'system' || value === 'light' || value === 'dark'
-}
-
-function isDataFlowAcknowledgement(value: unknown): value is DataFlowAcknowledgement {
-  if (value === null) return true
-  if (!value || typeof value !== 'object') return false
-  const candidate = value as Partial<DataFlowAcknowledgement>
-  return (
-    typeof candidate.acknowledgedAt === 'string' &&
-    isProviderId(candidate.provider) &&
-    typeof candidate.model === 'string' &&
-    candidate.model.length > 0
-  )
-}
-
 function assertOptionalBoolean(value: unknown, key: string): boolean {
   if (typeof value !== 'boolean') throw new Error(`Invalid ${key}`)
   return value
-}
-
-function assertOptionalKey(value: unknown, key: string): string {
-  if (typeof value !== 'string' || value.trim().length === 0) {
-    throw new Error(`Invalid ${key}`)
-  }
-  return value.trim()
-}
-
-export function assertValidSettingsPatch(value: unknown): SettingsUpdate {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error('Invalid settings patch')
-  }
-
-  const input = value as Record<string, unknown>
-  for (const key of Object.keys(input)) {
-    if (!SETTINGS_KEYS.has(key)) throw new Error(`Invalid settings key: ${key}`)
-  }
-
-  const patch: SettingsUpdate = {}
-  if ('notesRoot' in input) patch.notesRoot = assertValidAbsolutePath(input.notesRoot)
-  if ('model' in input) {
-    if (!isAnswerModelId(input.model)) throw new Error('Invalid model')
-    patch.model = input.model
-  }
-  if ('cloudAnswersEnabled' in input) {
-    patch.cloudAnswersEnabled = assertOptionalBoolean(
-      input.cloudAnswersEnabled,
-      'cloudAnswersEnabled'
-    )
-  }
-  if ('semanticIndexEnabled' in input) {
-    patch.semanticIndexEnabled = assertOptionalBoolean(
-      input.semanticIndexEnabled,
-      'semanticIndexEnabled'
-    )
-  }
-  if ('firstCloudUseAcknowledgedAt' in input) {
-    if (
-      input.firstCloudUseAcknowledgedAt !== null &&
-      typeof input.firstCloudUseAcknowledgedAt !== 'string'
-    ) {
-      throw new Error('Invalid first cloud acknowledgement')
-    }
-    patch.firstCloudUseAcknowledgedAt = input.firstCloudUseAcknowledgedAt
-  }
-  if ('cloudAnswersAcknowledgement' in input) {
-    if (!isDataFlowAcknowledgement(input.cloudAnswersAcknowledgement)) {
-      throw new Error('Invalid cloud answers acknowledgement')
-    }
-    patch.cloudAnswersAcknowledgement = input.cloudAnswersAcknowledgement
-  }
-  if ('semanticIndexAcknowledgement' in input) {
-    if (!isDataFlowAcknowledgement(input.semanticIndexAcknowledgement)) {
-      throw new Error('Invalid semantic index acknowledgement')
-    }
-    patch.semanticIndexAcknowledgement = input.semanticIndexAcknowledgement
-  }
-  if ('answerProvider' in input) {
-    if (!isAnswerProviderId(input.answerProvider)) throw new Error('Invalid answer provider')
-    patch.answerProvider = input.answerProvider
-  }
-  if ('answerModel' in input) {
-    if (!isAnswerModelId(input.answerModel)) throw new Error('Invalid answer model')
-    patch.answerModel = input.answerModel
-  }
-  if ('embeddingProvider' in input) {
-    if (!isEmbeddingProviderId(input.embeddingProvider)) {
-      throw new Error('Invalid embedding provider')
-    }
-    patch.embeddingProvider = input.embeddingProvider
-  }
-  if ('embeddingModel' in input) {
-    if (!isEmbeddingModelId(input.embeddingModel)) throw new Error('Invalid embedding model')
-    patch.embeddingModel = input.embeddingModel
-  }
-  if ('searchHistoryRetention' in input) {
-    if (!isSearchHistoryRetention(input.searchHistoryRetention)) {
-      throw new Error('Invalid search history retention')
-    }
-    patch.searchHistoryRetention = input.searchHistoryRetention
-  }
-  if ('searchHistoryIncludesAnswers' in input) {
-    patch.searchHistoryIncludesAnswers = assertOptionalBoolean(
-      input.searchHistoryIncludesAnswers,
-      'searchHistoryIncludesAnswers'
-    )
-  }
-  if ('scrollbarVisibility' in input) {
-    if (!isScrollbarVisibility(input.scrollbarVisibility)) {
-      throw new Error('Invalid scrollbar visibility')
-    }
-    patch.scrollbarVisibility = input.scrollbarVisibility
-  }
-  if ('fontFamily' in input) {
-    if (!isFontId(input.fontFamily)) throw new Error('Invalid font')
-    patch.fontFamily = input.fontFamily
-  }
-  if ('colorMode' in input) {
-    if (!isColorMode(input.colorMode)) throw new Error('Invalid color mode')
-    patch.colorMode = input.colorMode
-  }
-  if ('ticketLinkBase' in input) {
-    if (!isReferenceLinkBase(input.ticketLinkBase)) throw new Error('Invalid ticket link base')
-    patch.ticketLinkBase = input.ticketLinkBase
-  }
-  if ('pullRequestLinkBase' in input) {
-    if (!isReferenceLinkBase(input.pullRequestLinkBase)) {
-      throw new Error('Invalid pull request link base')
-    }
-    patch.pullRequestLinkBase = input.pullRequestLinkBase
-  }
-  if ('anthropicKey' in input)
-    patch.anthropicKey = assertOptionalKey(input.anthropicKey, 'anthropicKey')
-  if ('openaiKey' in input) patch.openaiKey = assertOptionalKey(input.openaiKey, 'openaiKey')
-  if ('geminiKey' in input) patch.geminiKey = assertOptionalKey(input.geminiKey, 'geminiKey')
-  if ('deleteProviderKeys' in input) {
-    if (!Array.isArray(input.deleteProviderKeys)) throw new Error('Invalid deleteProviderKeys')
-    patch.deleteProviderKeys = input.deleteProviderKeys.map(assertValidProviderId)
-  }
-
-  return patch
 }
 
 function assertFiniteNumber(value: unknown, key: string): number {

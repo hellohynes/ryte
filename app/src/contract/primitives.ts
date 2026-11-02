@@ -1,6 +1,8 @@
+import { isAbsolute } from 'node:path'
+
 import { z } from 'zod'
 
-import { normalizeWorkspaceSourcePath } from '../shared/source-path'
+import { MAX_PATH_LENGTH, normalizeWorkspaceSourcePath } from '../shared/source-path'
 
 /**
  * A notes-root-relative file path, validated and normalized by the same function the legacy IPC
@@ -29,3 +31,14 @@ export const integer = z.number().refine(Number.isInteger, 'Expected an integer'
 export function hasNoExplicitUndefined(value: Record<string, unknown>): boolean {
   return Object.values(value).every((entry) => entry !== undefined)
 }
+
+/**
+ * An absolute path by `node:path`, non-empty and at most `MAX_PATH_LENGTH`, kept exactly as given (the legacy
+ * validator did not normalize it).
+ */
+export const absolutePath = z
+  .string()
+  .refine(
+    (value) => value.length > 0 && value.length <= MAX_PATH_LENGTH && isAbsolute(value),
+    'Expected an absolute path'
+  )

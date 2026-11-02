@@ -124,12 +124,21 @@ types change, and so does every caller. Rules:
 - **Never rename a channel.** It is the wire name. Add the new operation, move the callers, then remove the old one.
 - Adding an optional input field or an extra output field is safe. Tightening or reinterpreting an input changes
   behavior: say so in the change.
-- `tasks.list` and `tasks.toggle` are covered by recorded vectors of the behavior they had before the contract
-  (`app/src/contract/tasks.vectors.*`, recorded from the pre-contract code at `c4c7b3c`; the one-shot recorder was
-  deleted with the old validators and is in git history at `a9ce30b:app/src/contract/record/record-vectors.ts`). If
-  you intentionally change what they accept, add an entry with a reason to
-  `ACCEPTED_DEVIATIONS` in `tasks.vectors.deviations.ts`. Do not edit `tasks.vectors.expected.json`: it is the
-  oracle.
+- An area migrated from hand-written validators is covered by recorded vectors of the behavior it had before the
+  contract: `tasks` (`app/src/contract/tasks.vectors.*`, recorded from the pre-contract code at `c4c7b3c`) and
+  `settings` (`app/src/contract/settings.vectors.*`, recorded at `322bfd7`). `<area>.vectors.inputs.ts` holds the authored
+  inputs, `<area>.vectors.expected.json` is the oracle recorded from the old validators, and a test checks every vector
+  against the new schemas. The one-shot recorders were deleted with the old validators and are in git history
+  (`a9ce30b:app/src/contract/record/record-vectors.ts` and
+  `88ee7dc:app/src/contract/record/record-settings-vectors.ts`). If you intentionally change what an operation accepts,
+  add an entry with a reason to `ACCEPTED_DEVIATIONS` in `<area>.vectors.deviations.ts`; only a change that is stricter than
+  the recording is a deviation, and anything that accepts more than the old validator did is a defect. Do not edit
+  `<area>.vectors.expected.json`: it is the oracle.
+- `<area>.wire-types.ts` (`tasks`, `indexer`, `settings`) is a **frozen copy** of the hand-written declarations the contract
+  replaced, kept as the oracle for the compile-time check in `<area>.wire-types.check.ts`: the types inferred from the
+  definition must equal it. It is hand-written on purpose and is the one exception to "never write a type by hand"; do not
+  edit it to make the check pass. Keep it for as long as the contract should not drift from what those declarations said;
+  delete it, with its check, only when the owner decides the types may change freely.
 - An error message is not a contract. The UI shows `error.message` for a rejected input, but only for input its own
   callers never send.
 
