@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events'
 import { realpath as fsRealpath, watch, type FSWatcher } from 'node:fs'
 import { lstat, readdir } from 'node:fs/promises'
-import { basename, join, sep } from 'node:path'
+import { basename, dirname, join, sep } from 'node:path'
 
 import { indexerService } from './indexer-service'
 
@@ -13,6 +13,14 @@ const CATALOG_CHANGED_EVENT = 'catalog-changed'
 const DEBOUNCE_MS = 300
 const DECISION_CONCURRENCY = 64
 const WALK_CONCURRENCY = 16
+const STAT_CONCURRENCY = 64
+// A path that could not be read is tried again this many times, this long after the last try (times the try number).
+const READ_RETRIES = 2
+const READ_RETRY_MS = 1000
+// The folder itself is checked this often: it can be deleted or renamed without any event arriving.
+const ROOT_CHECK_MS = 5000
+// A restarted watcher may restart again once it has run this long.
+const RESTART_RENEWAL_MS = 60_000
 
 export interface CatalogChangeEvent {
   type: 'upsert' | 'remove'
@@ -121,16 +129,44 @@ async function classify(path: string): Promise<Kind> {
   }
 }
 
+type Seen = Kind | 'unknown'
+
+// What each path is right now, for at most STAT_CONCURRENCY paths at a time. A path that cannot be read for another reason than
+// being gone is `unknown`, and is never acted on.
+async function statAll(paths: string[], cancelled: () => boolean): Promise<Map<string, Seen>> {
+  const seen = new Map<string, Seen>()
+  let next = 0
+  const worker = async (): Promise<void> => {
+    while (next < paths.length && !cancelled()) {
+      const path = paths[next++] as string
+      try {
+        const stats = await lstat(path)
+        seen.set(path, stats.isDirectory() ? 'directory' : stats.isFile() ? 'file' : 'missing')
+      } catch (error) {
+        seen.set(path, isGone(error) ? 'missing' : 'unknown')
+      }
+    }
+  }
+  await Promise.all(Array.from({ length: Math.min(STAT_CONCURRENCY, paths.length) }, worker))
+  return seen
+}
+
 interface Session {
   root: string
+  rootId: number | null
   fsw: FSWatcher | null
   closed: boolean
   ready: boolean
   canRestart: boolean
+  checkingRoot: boolean
   files: Set<string>
+  /** How many known notes are under each folder, at any depth, so a path with nothing under it costs no scan. */
+  counts: Map<string, number>
   dirs: Set<string>
   held: Set<string>
   timers: Map<string, ReturnType<typeof setTimeout>>
+  retries: Map<string, number>
+  housekeeping: Array<ReturnType<typeof setTimeout>>
   pending: Set<string>
   active: Set<string>
 }
@@ -141,6 +177,7 @@ interface Change {
 
 export class Watcher {
   private session: Session | null = null
+  private waiting: ReturnType<typeof setInterval> | null = null
   private readonly events = new EventEmitter()
   private readonly pendingIndexOperations = new Map<string, 'changed' | 'removed'>()
   private processingIndexOperations = false
@@ -167,14 +204,19 @@ export class Watcher {
   private open(root: string, canRestart: boolean): void {
     const session: Session = {
       root,
+      rootId: null,
       fsw: null,
       closed: false,
       ready: false,
       canRestart,
+      checkingRoot: false,
       files: new Set(),
+      counts: new Map(),
       dirs: new Set(),
       held: new Set(),
       timers: new Map(),
+      retries: new Map(),
+      housekeeping: [],
       pending: new Set(),
       active: new Set()
     }
@@ -187,15 +229,28 @@ export class Watcher {
       return
     }
     session.fsw.on('error', (error) => this.onWatchError(session, error))
+    if (!canRestart) {
+      session.housekeeping.push(
+        setTimeout(() => {
+          session.canRestart = true
+        }, RESTART_RENEWAL_MS)
+      )
+    }
     this.session = session
     void this.seed(session)
   }
 
   private closeSession(session: Session | null = this.session): void {
+    if (this.waiting && session === this.session) {
+      clearInterval(this.waiting)
+      this.waiting = null
+    }
     if (!session) return
     session.closed = true
     for (const timer of session.timers.values()) clearTimeout(timer)
+    for (const timer of session.housekeeping) clearTimeout(timer)
     session.timers.clear()
+    session.housekeeping.length = 0
     session.pending.clear()
     session.held.clear()
     try {
@@ -213,7 +268,7 @@ export class Watcher {
     this.emitTreeChanged()
     const { root, canRestart } = session
     this.closeSession(session)
-    // One restart; a watcher that fails again stays stopped, and the next reindex recovers what was missed.
+    // One restart in a row; a watcher that fails again soon after stays stopped, and the next reindex recovers what was missed.
     if (canRestart) this.open(root, false)
   }
 
@@ -228,7 +283,7 @@ export class Watcher {
     this.schedule(session, path)
   }
 
-  private schedule(session: Session, path: string): void {
+  private schedule(session: Session, path: string, delay = DEBOUNCE_MS): void {
     const previous = session.timers.get(path)
     if (previous) clearTimeout(previous)
     session.timers.set(
@@ -236,7 +291,7 @@ export class Watcher {
       setTimeout(() => {
         session.timers.delete(path)
         this.decideNow(session, path)
-      }, DEBOUNCE_MS)
+      }, delay)
     )
   }
 
@@ -273,16 +328,64 @@ export class Watcher {
       this.closeSession(session)
       return
     }
-    session.files = new Set(walked.files)
+    try {
+      const id = (await lstat(session.root)).ino
+      session.rootId = typeof id === 'number' ? id : null
+    } catch {
+      // The folder is checked again on the next tick.
+    }
+    if (session.closed) return
+    for (const file of walked.files) this.addFile(session, file)
     session.dirs = new Set(walked.dirs)
     session.dirs.delete(session.root)
     session.ready = true
+    session.housekeeping.push(setInterval(() => void this.checkRoot(session), ROOT_CHECK_MS))
     // Whatever happened while the walk ran is decided now, on the states the files are in.
     if (session.held.size > 0) {
       this.emitTreeChanged()
       for (const path of session.held) this.decideNow(session, path)
       session.held.clear()
     }
+  }
+
+  // Deleting or renaming the notes folder reports nothing, and the watcher is bound to the folder that was there.
+  private async checkRoot(session: Session): Promise<void> {
+    if (session.closed || session.checkingRoot) return
+    session.checkingRoot = true
+    let lost = false
+    try {
+      const stats = await lstat(session.root)
+      const id = typeof stats.ino === 'number' ? stats.ino : null
+      lost =
+        !stats.isDirectory() || (id !== null && session.rootId !== null && id !== session.rootId)
+    } catch (error) {
+      lost = isGone(error)
+    } finally {
+      session.checkingRoot = false
+    }
+    if (lost && !session.closed) this.onRootLost(session)
+  }
+
+  private onRootLost(session: Session): void {
+    console.error('Ryte lost the notes folder.', 'ROOT_GONE')
+    const { root } = session
+    const known = [...session.files]
+    this.closeSession(session)
+    const change: Change = { tree: true }
+    for (const file of known) this.removeFile(session, file, change)
+    this.emitTreeChanged()
+    this.waiting = setInterval(() => {
+      void lstat(root).then(
+        (stats) => {
+          if (!stats.isDirectory() || !this.waiting || this.session) return
+          clearInterval(this.waiting)
+          this.waiting = null
+          this.open(root, true)
+          this.emitTreeChanged()
+        },
+        () => undefined
+      )
+    }, ROOT_CHECK_MS)
   }
 
   private async decide(session: Session, path: string): Promise<void> {
@@ -296,20 +399,47 @@ export class Watcher {
         // A folder replaced by a file leaves nothing of the folder's notes.
         if (session.dirs.has(path)) this.removeSubtree(session, path, change)
         if (isMarkdownFile(path)) {
-          if (!session.files.has(path)) {
-            session.files.add(path)
-            change.tree = true
-          }
+          if (this.addFile(session, path)) change.tree = true
           this.emitCatalogChanged({ type: 'upsert', path, notesRoot: session.root })
           this.queueIndexOperation(path, 'changed')
         }
       } else {
         await this.reconcileDirectory(session, path, change)
       }
+      session.retries.delete(path)
     } catch (error) {
       console.error('Ryte could not read a changed path.', errorCode(error))
+      this.retry(session, path)
     }
     if (change.tree && !session.closed) this.emitTreeChanged()
+  }
+
+  // A path that could not be read is tried again a few times; after that the next reindex recovers it.
+  private retry(session: Session, path: string): void {
+    if (session.closed) return
+    const tried = session.retries.get(path) ?? 0
+    if (tried >= READ_RETRIES) {
+      session.retries.delete(path)
+      return
+    }
+    session.retries.set(path, tried + 1)
+    this.schedule(session, path, READ_RETRY_MS * (tried + 1))
+  }
+
+  private addFile(session: Session, path: string): boolean {
+    if (session.files.has(path)) return false
+    session.files.add(path)
+    this.countUnder(session, path, 1)
+    return true
+  }
+
+  private countUnder(session: Session, path: string, delta: number): void {
+    for (let dir = dirname(path); ; dir = dirname(dir)) {
+      const count = (session.counts.get(dir) ?? 0) + delta
+      if (count > 0) session.counts.set(dir, count)
+      else session.counts.delete(dir)
+      if (dir === session.root || dirname(dir) === dir) break
+    }
   }
 
   // A known file, a known folder, or a folder only its notes were known for.
@@ -319,30 +449,44 @@ export class Watcher {
   }
 
   private removeFile(session: Session, path: string, change: Change): void {
-    session.files.delete(path)
+    if (session.files.delete(path)) this.countUnder(session, path, -1)
     change.tree = true
     this.emitCatalogChanged({ type: 'remove', path, notesRoot: session.root })
     this.queueIndexOperation(path, 'removed')
   }
 
-  private removeSubtree(session: Session, path: string, change: Change): void {
+  private knownFilesUnder(session: Session, path: string): string[] {
+    if (!session.counts.get(path)) return []
     const prefix = path + sep
-    for (const file of [...session.files]) {
-      if (file.startsWith(prefix)) this.removeFile(session, file, change)
-    }
-    if (session.dirs.delete(path)) change.tree = true
-    for (const dir of [...session.dirs]) {
-      if (dir.startsWith(prefix)) {
-        session.dirs.delete(dir)
-        change.tree = true
-      }
-    }
+    const found: string[] = []
+    for (const file of session.files) if (file.startsWith(prefix)) found.push(file)
+    return found
+  }
+
+  private knownDirsUnder(session: Session, path: string): string[] {
+    const prefix = path + sep
+    const found: string[] = []
+    for (const dir of session.dirs) if (dir.startsWith(prefix)) found.push(dir)
+    return found
+  }
+
+  private removeSubtree(session: Session, path: string, change: Change): void {
+    const files = this.knownFilesUnder(session, path)
+    const isFolder = session.dirs.delete(path)
+    // Nothing known at or under the path (a deleted temporary or non-markdown file): no scan of the known folders either.
+    if (!isFolder && files.length === 0) return
+    for (const file of files) this.removeFile(session, file, change)
+    for (const dir of this.knownDirsUnder(session, path)) session.dirs.delete(dir)
+    change.tree = true
   }
 
   // A folder created, copied in, moved in, or renamed onto an existing folder reports no events for what is inside, so its
-  // subtree is compared with what is known.
+  // subtree is compared with what is known. The walk can take a while, so what it found is checked against the folder before it
+  // is acted on: a note saved or deleted meanwhile is decided by its own event, and an unreadable folder removes nothing.
   private async reconcileDirectory(session: Session, path: string, change: Change): Promise<void> {
     if (session.files.has(path)) this.removeFile(session, path, change)
+    const knownFiles = this.knownFilesUnder(session, path)
+    const knownDirs = this.knownDirsUnder(session, path)
     const walked = await walkTree(path, () => session.closed)
     if (session.closed) return
     if (!walked) {
@@ -351,26 +495,48 @@ export class Watcher {
     }
     const seenFiles = new Set(walked.files)
     const seenDirs = new Set(walked.dirs)
-    for (const dir of walked.dirs) {
-      if (!session.dirs.has(dir)) {
+    const candidates = {
+      addFiles: walked.files.filter((file) => !session.files.has(file)),
+      addDirs: walked.dirs.filter((dir) => !session.dirs.has(dir)),
+      dropFiles: knownFiles.filter((file) => !seenFiles.has(file)),
+      dropDirs: knownDirs.filter((dir) => !seenDirs.has(dir))
+    }
+    const seen = await statAll(
+      [
+        ...candidates.addFiles,
+        ...candidates.addDirs,
+        ...candidates.dropFiles,
+        ...candidates.dropDirs
+      ],
+      () => session.closed
+    )
+    if (session.closed) return
+    for (const dir of candidates.addDirs) {
+      if (seen.get(dir) === 'directory' && !session.dirs.has(dir)) {
         session.dirs.add(dir)
         change.tree = true
       }
     }
-    for (const file of walked.files) {
-      if (session.files.has(file)) continue
-      session.files.add(file)
+    for (const file of candidates.addFiles) {
+      if (seen.get(file) !== 'file' || !this.addFile(session, file)) continue
       change.tree = true
       this.emitCatalogChanged({ type: 'upsert', path: file, notesRoot: session.root })
       this.queueIndexOperation(file, 'changed')
     }
-    const prefix = path + sep
-    for (const file of [...session.files]) {
-      if (file.startsWith(prefix) && !seenFiles.has(file)) this.removeFile(session, file, change)
+    for (const file of candidates.dropFiles) {
+      const now = seen.get(file)
+      if (now !== undefined && now !== 'file' && now !== 'unknown' && session.files.has(file)) {
+        this.removeFile(session, file, change)
+      }
     }
-    for (const dir of [...session.dirs]) {
-      if (dir.startsWith(prefix) && !seenDirs.has(dir)) {
+    for (const dir of candidates.dropDirs) {
+      const now = seen.get(dir)
+      if (
+        now !== undefined &&
+        now !== 'directory' &&
+        now !== 'unknown' &&
         session.dirs.delete(dir)
+      ) {
         change.tree = true
       }
     }

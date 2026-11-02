@@ -11,6 +11,9 @@ const h = vi.hoisted(() => {
   const aliases = new Map<string, string>()
   const linkTargets = new Map<string, string>()
   const gates = new Map<string, Promise<void>>()
+  const staleGates = new Map<string, Promise<void>>()
+  const inos = new Map<string, number>()
+  const lstatFailures = new Map<string, string>()
   const lstatStats = { inflight: 0, max: 0 }
   const parent = (path: string): string => path.slice(0, path.lastIndexOf('/'))
   const fail = (code: string): Error =>
@@ -22,6 +25,9 @@ const h = vi.hoisted(() => {
     aliases,
     linkTargets,
     gates,
+    staleGates,
+    inos,
+    lstatFailures,
     lstatStats,
     watchFailure: { code: null as string | null },
     watch: vi.fn(),
@@ -32,9 +38,12 @@ const h = vi.hoisted(() => {
       lstatStats.max = Math.max(lstatStats.max, lstatStats.inflight)
       await Promise.resolve()
       lstatStats.inflight -= 1
+      const failure = lstatFailures.get(path)
+      if (failure) throw fail(failure)
       const kind = kinds.get(actual(path))
       if (!kind) throw fail('ENOENT')
       return {
+        ino: inos.get(path),
         isFile: () => kind === 'file',
         isDirectory: () => kind === 'dir',
         isSymbolicLink: () => kind === 'link'
@@ -48,7 +57,7 @@ const h = vi.hoisted(() => {
       // Following a link reads its target.
       const target = linkTargets.get(dir) ?? dir
       if (kinds.get(target) !== 'dir') throw fail('ENOENT')
-      return [...kinds]
+      const listing = [...kinds]
         .filter(([path]) => parent(path) === target)
         .map(([path, kind]) => ({
           name: path.slice(path.lastIndexOf('/') + 1),
@@ -56,6 +65,10 @@ const h = vi.hoisted(() => {
           isDirectory: () => kind === 'dir',
           isSymbolicLink: () => kind === 'link'
         }))
+      // A slow read: the listing is what the folder held when the read began.
+      const staleGate = staleGates.get(dir)
+      if (staleGate) await staleGate
+      return listing
     }),
     realpathNative: vi.fn(
       (path: string, callback: (error: Error | null, resolved?: string) => void) => {
@@ -175,6 +188,9 @@ describe('Watcher', () => {
     h.aliases.clear()
     h.linkTargets.clear()
     h.gates.clear()
+    h.staleGates.clear()
+    h.inos.clear()
+    h.lstatFailures.clear()
     h.lstatStats.inflight = 0
     h.lstatStats.max = 0
     h.watchFailure.code = null
@@ -609,16 +625,219 @@ describe('Watcher', () => {
       expect(watches[1]?.fsw.close).toHaveBeenCalledOnce()
     })
 
-    it('logs and skips a path it cannot read, and never calls the indexer for it', async () => {
+    it('tries a path it cannot read again, then reports it', async () => {
       const { catalog } = await boot()
       h.lstat.mockRejectedValueOnce(h.fail('EACCES'))
 
       fakeFs.file('/notes/a.md')
       emit('a.md')
       await advance(DEBOUNCE)
-
       expect(catalog).not.toHaveBeenCalled()
       expect(consoleError).toHaveBeenCalledWith(expect.any(String), 'EACCES')
+
+      await advance(1000)
+      expect(catalogPaths(catalog, 'upsert')).toEqual(['/notes/a.md'])
+    })
+
+    it('gives up on a path that stays unreadable after two more tries', async () => {
+      const { catalog } = await boot()
+      for (let i = 0; i < 3; i += 1) h.lstat.mockRejectedValueOnce(h.fail('EACCES'))
+      fakeFs.file('/notes/a.md')
+      emit('a.md')
+
+      await advance(DEBOUNCE + 1000 + 2000 + 3000)
+
+      expect(catalog).not.toHaveBeenCalled()
+      expect(consoleError.mock.calls.filter(([, code]) => code === 'EACCES')).toHaveLength(3)
+    })
+
+    it('may restart again after it has run for a minute', async () => {
+      await boot()
+      watches[0]?.fsw.emit('error', Object.assign(new Error('first'), { code: 'EMFILE' }))
+      await advance(0)
+      expect(watches).toHaveLength(2)
+
+      await advance(60_000)
+      watches[1]?.fsw.emit('error', Object.assign(new Error('second'), { code: 'EMFILE' }))
+      await advance(0)
+
+      expect(watches).toHaveLength(3)
+    })
+  })
+
+  describe('a folder walk that is slow, or cannot read everything', () => {
+    it('keeps a note saved while the folder was being read', async () => {
+      const { catalog } = await boot()
+      fakeFs.file('/notes/D/sub/a.md')
+      let release!: () => void
+      h.staleGates.set('/notes/D/sub', new Promise<void>((resolve) => (release = resolve)))
+
+      emit('D')
+      await advance(DEBOUNCE)
+      fakeFs.file('/notes/D/sub/late.md')
+      emit('D/sub/late.md')
+      await advance(DEBOUNCE)
+      expect(catalogPaths(catalog, 'upsert')).toEqual(['/notes/D/sub/late.md'])
+
+      release()
+      await advance(0)
+      expect(catalogPaths(catalog, 'remove')).toEqual([])
+      expect(h.notifyFileRemoved).not.toHaveBeenCalled()
+      expect(catalogPaths(catalog, 'upsert')).toEqual(['/notes/D/sub/a.md', '/notes/D/sub/late.md'])
+    })
+
+    it('keeps a known note that was saved again while its folder was being read', async () => {
+      fakeFs.file('/notes/D/sub/a.md')
+      const { catalog } = await boot()
+      let release!: () => void
+      h.staleGates.set('/notes/D/sub', new Promise<void>((resolve) => (release = resolve)))
+      // The folder is reported while the walk of it is slow, and a second note appears in it meanwhile.
+      emit('D')
+      await advance(DEBOUNCE)
+      fakeFs.file('/notes/D/sub/b.md')
+      emit('D/sub/b.md')
+      await advance(DEBOUNCE)
+      emit('D')
+      await advance(DEBOUNCE)
+      release()
+      await advance(0)
+
+      expect(catalogPaths(catalog, 'remove')).toEqual([])
+    })
+
+    it('does not add a note that was deleted while the folder was being read', async () => {
+      const { catalog } = await boot()
+      fakeFs.file('/notes/D/sub/gone.md')
+      let release!: () => void
+      h.staleGates.set('/notes/D/sub', new Promise<void>((resolve) => (release = resolve)))
+
+      emit('D')
+      await advance(DEBOUNCE)
+      fakeFs.remove('/notes/D/sub/gone.md')
+      emit('D/sub/gone.md')
+      await advance(DEBOUNCE)
+      release()
+      await advance(0)
+
+      expect(catalogPaths(catalog, 'upsert')).toEqual([])
+    })
+
+    it('keeps the known notes of a subfolder it could not read', async () => {
+      fakeFs.file('/notes/p/sub/n.md')
+      fakeFs.file('/notes/p/other.md')
+      const { catalog } = await boot()
+
+      h.readdirFailures.set('/notes/p/sub', 'EACCES')
+      emit('p')
+      await advance(DEBOUNCE)
+
+      expect(catalogPaths(catalog, 'remove')).toEqual([])
+      expect(consoleError).toHaveBeenCalledWith(expect.any(String), 'EACCES')
+    })
+
+    it('keeps a known note it cannot check, as it cannot tell whether it is gone', async () => {
+      fakeFs.file('/notes/p/sub/n.md')
+      const { catalog } = await boot()
+
+      h.readdirFailures.set('/notes/p/sub', 'EACCES')
+      h.lstatFailures.set('/notes/p/sub/n.md', 'EACCES')
+      emit('p')
+      await advance(DEBOUNCE)
+
+      expect(catalogPaths(catalog, 'remove')).toEqual([])
+    })
+
+    it('still removes a known note that is really gone from a folder it walked', async () => {
+      fakeFs.file('/notes/p/n.md')
+      fakeFs.file('/notes/p/m.md')
+      const { catalog } = await boot()
+
+      fakeFs.remove('/notes/p/n.md')
+      emit('p')
+      await advance(DEBOUNCE)
+
+      expect(catalogPaths(catalog, 'remove')).toEqual(['/notes/p/n.md'])
+    })
+  })
+
+  describe('cost', () => {
+    it('does not scan the known notes for a deleted path that held none', async () => {
+      for (let i = 0; i < 2000; i += 1) fakeFs.file(`/notes/d${i % 50}/n${i}.md`)
+      await boot()
+      fakeFs.file('/notes/d1/pic.png')
+      fakeFs.file('/notes/d1/.n.tmp')
+      emit('d1/pic.png')
+      emit('d1/.n.tmp')
+      await advance(DEBOUNCE)
+
+      fakeFs.remove('/notes/d1/pic.png')
+      fakeFs.remove('/notes/d1/.n.tmp')
+      const startsWith = vi.spyOn(String.prototype, 'startsWith')
+      emit('d1/pic.png')
+      emit('d1/.n.tmp')
+      emit('never/existed.md')
+      await advance(DEBOUNCE)
+      const calls = startsWith.mock.calls.length
+      startsWith.mockRestore()
+
+      expect(calls).toBeLessThan(50)
+    })
+  })
+
+  describe('the folder itself is lost', () => {
+    it('removes everything known when the folder is deleted, though no event arrived', async () => {
+      fakeFs.file('/notes/a.md')
+      fakeFs.file('/notes/sub/b.md')
+      const { catalog, tree } = await boot()
+
+      fakeFs.remove(ROOT)
+      await advance(5000)
+
+      expect(catalogPaths(catalog, 'remove')).toEqual(['/notes/a.md', '/notes/sub/b.md'])
+      expect(h.notifyFileRemoved).toHaveBeenCalledWith('/notes/a.md')
+      expect(tree).toHaveBeenCalled()
+      expect(watches[0]?.fsw.close).toHaveBeenCalledOnce()
+    })
+
+    it('starts watching again when the folder comes back', async () => {
+      fakeFs.file('/notes/a.md')
+      const { catalog } = await boot()
+      fakeFs.remove(ROOT)
+      await advance(5000)
+      expect(watches).toHaveLength(1)
+
+      h.kinds.set(ROOT, 'dir')
+      await advance(5000)
+      expect(watches).toHaveLength(2)
+
+      fakeFs.file('/notes/new.md')
+      emit('new.md')
+      await advance(DEBOUNCE)
+      expect(catalogPaths(catalog, 'upsert')).toEqual(['/notes/new.md'])
+    })
+
+    it('treats a folder replaced by another at the same path as lost and watches the new one', async () => {
+      fakeFs.file('/notes/a.md')
+      h.inos.set(ROOT, 1)
+      const { catalog } = await boot()
+
+      h.inos.set(ROOT, 2)
+      await advance(5000)
+      expect(catalogPaths(catalog, 'remove')).toEqual(['/notes/a.md'])
+      await advance(5000)
+      expect(watches).toHaveLength(2)
+    })
+
+    it('stop ends the wait for a lost folder', async () => {
+      fakeFs.file('/notes/a.md')
+      const { watcher } = await boot()
+      fakeFs.remove(ROOT)
+      await advance(5000)
+      await watcher.stop()
+
+      h.kinds.set(ROOT, 'dir')
+      await advance(20_000)
+      expect(watches).toHaveLength(1)
     })
   })
 
