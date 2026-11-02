@@ -13,10 +13,6 @@ export function workspaceFilePath(): string {
   return join(userDataDir(), 'workspace.json')
 }
 
-export function indexDbPath(): string {
-  return join(userDataDir(), 'index.db')
-}
-
 export function defaultNotesRoot(): string {
   return join(app.getPath('documents'), 'Ryte')
 }
