@@ -49,6 +49,15 @@ const INDEXER_REQUEST_CHANNELS = [
 ]
 const INDEXER_EVENT_CHANNELS = ['indexer:status-event']
 const INDEXER_MEMBERS = ['clearAndRebuild', 'getStatus', 'onStatus', 'triggerReindex']
+// The settings wire strings and `window.ryte.settings` members, copied from the hand-written preload
+// (preload/index.ts at 322bfd7) before the area moved.
+const SETTINGS_REQUEST_CHANNELS = [
+  'settings:get-state',
+  'settings:list-models',
+  'settings:save',
+  'settings:validate-key'
+]
+const SETTINGS_MEMBERS = ['getState', 'listModels', 'save', 'validateKey']
 
 const toggleInput = {
   sourcePath: 'folder/tasks.md',
@@ -110,6 +119,30 @@ describe('createContractApi from the generated manifest', () => {
     // Called with no argument, as the legacy preload did.
     expect(invoke.mock.calls.every((call) => call.length === 1)).toBe(true)
     expect(on.mock.calls.map((call) => call[0])).toEqual(INDEXER_EVENT_CHANNELS)
+  })
+
+  it('builds window.ryte.settings with the members and channels recorded before the migration', async () => {
+    const { ipc, invoke, on } = fakeIpc()
+    const api = createContractApi(ipc)
+
+    expect(Object.keys(api.settings).sort()).toEqual(SETTINGS_MEMBERS)
+
+    await api.settings.getState()
+    await api.settings.save({ colorMode: 'dark' })
+    await api.settings.validateKey({ provider: 'openai' })
+    await api.settings.listModels({ provider: 'openai' })
+
+    expect(invoke.mock.calls.map((call) => call[0]).sort()).toEqual(SETTINGS_REQUEST_CHANNELS)
+    // Each call forwards its one input, and the no-input call forwards none.
+    expect(invoke.mock.calls.find((call) => call[0] === 'settings:get-state')).toHaveLength(1)
+    expect(invoke.mock.calls.find((call) => call[0] === 'settings:save')?.[1]).toEqual({
+      colorMode: 'dark'
+    })
+    expect(invoke.mock.calls.find((call) => call[0] === 'settings:validate-key')?.[1]).toEqual({
+      provider: 'openai'
+    })
+    // The area has no events.
+    expect(on.mock.calls.filter((call) => String(call[0]).startsWith('settings:'))).toEqual([])
   })
 
   it('forwards at most the first argument: none for list() and refresh(), the input otherwise', async () => {

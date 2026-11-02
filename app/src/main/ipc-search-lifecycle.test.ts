@@ -190,7 +190,7 @@ describe('search IPC request lifecycle', () => {
   it('remembers the models a refresh found, so the picker lists them after a restart', async () => {
     mocks.listModels.mockResolvedValue(['gpt-6-luna', 'gpt-5.2'])
 
-    const models = await handler('settings:list-models')({}, 'openai')
+    const models = await handler('settings:list-models')({}, { provider: 'openai' })
 
     expect(models).toEqual(['gpt-6-luna', 'gpt-5.2'])
     expect(mocks.recordModels).toHaveBeenCalledWith(['gpt-6-luna', 'gpt-5.2'])
@@ -200,7 +200,7 @@ describe('search IPC request lifecycle', () => {
     mocks.getSecret.mockReturnValueOnce('sk-old').mockReturnValue('sk-new')
     mocks.listModels.mockResolvedValue(['gpt-6-luna'])
 
-    await expect(handler('settings:list-models')({}, 'openai')).rejects.toThrow(
+    await expect(handler('settings:list-models')({}, { provider: 'openai' })).rejects.toThrow(
       'API key changed while the models were loading'
     )
 
@@ -213,13 +213,15 @@ describe('search IPC request lifecycle', () => {
       throw new Error('ENOSPC')
     })
 
-    await expect(handler('settings:list-models')({}, 'openai')).resolves.toEqual(['gpt-6-luna'])
+    await expect(handler('settings:list-models')({}, { provider: 'openai' })).resolves.toEqual([
+      'gpt-6-luna'
+    ])
   })
 
   it('remembers nothing when the refresh fails', async () => {
     mocks.listModels.mockRejectedValue(new Error('401'))
 
-    await expect(handler('settings:list-models')({}, 'openai')).rejects.toThrow('401')
+    await expect(handler('settings:list-models')({}, { provider: 'openai' })).rejects.toThrow('401')
 
     expect(mocks.recordModels).not.toHaveBeenCalled()
   })

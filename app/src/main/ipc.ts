@@ -8,6 +8,7 @@ import { refreshAppMenu } from './app-menu'
 import { applyColorMode } from './appearance'
 import { createIndexerHandlers, forwardIndexerStatus } from './contract/indexer-handlers'
 import { createEmitter, registerOperations } from './contract/register'
+import { createSettingsHandlers } from './contract/settings-handlers'
 import { createTaskHandlers } from './contract/tasks-handlers'
 import { contract } from '../contract'
 import { taskFactsService } from './facts/task-facts-service'
@@ -18,13 +19,11 @@ import { watcher } from './indexing/watcher'
 import {
   assertValidAbsolutePath,
   assertValidFileRenameInput,
-  assertValidProviderId,
   assertValidRequestId,
   assertValidSearchSnapshotFreshnessInput,
   assertValidSearchOptions,
   assertValidSearchQuery,
   assertValidSourceFileInput,
-  assertValidSettingsPatch,
   assertValidWorkspaceCloseTabInput,
   assertValidWorkspaceFileRefInput,
   assertValidWorkspaceFocusTabInput,
@@ -40,7 +39,7 @@ import {
   assertValidWorkspaceWindowPatch
 } from './ipc-validation'
 import { SearchService } from './search/search-service'
-import { settingsStore, type SettingsFile, type SettingsUpdate } from './settings/settings-store'
+import { settingsStore } from './settings/settings-store'
 import { listAuthorizedOpenAIModels, validateProviderKey } from './settings/key-validation'
 import {
   readFileSafe,
@@ -149,21 +148,6 @@ async function readWorkspaceTabFile(tabId: string, notesRoot: string): Promise<s
   return readFile(fileRef.externalPath, 'utf8')
 }
 
-function settingsPatchRequiresIndexerRestart(
-  patch: SettingsUpdate,
-  before: SettingsFile,
-  after: SettingsFile
-): boolean {
-  return (
-    before.notesRoot !== after.notesRoot ||
-    patch.openaiKey !== undefined ||
-    patch.deleteProviderKeys?.includes('openai') === true ||
-    before.semanticIndexEnabled !== after.semanticIndexEnabled ||
-    before.embeddingProvider !== after.embeddingProvider ||
-    before.embeddingModel !== after.embeddingModel
-  )
-}
-
 function getOrCreateSearchService(): SearchService | null {
   const vs = indexerService.getVectorStore()
   if (!vs) return null
@@ -182,8 +166,6 @@ const emit = createEmitter(() => BrowserWindow.getAllWindows())
  */
 export function registerIpc(): void {
   ipcMain.handle('app:get-version', () => app.getVersion())
-
-  ipcMain.handle('settings:get-state', () => settingsStore.publicState())
 
   ipcMain.handle('workspace:get-state', () => workspaceStore.publicState())
 
@@ -263,69 +245,6 @@ export function registerIpc(): void {
     const next = await workspaceStore.pruneMissingFileRefs()
     refreshAppMenu()
     return next
-  })
-
-  const restartIndexer = createIndexerRestarter({
-    watcher,
-    indexer: indexerService,
-    cancelSearches: cancelAllActiveSearchRequests,
-    resetSearchService: () => {
-      searchService = null // vectorStore is replaced; recreate on next search
-    },
-    notesRoot: () => settingsStore.load().notesRoot
-  })
-
-  ipcMain.handle('settings:save', async (_, patch: unknown) => {
-    const validatedPatch = assertValidSettingsPatch(patch)
-    const previousSettings = settingsStore.load()
-    const next = settingsStore.update(validatedPatch)
-    if (validatedPatch.colorMode !== undefined) applyColorMode(validatedPatch.colorMode)
-    if (
-      settingsPatchRequiresIndexerRestart(validatedPatch, previousSettings, settingsStore.load())
-    ) {
-      // Re-init indexer and restart watcher so new notesRoot / embedding settings take effect.
-      await restartIndexer()
-    }
-    return next
-  })
-
-  ipcMain.handle('settings:validate-key', async (_, provider: unknown) => {
-    const validProvider = assertValidProviderId(provider)
-    const apiKey = settingsStore.getSecret(validProvider)
-    if (!apiKey) {
-      return {
-        ok: false,
-        provider: validProvider,
-        validatedAt: null,
-        error: 'No saved API key to validate.'
-      }
-    }
-    const result = await validateProviderKey(validProvider, apiKey)
-    if (result.ok && result.validatedAt) {
-      settingsStore.markKeyValidated(validProvider, result.validatedAt)
-    }
-    return result
-  })
-
-  ipcMain.handle('settings:list-models', async (_, provider: unknown) => {
-    const validProvider = assertValidProviderId(provider)
-    if (validProvider !== 'openai')
-      throw new Error('Model discovery is not available for this provider')
-    const apiKey = settingsStore.getSecret(validProvider)
-    if (!apiKey) throw new Error('No saved API key to list models')
-    const models = await listAuthorizedOpenAIModels(apiKey)
-    // The list belongs to the key that fetched it. If the key was replaced or removed while the
-    // request ran, the list is for a key that is gone: say so rather than hand it back as current.
-    if (settingsStore.getSecret(validProvider) !== apiKey) {
-      throw new Error('Your API key changed while the models were loading. Refresh again.')
-    }
-    try {
-      settingsStore.recordDiscoveredOpenAIModels(models)
-    } catch {
-      // Not remembering the list is no reason to lose what was just fetched; the pane notices that
-      // it was not saved.
-    }
-    return models
   })
 
   ipcMain.handle('dialog:open-folder', async (event) => {
@@ -425,10 +344,27 @@ export function registerIpc(): void {
     return { trashed: true, workspace }
   })
 
+  const restartIndexer = createIndexerRestarter({
+    watcher,
+    indexer: indexerService,
+    cancelSearches: cancelAllActiveSearchRequests,
+    resetSearchService: () => {
+      searchService = null // vectorStore is replaced; recreate on next search
+    },
+    notesRoot: () => settingsStore.load().notesRoot
+  })
+
   registerOperations(ipcMain, contract, {
     indexer: createIndexerHandlers({
       service: indexerService,
       beforeClear: stopSearchesBeforeClear
+    }),
+    settings: createSettingsHandlers({
+      store: settingsStore,
+      applyColorMode,
+      restartIndexing: restartIndexer,
+      validateProviderKey,
+      listAuthorizedOpenAIModels
     }),
     tasks: createTaskHandlers({ service: taskFactsService, settings: settingsStore, emit })
   })

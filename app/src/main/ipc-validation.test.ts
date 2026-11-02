@@ -8,7 +8,6 @@ import {
   assertValidSearchOptions,
   assertValidSearchQuery,
   assertValidSourceFileInput,
-  assertValidSettingsPatch,
   assertValidWorkspaceCloseTabInput,
   assertValidWorkspaceFileRefInput,
   assertValidWorkspaceFocusTabInput,
@@ -47,68 +46,6 @@ describe('ipc validation', () => {
       'Invalid retrieval mode'
     )
     expect(() => assertValidSearchOptions({ arbitrary: true })).toThrow('Invalid search option')
-  })
-
-  it('accepts a narrow settings patch', () => {
-    expect(
-      assertValidSettingsPatch({
-        notesRoot: '/tmp/notes',
-        cloudAnswersEnabled: true,
-        cloudAnswersAcknowledgement: {
-          acknowledgedAt: '2026-05-19T12:00:00.000Z',
-          provider: 'openai',
-          model: 'gpt-5.2'
-        },
-        answerProvider: 'openai',
-        answerModel: 'gpt-5.2',
-        searchHistoryRetention: '30-days',
-        searchHistoryIncludesAnswers: false,
-        scrollbarVisibility: 'always'
-      })
-    ).toMatchObject({
-      notesRoot: '/tmp/notes',
-      cloudAnswersEnabled: true,
-      answerProvider: 'openai',
-      answerModel: 'gpt-5.2',
-      scrollbarVisibility: 'always'
-    })
-  })
-
-  it('accepts a known font and color mode, and rejects anything else', () => {
-    expect(assertValidSettingsPatch({ fontFamily: 'ibm-plex', colorMode: 'light' })).toMatchObject({
-      fontFamily: 'ibm-plex',
-      colorMode: 'light'
-    })
-    expect(() => assertValidSettingsPatch({ fontFamily: 'papyrus' })).toThrow('Invalid font')
-    expect(() => assertValidSettingsPatch({ colorMode: 'sepia' })).toThrow('Invalid color mode')
-  })
-
-  it('accepts https reference link bases, and an empty one that turns linking off', () => {
-    expect(
-      assertValidSettingsPatch({
-        ticketLinkBase: 'https://example.atlassian.net/browse/',
-        pullRequestLinkBase: ''
-      })
-    ).toMatchObject({
-      ticketLinkBase: 'https://example.atlassian.net/browse/',
-      pullRequestLinkBase: ''
-    })
-    expect(() => assertValidSettingsPatch({ ticketLinkBase: 'http://example.com/' })).toThrow(
-      'Invalid ticket link base'
-    )
-    expect(() => assertValidSettingsPatch({ pullRequestLinkBase: 'javascript:alert(1)' })).toThrow(
-      'Invalid pull request link base'
-    )
-  })
-
-  it('rejects unexpected settings keys and invalid ids', () => {
-    expect(() => assertValidSettingsPatch({ arbitrary: true })).toThrow('Invalid settings key')
-    expect(assertValidSettingsPatch({ answerModel: 'gpt-6-luna' })).toMatchObject({
-      answerModel: 'gpt-6-luna'
-    })
-    expect(() => assertValidSettingsPatch({ scrollbarVisibility: 'visible' })).toThrow(
-      'Invalid scrollbar visibility'
-    )
   })
 
   it('accepts narrow workspace shell and window patches', () => {

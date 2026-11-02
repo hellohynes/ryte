@@ -2,7 +2,8 @@
 // undefined-valued keys, own `__proto__` keys, inherited keys and non-plain objects survive. The expected
 // results live in `settings.vectors.expected.json` and were recorded once from the pre-change validators
 // (`assertValidSettingsPatch` for `save`, `assertValidProviderId` for the provider of `validate-key` and
-// `list-models`). Do not derive expectations from new code.
+// `list-models`). Do not derive expectations from new code. Those validators were deleted when the area moved onto
+// the registry; the recorder is in git history at 88ee7dc.
 //
 // Vector ids are written `save: ...` and `provider: ...` (a colon and a space) so that none is shaped like an
 // `area:name` channel, which `check:contract` would report. Every key and secret here is synthetic.

@@ -1,15 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk'
 import OpenAI from 'openai'
 
+import type { ProviderKeyValidationResult } from '../../contract/settings'
 import type { ProviderId } from '../../shared/provider-registry'
 import { describeProviderError } from './provider-errors'
 
-export interface ProviderKeyValidationResult {
-  ok: boolean
-  provider: ProviderId
-  validatedAt: string | null
-  error?: string
-}
+export type { ProviderKeyValidationResult }
 
 export function normalizeAuthorizedModelIds(modelIds: string[]): string[] {
   return [...new Set(modelIds.filter((id) => id.length > 0))].sort((a, b) => a.localeCompare(b))

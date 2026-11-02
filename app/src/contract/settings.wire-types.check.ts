@@ -1,6 +1,6 @@
 // Compile-time check, enforced by `pnpm typecheck`: the types inferred from the contract equal the hand-written
 // declarations the contract replaced. A looser, wider or different inferred type fails the build here.
-import type { AreaApi } from '../preload/contract-api'
+import type { AreaApi, ContractApi } from '../preload/contract-api'
 import type { ProviderId } from '../shared/provider-registry'
 import type * as contract from './settings'
 import type * as wire from './settings.wire-types'
@@ -23,5 +23,7 @@ export type SettingsWireTypeChecks = [
   Assert<Equal<contract.SettingsUpdate, wire.SettingsUpdate>>,
   Assert<Equal<contract.ProviderKeyValidationResult, wire.ProviderKeyValidationResult>>,
   // The four members `window.ryte.settings` will have: names, argument lists and results.
-  Assert<Equal<Flatten<AreaApi<typeof contract.settings>>, wire.SettingsApi>>
+  Assert<Equal<Flatten<AreaApi<typeof contract.settings>>, wire.SettingsApi>>,
+  // And the object the renderer actually gets, once the area is registered.
+  Assert<Equal<Flatten<ContractApi['settings']>, wire.SettingsApi>>
 ]

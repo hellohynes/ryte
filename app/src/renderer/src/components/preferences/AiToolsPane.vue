@@ -157,7 +157,7 @@ async function validateKey(id: AnswerProviderId): Promise<void> {
   validating.value = id
   messages[id] = ''
   try {
-    const result = await window.ryte.settings.validateKey(id)
+    const result = await window.ryte.settings.validateKey({ provider: id })
     messages[id] =
       result.ok && result.validatedAt
         ? `Last validated on ${formatValidatedAt(result.validatedAt)}.`
@@ -180,10 +180,13 @@ function keyStatus(id: AnswerProviderId): string {
 async function refreshModels(): Promise<void> {
   refreshingModels.value = true
   modelMessage.value = ''
-  const result = await refreshOpenAIModels(() => window.ryte.settings.listModels('openai'), {
-    selected: props.state.answerModel,
-    touched: modelTouched
-  })
+  const result = await refreshOpenAIModels(
+    () => window.ryte.settings.listModels({ provider: 'openai' }),
+    {
+      selected: props.state.answerModel,
+      touched: modelTouched
+    }
+  )
   if (!result.ok) {
     modelMessage.value = result.message
     refreshingModels.value = false

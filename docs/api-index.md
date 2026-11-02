@@ -18,6 +18,15 @@ change or remove one.
 | --- | --- | --- | --- |
 | `indexer.status` | `indexer:status-event` | The index state changed; sent to every open window as indexing progresses. | `{ phase: string, filesTotal: number, filesDone: number, chunksTotal: number, chunksDone: number, lastIndexedAt: string \| null, error?: string }` |
 
+## settings
+
+| Operation | Channel | What it does | Input |
+| --- | --- | --- | --- |
+| `settings.getState` | `settings:get-state` | The current settings, with whether each provider key exists and never the key itself. | `none` |
+| `settings.save` | `settings:save` | Change some settings and return the new state. A change that affects indexing restarts the indexer. Provider keys are write-only. | `{ notesRoot?: string, model?: string, cloudAnswersEnabled?: boolean, semanticIndexEnabled?: boolean, firstCloudUseAcknowledgedAt?: string \| null, cloudAnswersAcknowledgement?: unknown, semanticIndexAcknowledgement?: unknown, answerProvider?: string, answerModel?: string, embeddingProvider?: string, embeddingModel?: string, searchHistoryRetention?: string, searchHistoryIncludesAnswers?: boolean, scrollbarVisibility?: string, fontFamily?: unknown, colorMode?: string, ticketLinkBase?: string, pullRequestLinkBase?: string, anthropicKey?: string, openaiKey?: string, geminiKey?: string, deleteProviderKeys?: array }` |
+| `settings.validateKey` | `settings:validate-key` | Check the saved key for a provider with that provider and record when it last passed. | `{ provider: string }` |
+| `settings.listModels` | `settings:list-models` | List the models the saved OpenAI key can use, and remember the list. | `{ provider: string }` |
+
 ## tasks
 
 | Operation | Channel | What it does | Input |

@@ -11,6 +11,15 @@ export const manifest = {
       status: 'indexer:status-event'
     }
   },
+  settings: {
+    operations: {
+      getState: 'settings:get-state',
+      save: 'settings:save',
+      validateKey: 'settings:validate-key',
+      listModels: 'settings:list-models'
+    },
+    events: {}
+  },
   tasks: {
     operations: {
       list: 'tasks:list',
