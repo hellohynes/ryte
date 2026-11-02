@@ -22,7 +22,18 @@ export function encode(value: unknown): Encoded {
     if (Object.is(value, -0)) return { $negativeZero: true }
     return value
   }
-  if (Array.isArray(value)) return value.map(encode)
+  if (Array.isArray(value)) {
+    // JSON turns a hole into null. Keep the holes: `.map` over a sparse array is how a validator can accept one.
+    if (Object.keys(value).length !== value.length) {
+      return {
+        $sparse: {
+          length: value.length,
+          entries: Object.keys(value).map((index) => [Number(index), encode(value[Number(index)])])
+        }
+      }
+    }
+    return value.map(encode)
+  }
   if (value !== null && typeof value === 'object') {
     const out: Record<string, unknown> = {}
     for (const key of Object.keys(value)) {
@@ -42,6 +53,12 @@ export function decode(value: Encoded): unknown {
     if (record.$infinity === 1) return Number.POSITIVE_INFINITY
     if (record.$infinity === -1) return Number.NEGATIVE_INFINITY
     if (record.$negativeZero === true) return -0
+    if (record.$sparse !== undefined) {
+      const { length, entries } = record.$sparse as { length: number; entries: [number, unknown][] }
+      const array: unknown[] = new Array(length)
+      for (const [index, entry] of entries) array[index] = decode(entry)
+      return array
+    }
     const out: Record<string, unknown> = {}
     for (const key of Object.keys(record)) {
       setOwn(out, key, decode(Object.getOwnPropertyDescriptor(record, key)?.value))

@@ -38,4 +38,18 @@ describe('the vectors codec keeps an own __proto__ key', () => {
     expect(Object.is(roundTrip.c, -0)).toBe(true)
     expect(roundTrip.d).toEqual([Number.POSITIVE_INFINITY])
   })
+
+  it('keeps the holes of a sparse array instead of turning them into null', () => {
+    const sparse: unknown[] = []
+    sparse[2] = 'openai'
+    const decoded = decode(JSON.parse(JSON.stringify(encode(sparse)))) as unknown[]
+
+    expect(decoded).toHaveLength(3)
+    expect(Object.keys(decoded)).toEqual(['2'])
+    expect(0 in decoded).toBe(false)
+    expect(decoded[2]).toBe('openai')
+    // A dense array with a null in it is not a hole.
+    const dense = decode(JSON.parse(JSON.stringify(encode([null, 'openai'])))) as unknown[]
+    expect(Object.keys(dense)).toEqual(['0', '1'])
+  })
 })
