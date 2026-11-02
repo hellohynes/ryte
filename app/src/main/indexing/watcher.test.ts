@@ -14,6 +14,8 @@ const h = vi.hoisted(() => {
   const staleGates = new Map<string, Promise<void>>()
   const inos = new Map<string, number>()
   const lstatFailures = new Map<string, string>()
+  const lstatGates = new Map<string, Promise<void>>()
+  const statGates = new Map<string, Promise<void>>()
   const lstatStats = { inflight: 0, max: 0 }
   const parent = (path: string): string => path.slice(0, path.lastIndexOf('/'))
   const fail = (code: string): Error =>
@@ -28,6 +30,8 @@ const h = vi.hoisted(() => {
     staleGates,
     inos,
     lstatFailures,
+    lstatGates,
+    statGates,
     lstatStats,
     watchFailure: { code: null as string | null },
     watch: vi.fn(),
@@ -41,12 +45,35 @@ const h = vi.hoisted(() => {
       const failure = lstatFailures.get(path)
       if (failure) throw fail(failure)
       const kind = kinds.get(actual(path))
+      // A slow stat: the answer is what the path was when the call began.
+      const gate = lstatGates.get(path)
+      if (gate) {
+        lstatGates.delete(path)
+        await gate
+      }
       if (!kind) throw fail('ENOENT')
       return {
         ino: inos.get(path),
         isFile: () => kind === 'file',
         isDirectory: () => kind === 'dir',
         isSymbolicLink: () => kind === 'link'
+      }
+    }),
+    // Follows a symbolic link, as the real call does.
+    stat: vi.fn(async (path: string) => {
+      const gate = statGates.get(path)
+      if (gate) {
+        statGates.delete(path)
+        await gate
+      }
+      const kind = kinds.get(actual(linkTargets.get(path) ?? path))
+      const resolved = linkTargets.has(path) ? 'dir' : kind
+      if (!resolved) throw fail('ENOENT')
+      return {
+        ino: inos.get(path),
+        isFile: () => resolved === 'file',
+        isDirectory: () => resolved === 'dir',
+        isSymbolicLink: () => false
       }
     }),
     readdir: vi.fn(async (dir: string) => {
@@ -87,7 +114,7 @@ vi.mock('node:fs', () => ({
   watch: h.watch,
   realpath: { native: h.realpathNative }
 }))
-vi.mock('node:fs/promises', () => ({ lstat: h.lstat, readdir: h.readdir }))
+vi.mock('node:fs/promises', () => ({ lstat: h.lstat, readdir: h.readdir, stat: h.stat }))
 vi.mock('./indexer-service', () => ({
   indexerService: {
     notifyFileChanged: h.notifyFileChanged,
@@ -191,6 +218,8 @@ describe('Watcher', () => {
     h.staleGates.clear()
     h.inos.clear()
     h.lstatFailures.clear()
+    h.lstatGates.clear()
+    h.statGates.clear()
     h.lstatStats.inflight = 0
     h.lstatStats.max = 0
     h.watchFailure.code = null
@@ -651,6 +680,27 @@ describe('Watcher', () => {
       expect(consoleError.mock.calls.filter(([, code]) => code === 'EACCES')).toHaveLength(3)
     })
 
+    it('carries on when a listener throws', async () => {
+      const { watcher, catalog } = await boot()
+      watcher.onTreeChanged(() => {
+        throw new Error('window is gone /notes/secret-title.md')
+      })
+
+      fakeFs.file('/notes/a.md')
+      emit('a.md')
+      await advance(DEBOUNCE)
+      fakeFs.file('/notes/b.md')
+      emit('b.md')
+      await advance(DEBOUNCE)
+
+      expect(catalogPaths(catalog, 'upsert')).toEqual(['/notes/a.md', '/notes/b.md'])
+      expect(consoleError).toHaveBeenCalledWith(
+        'Ryte could not notify a file tree listener.',
+        'UNKNOWN'
+      )
+      expect(JSON.stringify(consoleError.mock.calls)).not.toContain('secret-title')
+    })
+
     it('may restart again after it has run for a minute', async () => {
       await boot()
       watches[0]?.fsw.emit('error', Object.assign(new Error('first'), { code: 'EMFILE' }))
@@ -747,6 +797,24 @@ describe('Watcher', () => {
       expect(catalogPaths(catalog, 'remove')).toEqual([])
     })
 
+    it('does not add a note that was deleted after the walk checked it', async () => {
+      const { catalog } = await boot()
+      fakeFs.file('/notes/d2/x.md')
+      let release!: () => void
+      h.lstatGates.set('/notes/d2/x.md', new Promise<void>((resolve) => (release = resolve)))
+
+      emit('d2')
+      await advance(DEBOUNCE)
+      fakeFs.remove('/notes/d2/x.md')
+      emit('d2/x.md')
+      await advance(DEBOUNCE)
+      release()
+      await advance(0)
+
+      expect(catalogPaths(catalog, 'upsert')).toEqual([])
+      expect(h.notifyFileChanged).not.toHaveBeenCalled()
+    })
+
     it('still removes a known note that is really gone from a folder it walked', async () => {
       fakeFs.file('/notes/p/n.md')
       fakeFs.file('/notes/p/m.md')
@@ -807,13 +875,17 @@ describe('Watcher', () => {
       expect(watches).toHaveLength(1)
 
       h.kinds.set(ROOT, 'dir')
+      fakeFs.file('/notes/a.md')
       await advance(5000)
       expect(watches).toHaveLength(2)
+      // The folder's notes were reported removed, so they are reported again.
+      expect(catalogPaths(catalog, 'upsert')).toEqual(['/notes/a.md'])
+      expect(h.notifyFileChanged).toHaveBeenCalledWith('/notes/a.md')
 
       fakeFs.file('/notes/new.md')
       emit('new.md')
       await advance(DEBOUNCE)
-      expect(catalogPaths(catalog, 'upsert')).toEqual(['/notes/new.md'])
+      expect(catalogPaths(catalog, 'upsert')).toEqual(['/notes/a.md', '/notes/new.md'])
     })
 
     it('treats a folder replaced by another at the same path as lost and watches the new one', async () => {
@@ -826,6 +898,60 @@ describe('Watcher', () => {
       expect(catalogPaths(catalog, 'remove')).toEqual(['/notes/a.md'])
       await advance(5000)
       expect(watches).toHaveLength(2)
+    })
+
+    it('does not treat a notes folder that is a symbolic link as lost', async () => {
+      fakeFs.file('/real/a.md')
+      h.kinds.set('/real', 'dir')
+      h.kinds.set(ROOT, 'link')
+      h.linkTargets.set(ROOT, '/real')
+      h.inos.set(ROOT, 7)
+      const { catalog } = await boot()
+
+      await advance(30_000)
+
+      expect(catalog).not.toHaveBeenCalled()
+      expect(watches).toHaveLength(1)
+      expect(watches[0]?.fsw.close).not.toHaveBeenCalled()
+    })
+
+    it('watches a folder that was missing at start once it appears, and reports its notes', async () => {
+      h.watchFailure.code = 'ENOENT'
+      const watcher = new Watcher()
+      const catalog = vi.fn()
+      watcher.onCatalogChanged(catalog)
+      watcher.start(ROOT)
+      await advance(0)
+      expect(watches).toHaveLength(0)
+
+      h.watchFailure.code = null
+      fakeFs.file('/notes/a.md')
+      await advance(5000)
+
+      expect(watches).toHaveLength(1)
+      expect(catalogPaths(catalog, 'upsert')).toEqual(['/notes/a.md'])
+    })
+
+    it('does not open the old folder when a stale check of it finishes after a new start', async () => {
+      fakeFs.file('/notes/a.md')
+      fakeFs.dir('/other')
+      const { watcher } = await boot()
+      fakeFs.remove(ROOT)
+      await advance(5000)
+
+      h.kinds.set(ROOT, 'dir')
+      let release!: () => void
+      h.statGates.set(ROOT, new Promise<void>((resolve) => (release = resolve)))
+      await advance(5000)
+      watcher.start('/other')
+      await advance(0)
+      // The new folder is lost too, so nothing but the stale check could open a watcher.
+      fakeFs.remove('/other')
+      await advance(5000)
+      release()
+      await advance(0)
+
+      expect(watches.map((w) => w.root)).toEqual([ROOT, '/other'])
     })
 
     it('stop ends the wait for a lost folder', async () => {

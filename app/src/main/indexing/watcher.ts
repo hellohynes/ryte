@@ -1,6 +1,6 @@
 import { EventEmitter } from 'node:events'
 import { realpath as fsRealpath, watch, type FSWatcher } from 'node:fs'
-import { lstat, readdir } from 'node:fs/promises'
+import { lstat, readdir, stat } from 'node:fs/promises'
 import { basename, dirname, join, sep } from 'node:path'
 
 import { indexerService } from './indexer-service'
@@ -159,6 +159,11 @@ interface Session {
   ready: boolean
   canRestart: boolean
   checkingRoot: boolean
+  /** Report every note found by the first walk: the folder was lost, or was not there, and the index may lack its notes. */
+  reportAll: boolean
+  /** Walks in progress, and the paths decided while any ran, so a walk's older picture does not undo a newer decision. */
+  reconciling: number
+  decided: Set<string>
   files: Set<string>
   /** How many known notes are under each folder, at any depth, so a path with nothing under it costs no scan. */
   counts: Map<string, number>
@@ -183,11 +188,13 @@ export class Watcher {
   private processingIndexOperations = false
 
   start(notesRoot: string): void {
+    this.clearWaiting()
     this.closeSession()
     this.open(notesRoot, true)
   }
 
   async stop(): Promise<void> {
+    this.clearWaiting()
     this.closeSession()
   }
 
@@ -201,7 +208,7 @@ export class Watcher {
     return () => this.events.off(CATALOG_CHANGED_EVENT, cb)
   }
 
-  private open(root: string, canRestart: boolean): void {
+  private open(root: string, canRestart: boolean, reportAll = false): void {
     const session: Session = {
       root,
       rootId: null,
@@ -210,6 +217,9 @@ export class Watcher {
       ready: false,
       canRestart,
       checkingRoot: false,
+      reportAll,
+      reconciling: 0,
+      decided: new Set(),
       files: new Set(),
       counts: new Map(),
       dirs: new Set(),
@@ -226,6 +236,7 @@ export class Watcher {
       })
     } catch (error) {
       console.error('Ryte could not watch the notes folder.', errorCode(error))
+      if (isGone(error)) this.waitForRoot(root)
       return
     }
     session.fsw.on('error', (error) => this.onWatchError(session, error))
@@ -237,14 +248,12 @@ export class Watcher {
       )
     }
     this.session = session
-    void this.seed(session)
+    void this.seed(session).catch((error: unknown) => {
+      console.error('Ryte could not start watching the notes folder.', errorCode(error))
+    })
   }
 
-  private closeSession(session: Session | null = this.session): void {
-    if (this.waiting && session === this.session) {
-      clearInterval(this.waiting)
-      this.waiting = null
-    }
+  private closeSession(session: Session | null = this.session, keepIndexOperations = false): void {
     if (!session) return
     session.closed = true
     for (const timer of session.timers.values()) clearTimeout(timer)
@@ -259,7 +268,30 @@ export class Watcher {
       console.error('Ryte could not close the notes folder watcher.', errorCode(error))
     }
     if (this.session === session) this.session = null
-    this.pendingIndexOperations.clear()
+    // A stop or a new start drops what was not yet applied; a restart keeps it.
+    if (!keepIndexOperations) this.pendingIndexOperations.clear()
+  }
+
+  private clearWaiting(): void {
+    if (this.waiting) clearInterval(this.waiting)
+    this.waiting = null
+  }
+
+  // Polls for a notes folder that is missing, so watching starts when it appears (a volume that is mounted later).
+  private waitForRoot(root: string): void {
+    this.clearWaiting()
+    const timer = setInterval(() => {
+      void stat(root).then(
+        (stats) => {
+          if (this.waiting !== timer || this.session || !stats.isDirectory()) return
+          this.clearWaiting()
+          this.open(root, true, true)
+          this.emitTreeChanged()
+        },
+        () => undefined
+      )
+    }, ROOT_CHECK_MS)
+    this.waiting = timer
   }
 
   private onWatchError(session: Session, error: unknown): void {
@@ -267,7 +299,7 @@ export class Watcher {
     console.error('Ryte lost the notes folder watcher.', errorCode(error))
     this.emitTreeChanged()
     const { root, canRestart } = session
-    this.closeSession(session)
+    this.closeSession(session, true)
     // One restart in a row; a watcher that fails again soon after stays stopped, and the next reindex recovers what was missed.
     if (canRestart) this.open(root, false)
   }
@@ -308,10 +340,14 @@ export class Watcher {
       if (session.active.has(path)) continue
       session.pending.delete(path)
       session.active.add(path)
-      void this.decide(session, path).finally(() => {
-        session.active.delete(path)
-        this.pump(session)
-      })
+      void this.decide(session, path)
+        .catch((error: unknown) => {
+          console.error('Ryte could not decide a changed path.', errorCode(error))
+        })
+        .finally(() => {
+          session.active.delete(path)
+          this.pump(session)
+        })
     }
   }
 
@@ -325,11 +361,12 @@ export class Watcher {
     }
     if (session.closed) return
     if (!walked) {
-      this.closeSession(session)
+      this.closeSession(session, true)
+      this.waitForRoot(session.root)
       return
     }
     try {
-      const id = (await lstat(session.root)).ino
+      const id = (await stat(session.root)).ino
       session.rootId = typeof id === 'number' ? id : null
     } catch {
       // The folder is checked again on the next tick.
@@ -339,7 +376,20 @@ export class Watcher {
     session.dirs = new Set(walked.dirs)
     session.dirs.delete(session.root)
     session.ready = true
-    session.housekeeping.push(setInterval(() => void this.checkRoot(session), ROOT_CHECK_MS))
+    session.housekeeping.push(
+      setInterval(() => {
+        void this.checkRoot(session).catch((error: unknown) => {
+          console.error('Ryte could not check the notes folder.', errorCode(error))
+        })
+      }, ROOT_CHECK_MS)
+    )
+    if (session.reportAll) {
+      this.emitTreeChanged()
+      for (const file of walked.files) {
+        this.emitCatalogChanged({ type: 'upsert', path: file, notesRoot: session.root })
+        this.queueIndexOperation(file, 'changed')
+      }
+    }
     // Whatever happened while the walk ran is decided now, on the states the files are in.
     if (session.held.size > 0) {
       this.emitTreeChanged()
@@ -354,7 +404,7 @@ export class Watcher {
     session.checkingRoot = true
     let lost = false
     try {
-      const stats = await lstat(session.root)
+      const stats = await stat(session.root)
       const id = typeof stats.ino === 'number' ? stats.ino : null
       lost =
         !stats.isDirectory() || (id !== null && session.rootId !== null && id !== session.rootId)
@@ -370,22 +420,11 @@ export class Watcher {
     console.error('Ryte lost the notes folder.', 'ROOT_GONE')
     const { root } = session
     const known = [...session.files]
-    this.closeSession(session)
+    this.closeSession(session, true)
     const change: Change = { tree: true }
     for (const file of known) this.removeFile(session, file, change)
     this.emitTreeChanged()
-    this.waiting = setInterval(() => {
-      void lstat(root).then(
-        (stats) => {
-          if (!stats.isDirectory() || !this.waiting || this.session) return
-          clearInterval(this.waiting)
-          this.waiting = null
-          this.open(root, true)
-          this.emitTreeChanged()
-        },
-        () => undefined
-      )
-    }, ROOT_CHECK_MS)
+    this.waitForRoot(root)
   }
 
   private async decide(session: Session, path: string): Promise<void> {
@@ -411,6 +450,7 @@ export class Watcher {
       console.error('Ryte could not read a changed path.', errorCode(error))
       this.retry(session, path)
     }
+    if (session.reconciling > 0) session.decided.add(path)
     if (change.tree && !session.closed) this.emitTreeChanged()
   }
 
@@ -487,6 +527,22 @@ export class Watcher {
     if (session.files.has(path)) this.removeFile(session, path, change)
     const knownFiles = this.knownFilesUnder(session, path)
     const knownDirs = this.knownDirsUnder(session, path)
+    session.reconciling += 1
+    try {
+      await this.reconcileWalk(session, path, change, knownFiles, knownDirs)
+    } finally {
+      session.reconciling -= 1
+      if (session.reconciling === 0) session.decided.clear()
+    }
+  }
+
+  private async reconcileWalk(
+    session: Session,
+    path: string,
+    change: Change,
+    knownFiles: string[],
+    knownDirs: string[]
+  ): Promise<void> {
     const walked = await walkTree(path, () => session.closed)
     if (session.closed) return
     if (!walked) {
@@ -518,7 +574,9 @@ export class Watcher {
       }
     }
     for (const file of candidates.addFiles) {
-      if (seen.get(file) !== 'file' || !this.addFile(session, file)) continue
+      // A path decided while the walk ran was decided on newer information than the walk's.
+      if (seen.get(file) !== 'file' || session.decided.has(file) || !this.addFile(session, file))
+        continue
       change.tree = true
       this.emitCatalogChanged({ type: 'upsert', path: file, notesRoot: session.root })
       this.queueIndexOperation(file, 'changed')
@@ -542,12 +600,21 @@ export class Watcher {
     }
   }
 
+  // A listener that throws (a window that is gone) must not stop the watcher.
   private emitTreeChanged(): void {
-    this.events.emit(TREE_CHANGED_EVENT)
+    try {
+      this.events.emit(TREE_CHANGED_EVENT)
+    } catch (error) {
+      console.error('Ryte could not notify a file tree listener.', errorCode(error))
+    }
   }
 
   private emitCatalogChanged(event: CatalogChangeEvent): void {
-    this.events.emit(CATALOG_CHANGED_EVENT, event)
+    try {
+      this.events.emit(CATALOG_CHANGED_EVENT, event)
+    } catch (error) {
+      console.error('Ryte could not notify a catalog listener.', errorCode(error))
+    }
   }
 
   private queueIndexOperation(path: string, operation: 'changed' | 'removed'): void {
@@ -570,7 +637,7 @@ export class Watcher {
           await indexerService.notifyFileRemoved(path)
         }
       } catch (error) {
-        console.error('Ryte could not apply a watched file change.', error)
+        console.error('Ryte could not apply a watched file change.', errorCode(error))
       }
     }
     this.processingIndexOperations = false
