@@ -20,6 +20,15 @@ import {
   type ModelId,
   type ProviderId
 } from '../../shared/provider-registry'
+import type {
+  ColorMode,
+  DataFlowAcknowledgement,
+  ProviderKeyMetadata,
+  PublicSettingsState,
+  ScrollbarVisibility,
+  SearchHistoryRetention,
+  SettingsUpdate
+} from '../../contract/settings'
 import { keychain } from './keychain'
 
 export const SETTINGS_SCHEMA_VERSION = 4
@@ -35,16 +44,6 @@ export type {
 
 // The wire types are defined once, in the contract (`src/contract/settings.ts`). They are re-exported here under
 // their old names so the renderer and the main code keep importing them from this module.
-import type {
-  ColorMode,
-  DataFlowAcknowledgement,
-  ProviderKeyMetadata,
-  PublicSettingsState,
-  ScrollbarVisibility,
-  SearchHistoryRetention,
-  SettingsUpdate
-} from '../../contract/settings'
-
 export type {
   ColorMode,
   DataFlowAcknowledgement,
