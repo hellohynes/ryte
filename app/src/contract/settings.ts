@@ -61,7 +61,13 @@ const publicSettingsState = z.object({
   hasAnthropicKey: z.boolean(),
   hasOpenAIKey: z.boolean(),
   hasGeminiKey: z.boolean(),
-  providerKeyMetadata: z.partialRecord(providerId, providerKeyMetadata),
+  // One optional entry per provider. A record schema (z.partialRecord) has the same type but pulls Zod's whole record
+  // implementation into the main bundle for an output schema that never runs.
+  providerKeyMetadata: z.object({
+    anthropic: providerKeyMetadata.optional(),
+    openai: providerKeyMetadata.optional(),
+    gemini: providerKeyMetadata.optional()
+  }),
   /** The model IDs the last refresh found for the OpenAI key, in the order returned. */
   discoveredOpenAIModels: z.array(z.string()).nullable(),
   keychainAvailable: z.boolean()
