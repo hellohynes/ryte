@@ -9,6 +9,7 @@ import { ACCEPTED_DEVIATIONS } from '../../contract/settings.vectors.deviations'
 import { settingsVectors } from '../../contract/settings.vectors.inputs'
 import { decode } from '../../contract/tasks.vectors.codec'
 import { registerOperations, type IpcMainLike } from './register'
+import { createSettingsHandlers } from './settings-handlers'
 
 interface RecordedVector {
   id: string
@@ -124,5 +125,47 @@ describe('settings through the registrar', () => {
     expect(thrown).toBeInstanceOf(ContractInputError)
     expect((thrown as Error).message).toBe('Invalid settings.save input: notesRoot')
     expect(save).not.toHaveBeenCalled()
+  })
+})
+
+describe('the real schema, handler and a fake store together', () => {
+  it('hands the store the patch exactly as the schema parsed it: the key trimmed once, the model kept as given', async () => {
+    const update = vi.fn(() => ({}) as never)
+    const listeners = new Map<string, Listener>()
+    const ipc: IpcMainLike = {
+      handle: (channel, listener) => {
+        listeners.set(channel, listener as Listener)
+      }
+    }
+    registerOperations(
+      ipc,
+      { settings },
+      {
+        settings: createSettingsHandlers({
+          store: {
+            load: () => ({}) as never,
+            update,
+            publicState: () => ({}) as never,
+            getSecret: () => null,
+            markKeyValidated: () => ({}) as never,
+            recordDiscoveredOpenAIModels: () => ({}) as never
+          },
+          applyColorMode: () => undefined,
+          restartIndexing: async () => undefined,
+          validateProviderKey: async () => ({ ok: false, provider: 'openai', validatedAt: null }),
+          listAuthorizedOpenAIModels: async () => []
+        })
+      }
+    )
+
+    await listeners.get('settings:save')?.(
+      { sender: {} as never },
+      { answerModel: '  gpt-5.2  ', model: ' m ', openaiKey: '  synthetic-key-value  ' }
+    )
+
+    expect(update).toHaveBeenCalledTimes(1)
+    expect(update.mock.calls[0]).toEqual([
+      { answerModel: '  gpt-5.2  ', model: ' m ', openaiKey: 'synthetic-key-value' }
+    ])
   })
 })
