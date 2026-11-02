@@ -3,6 +3,16 @@
 
 export type Encoded = unknown
 
+// `out[key] = value` with key `__proto__` sets the prototype and drops the key. Define it as data instead.
+function setOwn(target: Record<string, unknown>, key: string, value: unknown): void {
+  Object.defineProperty(target, key, {
+    value,
+    enumerable: true,
+    writable: true,
+    configurable: true
+  })
+}
+
 export function encode(value: unknown): Encoded {
   if (value === undefined) return { $undefined: true }
   if (typeof value === 'number') {
@@ -15,7 +25,9 @@ export function encode(value: unknown): Encoded {
   if (Array.isArray(value)) return value.map(encode)
   if (value !== null && typeof value === 'object') {
     const out: Record<string, unknown> = {}
-    for (const key of Object.keys(value)) out[key] = encode((value as Record<string, unknown>)[key])
+    for (const key of Object.keys(value)) {
+      setOwn(out, key, encode(Object.getOwnPropertyDescriptor(value, key)?.value))
+    }
     return out
   }
   return value
@@ -31,7 +43,9 @@ export function decode(value: Encoded): unknown {
     if (record.$infinity === -1) return Number.NEGATIVE_INFINITY
     if (record.$negativeZero === true) return -0
     const out: Record<string, unknown> = {}
-    for (const key of Object.keys(record)) out[key] = decode(record[key])
+    for (const key of Object.keys(record)) {
+      setOwn(out, key, decode(Object.getOwnPropertyDescriptor(record, key)?.value))
+    }
     return out
   }
   return value
