@@ -4,7 +4,8 @@
 // the types inferred from the contract must equal these. Do not edit.
 //
 // The members `validateKey` and `listModels` take `{ provider }` instead of the bare provider the old preload
-// took: that wire change is intended (plan D1) and written here by hand, not derived.
+// took. Every contract input is a strict object, so a bare value would be an exception to that rule; the
+// signatures below are written by hand on purpose and are not derived.
 import type { FontId } from '../shared/fonts'
 import type {
   AnswerModelId,

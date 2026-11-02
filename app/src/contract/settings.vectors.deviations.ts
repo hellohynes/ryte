@@ -2,9 +2,9 @@
 // (not skipped), so a change in either direction fails the test. A difference is allowed only when the new
 // behavior is stricter; anything that accepts more than the old validator did is a defect.
 const ACKNOWLEDGEMENT_EXTRA_FIELDS =
-  'An acknowledgement is a strict object of exactly acknowledgedAt, provider and model (owner decision, ' +
-  '2026-11-02). The legacy validator accepted extra fields and stored them in settings.json; the UI sends ' +
-  'exactly three fields, so nothing legitimate is rejected.'
+  'An acknowledgement is a strict object of exactly acknowledgedAt, provider and model. The legacy validator ' +
+  'accepted extra fields and stored them in settings.json; the UI sends exactly three fields, so nothing ' +
+  'legitimate is rejected and nothing unexpected is written to disk.'
 
 export const ACCEPTED_DEVIATIONS: Record<string, { accepted: false; reason: string }> = {
   'save: inherited unknown key only': {
