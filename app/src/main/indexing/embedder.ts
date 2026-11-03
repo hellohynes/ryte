@@ -37,8 +37,10 @@ export function classifyEmbeddingError(error: unknown): EmbeddingFailure {
   if (typeof status !== 'number') return 'offline'
   if (status === 401 || status === 403) return 'auth'
   if (status === 429) return 'rate-limit'
-  if (status >= 500) return 'service'
-  if (status >= 400) return 'bad-input'
+  // Only a request the service says it cannot take (too large or not processable) is the note's fault. A timeout
+  // (408) or a conflict (409) passes, and a model the key cannot use (404) is the same for every note.
+  if (status === 400 || status === 413 || status === 422) return 'bad-input'
+  if (status === 404) return 'auth'
   return 'service'
 }
 

@@ -7,7 +7,7 @@ import {
   describeEmbeddingError,
   type EmbeddingProvider
 } from './embedder'
-import type { IndexStateStore } from './index-state'
+import type { IndexStateStore, UnembeddedSource } from './index-state'
 import type { VectorStore } from './vector-store'
 
 // After a failure that may pass (offline, rate limit, a service error) the step waits this long before
@@ -107,9 +107,14 @@ export class EmbeddingBackfill {
     this.paused = false
     try {
       do {
+        // A kick that arrived while a request was out asks for a try now, even if that request then failed.
+        if (this.rerun && this.paused) {
+          this.clearTimer()
+          this.paused = false
+        }
         this.rerun = false
         await this.drain()
-      } while (this.rerun && !this.stopped && !this.paused && !this.authBlocked)
+      } while (this.rerun && !this.stopped && !this.authBlocked)
     } catch (error) {
       // Not a service failure: the index could not be read or written. The next kick tries again.
       this.deps.log?.('Ryte embedding step stopped.', describeStoreError(error))
@@ -123,15 +128,30 @@ export class EmbeddingBackfill {
     // Notes set aside for this run only: changed under the step, or being edited.
     const deferred = new Set<string>()
     const staleCount = new Map<string, number>()
+    // The queue is read once and walked, not read again for every note: reading it is a query over every waiting
+    // note. Each note is checked against the disk and the store when its turn comes, so an old snapshot cannot
+    // attach stale vectors. When it runs out, one more read finds notes queued meanwhile.
+    let queue: UnembeddedSource[] = []
+    let position = 0
+    let fresh = false
     for (;;) {
       if (this.stopped) return
-      const next = indexState
-        .unembeddedSources()
-        .find(
-          ({ sourcePath, mtimeMs }) =>
-            !deferred.has(sourcePath) && !this.rejected.has(`${sourcePath}\n${mtimeMs}`)
-        )
-      if (!next) return
+      if (position >= queue.length) {
+        if (fresh) return
+        queue = indexState.unembeddedSources()
+        position = 0
+        fresh = true
+      }
+      const next = queue[position]
+      position += 1
+      if (!next) continue
+      if (
+        deferred.has(next.sourcePath) ||
+        this.rejected.has(`${next.sourcePath}\n${next.mtimeMs}`)
+      ) {
+        continue
+      }
+      fresh = false
       const { sourcePath, mtimeMs } = next
 
       // The state row alone does not know the file changed since it was indexed.

@@ -207,6 +207,55 @@ describe('EmbeddingBackfill', () => {
     expect(t.attached).toEqual(['late.md'])
   })
 
+  it('reads the queue once for a run, not once for every note', async () => {
+    const notes: Record<string, FakeNote> = {}
+    for (let i = 0; i < 50; i += 1) notes[`n${i}.md`] = { mtimeMs: i + 1, texts: [`t${i}`] }
+    const t = setup(notes)
+    const reads = vi.fn()
+    const backfill = new EmbeddingBackfill({
+      provider: t.provider,
+      vectorStore: t.vectorStore,
+      indexState: {
+        unembeddedSources: () => {
+          reads()
+          return [...t.queue.entries()]
+            .map(([sourcePath, note]) => ({ sourcePath, mtimeMs: note.mtimeMs }))
+            .sort((a, b) => b.mtimeMs - a.mtimeMs)
+        }
+      },
+      fileMtimeMs: async (path) => t.onDisk.get(path) ?? null
+    })
+
+    backfill.kick()
+    for (let i = 0; i < 50; i += 1) await settle()
+
+    expect(t.attached).toHaveLength(50)
+    expect(t.sent[0]).toEqual(['t49'])
+    expect(reads.mock.calls.length).toBeLessThanOrEqual(3)
+  })
+
+  it('a kick that arrives while a request is out and then fails is tried at once, not after the wait', async () => {
+    const t = setup({ 'a.md': { mtimeMs: 1, texts: ['a'] } })
+    let fail!: (error: Error) => void
+    let first = true
+    t.setEmbed((texts) => {
+      if (first) {
+        first = false
+        return new Promise((_resolve, reject) => (fail = reject))
+      }
+      return Promise.resolve(texts.map(() => Float32Array.from([1, 0, 0, 0])))
+    })
+    t.backfill.kick()
+    await settle()
+
+    t.backfill.kick() // an edit arrives meanwhile
+    fail(statusError(500))
+    await settle()
+
+    expect(t.attached).toEqual(['a.md'])
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
   describe('a note that changed since it was indexed', () => {
     it('is not sent when the file on disk is newer than the recorded state, and the rest go on', async () => {
       const t = setup({
@@ -377,6 +426,31 @@ describe('EmbeddingBackfill', () => {
         await settle()
 
         expect(t.provider.embed).toHaveBeenCalledTimes(1)
+        expect(t.backfill.state).toBe('paused')
+      }
+    )
+
+    it.each([
+      ['408', 408, true],
+      ['409', 409, true],
+      ['404', 404, false]
+    ])(
+      "a %s is not the note's fault: nothing is skipped, the step pauses (retrying: %s)",
+      async (_name, status, retries) => {
+        const t = setup({
+          'a.md': { mtimeMs: 2, texts: ['a'] },
+          'b.md': { mtimeMs: 1, texts: ['b'] }
+        })
+        t.setEmbed(async () => {
+          throw statusError(status)
+        })
+
+        t.backfill.kick()
+        await settle()
+        await vi.advanceTimersByTimeAsync(RETRY_DELAYS_MS[0] * 2)
+
+        // One request, not one per note: the other note was not tried against the same failure.
+        expect(t.provider.embed).toHaveBeenCalledTimes(retries ? 2 : 1)
         expect(t.backfill.state).toBe('paused')
       }
     )

@@ -117,6 +117,13 @@ describe('classifyEmbeddingError', () => {
     expect(classifyEmbeddingError(statusError(422))).toBe('bad-input')
   })
 
+  it('does not blame the note for a timeout, a conflict or a model the key cannot use', () => {
+    expect(classifyEmbeddingError(statusError(408))).toBe('service')
+    expect(classifyEmbeddingError(statusError(409))).toBe('service')
+    expect(classifyEmbeddingError(statusError(404))).toBe('auth')
+    expect(classifyEmbeddingError(statusError(418))).toBe('service')
+  })
+
   it('treats a failure with no status, as a refused or timed-out connection gives, as offline', () => {
     expect(classifyEmbeddingError(new Error('Connection error.'))).toBe('offline')
     expect(classifyEmbeddingError(Object.assign(new Error('x'), { code: 'ECONNREFUSED' }))).toBe(
