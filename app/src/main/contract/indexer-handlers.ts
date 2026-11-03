@@ -1,5 +1,5 @@
 import { contract, type Contract } from '../../contract'
-import type { IndexerStatus, RebuildNotice } from '../../contract/indexer'
+import type { EmbeddingStatus, IndexerStatus, RebuildNotice } from '../../contract/indexer'
 import type { IndexerProgress } from '../indexing/indexer'
 import type { Emit, Handlers } from './register'
 
@@ -10,6 +10,7 @@ export interface IndexerHandlerDependencies {
     clearAndRebuild(beforeClear?: () => void): Promise<void>
     pendingRebuildNotice(): RebuildNotice | null
     dismissRebuildNotice(): void
+    getEmbeddingStatus(): EmbeddingStatus
   }
   /**
    * Runs only when the service is certain the rebuild will happen, so a refused or failed rebuild never
@@ -45,7 +46,10 @@ export function createIndexerHandlers({
 
     dismissRebuildNotice: async () => {
       service.dismissRebuildNotice()
-    }
+    },
+
+    // The current state, for a window that opens or reloads while smart search is working.
+    getEmbeddingStatus: async () => service.getEmbeddingStatus()
   }
 }
 
@@ -64,5 +68,15 @@ export function forwardRebuildNotice(
 ): () => void {
   return service.subscribeRebuildNotice((notice) =>
     emit(contract.indexer.events.rebuildNotice, notice)
+  )
+}
+
+/** Sends every change of what smart search is doing to every window through the registry's emitter. */
+export function forwardEmbeddingStatus(
+  service: { subscribeEmbeddingStatus(callback: (status: EmbeddingStatus) => void): () => void },
+  emit: Emit
+): () => void {
+  return service.subscribeEmbeddingStatus((status) =>
+    emit(contract.indexer.events.embeddingStatus, status)
   )
 }

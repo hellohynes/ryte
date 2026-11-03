@@ -161,6 +161,24 @@ describe('IndexStateStore', () => {
     expect(store2.totals()).toEqual({ files: 1, chunks: 5 })
   })
 
+  describe('embeddableCount', () => {
+    it('counts the notes that have chunks, embedded or not, and leaves out empty ones', () => {
+      store.markIndexed('waiting.md', 100, 2)
+      store.markIndexed('done.md', 100, 1, 1, true)
+      store.markIndexed('empty.md', 100, 0, 1, true)
+
+      expect(store.embeddableCount()).toBe(2)
+      expect(store.unembeddedCount()).toBe(1)
+    })
+
+    it('is zero for an empty index and follows removals', () => {
+      expect(store.embeddableCount()).toBe(0)
+      store.markIndexed('a.md', 100, 1)
+      store.markRemoved('a.md')
+      expect(store.embeddableCount()).toBe(0)
+    })
+  })
+
   describe('the embedding queue', () => {
     it('lists notes with chunks and no vectors, most recently changed first', () => {
       store.markIndexed('old.md', 100, 2)

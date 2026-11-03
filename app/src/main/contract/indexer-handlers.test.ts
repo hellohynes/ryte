@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { contract } from '../../contract'
+import type { EmbeddingStatus } from '../../contract/indexer'
 import type { IndexerProgress } from '../indexing/indexer'
 import {
   createIndexerHandlers,
+  forwardEmbeddingStatus,
   forwardIndexerStatus,
   forwardRebuildNotice
 } from './indexer-handlers'
@@ -29,10 +31,14 @@ const bareStatus: IndexerProgress = {
   chunksDone: 20
 }
 
+const idleEmbedding: EmbeddingStatus = { state: 'idle', total: 12, done: 12, pending: 0 }
+
 interface FakeService {
   pendingRebuildNotice: ReturnType<typeof vi.fn<() => { message: string; detail: string } | null>>
   dismissRebuildNotice: ReturnType<typeof vi.fn<() => void>>
   subscribeRebuildNotice: ReturnType<typeof vi.fn>
+  getEmbeddingStatus: ReturnType<typeof vi.fn<() => EmbeddingStatus>>
+  subscribeEmbeddingStatus: ReturnType<typeof vi.fn>
   getStatus: ReturnType<typeof vi.fn<() => IndexerProgress>>
   triggerReindex: ReturnType<typeof vi.fn<() => Promise<void>>>
   clearAndRebuild: ReturnType<typeof vi.fn<(beforeClear?: () => void) => Promise<void>>>
@@ -43,6 +49,8 @@ function fakeService(overrides: Partial<Record<string, unknown>> = {}): FakeServ
     pendingRebuildNotice: vi.fn(() => null),
     dismissRebuildNotice: vi.fn(),
     subscribeRebuildNotice: vi.fn(() => () => undefined),
+    getEmbeddingStatus: vi.fn(() => idleEmbedding),
+    subscribeEmbeddingStatus: vi.fn(() => () => undefined),
     getStatus: vi.fn(() => fullStatus),
     triggerReindex: vi.fn(async () => undefined),
     clearAndRebuild: vi.fn(async () => undefined),
@@ -231,5 +239,56 @@ describe('forwardRebuildNotice', () => {
       detail: 'd'
     })
     expect(emit).toHaveBeenNthCalledWith(2, contract.indexer.events.rebuildNotice, null)
+  })
+})
+
+describe('indexer embedding status', () => {
+  const paused: EmbeddingStatus = {
+    state: 'paused',
+    total: 3200,
+    done: 120,
+    pending: 3080,
+    reason: 'offline',
+    retryAt: '2026-11-03T15:42:00.000Z'
+  }
+
+  it('returns the current state from the service, for a window that opens mid-run', async () => {
+    const service = fakeService({ getEmbeddingStatus: vi.fn(() => paused) })
+    const handlers = createIndexerHandlers({ service, beforeClear: vi.fn() })
+
+    await expect(handlers.getEmbeddingStatus(undefined, ctx)).resolves.toStrictEqual(paused)
+  })
+
+  it('answers with the service state each time it is asked, not a copy from the first time', async () => {
+    const service = fakeService()
+    const handlers = createIndexerHandlers({ service, beforeClear: vi.fn() })
+
+    await handlers.getEmbeddingStatus(undefined, ctx)
+    service.getEmbeddingStatus.mockReturnValue(paused)
+
+    await expect(handlers.getEmbeddingStatus(undefined, ctx)).resolves.toStrictEqual(paused)
+  })
+})
+
+describe('forwardEmbeddingStatus', () => {
+  it('sends every change to every window through the emitter on the embedding status event', () => {
+    let listener: ((status: EmbeddingStatus) => void) | null = null
+    const unsubscribe = vi.fn()
+    const service = {
+      subscribeEmbeddingStatus: vi.fn((callback: (status: EmbeddingStatus) => void) => {
+        listener = callback
+        return unsubscribe
+      })
+    }
+    const emit = vi.fn()
+
+    const stop = forwardEmbeddingStatus(service, emit)
+    const running: EmbeddingStatus = { state: 'running', total: 10, done: 3, pending: 7 }
+    listener!(running)
+
+    expect(emit).toHaveBeenCalledTimes(1)
+    expect(emit).toHaveBeenCalledWith(contract.indexer.events.embeddingStatus, running)
+    stop()
+    expect(unsubscribe).toHaveBeenCalledTimes(1)
   })
 })

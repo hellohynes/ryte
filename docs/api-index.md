@@ -15,11 +15,13 @@ change or remove one.
 | `indexer.clearAndRebuild` | `indexer:clear-and-rebuild` | Empty the index and rebuild it from the notes folder, stopping running searches once the rebuild is certain. | `none` |
 | `indexer.getRebuildNotice` | `indexer:get-rebuild-notice` | The notice to show after an update removed the old search index and is rebuilding it, or null when there is none. It stays until dismissed. | `none` |
 | `indexer.dismissRebuildNotice` | `indexer:dismiss-rebuild-notice` | Dismiss the rebuild notice; every window is told it is gone. | `none` |
+| `indexer.getEmbeddingStatus` | `indexer:get-embedding-status` | What smart search is doing: off, idle, running or paused, how many notes have their embeddings, and why it is paused or off. | `none` |
 
 | Event | Channel | What it means | Payload |
 | --- | --- | --- | --- |
 | `indexer.status` | `indexer:status-event` | The index state changed; sent to every open window as indexing progresses. | `{ phase: 'idle' \| 'walking' \| 'indexing' \| 'done' \| 'error', filesTotal: number, filesDone: number, chunksTotal: number, chunksDone: number, lastIndexedAt: string \| null, error?: string }` |
 | `indexer.rebuildNotice` | `indexer:rebuild-notice-event` | The rebuild notice appeared or was dismissed (null); sent to every open window, so a window that opened before the notice existed still shows it. | `see schema` |
+| `indexer.embeddingStatus` | `indexer:embedding-status-event` | What smart search is doing changed; sent to every open window at once when its state changes and at most a few times a second while it makes progress. | `{ state: 'off' \| 'idle' \| 'running' \| 'paused', total: integer, done: integer, pending: integer, reason?: 'no-key' \| 'no-agreement' \| 'offline' \| 'rate-limit' \| 'service' \| 'auth', retryAt?: string }` |
 
 ## settings
 

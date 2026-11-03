@@ -15,6 +15,17 @@ const indexerStatus = z.object({
 // What a person is told when the search index is rebuilt after an update. Plain sentences: no path, no note, no key.
 const rebuildNotice = z.object({ message: z.string().max(200), detail: z.string().max(1000) })
 
+// What smart search (the vectors added after the keyword index) is doing. Counts, a state, a reason and a time: no path, no note,
+// no key and no error message. `retryAt` is the time of the next automatic try; it is absent when nothing will retry by itself.
+const embeddingStatus = z.object({
+  state: z.enum(['off', 'idle', 'running', 'paused']),
+  total: z.number().int().nonnegative(),
+  done: z.number().int().nonnegative(),
+  pending: z.number().int().nonnegative(),
+  reason: z.enum(['no-key', 'no-agreement', 'offline', 'rate-limit', 'service', 'auth']).optional(),
+  retryAt: z.string().optional()
+})
+
 const exampleStatus = {
   phase: 'done' as const,
   filesTotal: 12,
@@ -73,6 +84,25 @@ export const dismissRebuildNotice = defineOperation({
   example: { input: undefined, output: undefined }
 })
 
+export const getEmbeddingStatus = defineOperation({
+  channel: 'indexer:get-embedding-status',
+  description:
+    'What smart search is doing: off, idle, running or paused, how many notes have their embeddings, and why it is paused or off.',
+  input: z.undefined(),
+  output: embeddingStatus,
+  example: {
+    input: undefined,
+    output: {
+      state: 'paused' as const,
+      total: 3200,
+      done: 120,
+      pending: 3080,
+      reason: 'offline' as const,
+      retryAt: '2026-11-03T15:42:00.000Z'
+    }
+  }
+})
+
 export const status = defineEvent({
   channel: 'indexer:status-event',
   description: 'The index state changed; sent to every open window as indexing progresses.',
@@ -86,16 +116,29 @@ export const rebuildNoticeChanged = defineEvent({
   payload: rebuildNotice.nullable()
 })
 
+export const embeddingStatusChanged = defineEvent({
+  channel: 'indexer:embedding-status-event',
+  description:
+    'What smart search is doing changed; sent to every open window at once when its state changes and at most a few times a second while it makes progress.',
+  payload: embeddingStatus
+})
+
 export const indexer = defineArea('indexer', {
   operations: {
     getStatus,
     triggerReindex,
     clearAndRebuild,
     getRebuildNotice,
-    dismissRebuildNotice
+    dismissRebuildNotice,
+    getEmbeddingStatus
   },
-  events: { status, rebuildNotice: rebuildNoticeChanged }
+  events: {
+    status,
+    rebuildNotice: rebuildNoticeChanged,
+    embeddingStatus: embeddingStatusChanged
+  }
 })
 
 export type IndexerStatus = z.output<typeof indexerStatus>
 export type RebuildNotice = z.output<typeof rebuildNotice>
+export type EmbeddingStatus = z.output<typeof embeddingStatus>

@@ -155,6 +155,14 @@ export class IndexStateStore {
       .all() as UnembeddedSource[]
   }
 
+  /** Notes that have chunks, so something to embed: the number smart search is catching up over. */
+  embeddableCount(): number {
+    const row = this.db
+      .prepare('SELECT COUNT(*) AS n FROM file_state WHERE chunk_count > 0')
+      .get() as { n: number }
+    return row.n
+  }
+
   unembeddedCount(): number {
     const row = this.db
       .prepare('SELECT COUNT(*) AS n FROM file_state WHERE embedded = 0 AND chunk_count > 0')

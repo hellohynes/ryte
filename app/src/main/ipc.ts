@@ -8,6 +8,7 @@ import { refreshAppMenu } from './app-menu'
 import { applyColorMode } from './appearance'
 import {
   createIndexerHandlers,
+  forwardEmbeddingStatus,
   forwardIndexerStatus,
   forwardRebuildNotice
 } from './contract/indexer-handlers'
@@ -288,6 +289,7 @@ export function registerIpc(): void {
 
   forwardIndexerStatus(indexerService, emit)
   forwardRebuildNotice(indexerService, emit)
+  forwardEmbeddingStatus(indexerService, emit)
 
   ipcMain.handle('files:list-tree', async () => {
     const notesRoot = settingsStore.load().notesRoot

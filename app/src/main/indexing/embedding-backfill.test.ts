@@ -25,6 +25,7 @@ interface Fixture {
   attachCalls: Array<{ path: string; mtimeMs: number; count: number }>
   sent: string[][]
   log: ReturnType<typeof vi.fn>
+  changes: ReturnType<typeof vi.fn>
   setEmbed: (fn: (texts: string[]) => Promise<Float32Array[]>) => void
   setAttach: (fn: (path: string) => 'attached' | 'stale') => void
   setAttachError: (error: Error | null) => void
@@ -40,6 +41,7 @@ function setup(notes: Record<string, FakeNote>): Fixture {
   const attachCalls: Array<{ path: string; mtimeMs: number; count: number }> = []
   const sent: string[][] = []
   const log = vi.fn()
+  const changes = vi.fn()
   let embed: (texts: string[]) => Promise<Float32Array[]> = async (texts) =>
     texts.map(() => Float32Array.from([1, 0, 0, 0]))
   let attachResult: (path: string) => 'attached' | 'stale' = () => 'attached'
@@ -77,7 +79,8 @@ function setup(notes: Record<string, FakeNote>): Fixture {
     vectorStore,
     indexState,
     fileMtimeMs: async (path) => onDisk.get(path) ?? null,
-    log
+    log,
+    onChange: changes
   })
   return {
     backfill,
@@ -89,6 +92,7 @@ function setup(notes: Record<string, FakeNote>): Fixture {
     attachCalls,
     sent,
     log,
+    changes,
     setEmbed: (fn: typeof embed) => (embed = fn),
     setAttach: (fn: typeof attachResult) => (attachResult = fn),
     setAttachError: (error: Error | null) => (attachError = error)
@@ -536,6 +540,141 @@ describe('EmbeddingBackfill', () => {
       expect(logged).not.toContain('sk-live')
       expect(logged).not.toContain('Quarterly')
       expect(logged).not.toContain('a.md')
+    })
+  })
+
+  describe('what it reports', () => {
+    it('says why it is paused and when it will try again, then nothing once it runs again', async () => {
+      const t = setup({ 'a.md': { mtimeMs: 1, texts: ['a'] } })
+      expect(t.backfill.reason).toBeNull()
+      expect(t.backfill.retryAt).toBeNull()
+      t.setEmbed(async () => {
+        throw new Error('Connection error.')
+      })
+      const before = Date.now()
+
+      t.backfill.kick()
+      await settle()
+
+      expect(t.backfill.state).toBe('paused')
+      expect(t.backfill.reason).toBe('offline')
+      expect(t.backfill.retryAt).toBe(before + RETRY_DELAYS_MS[0])
+
+      t.setEmbed(async (texts) => texts.map(() => Float32Array.from([1, 0, 0, 0])))
+      t.backfill.kick()
+      await settle()
+      expect(t.backfill.state).toBe('idle')
+      expect(t.backfill.reason).toBeNull()
+      expect(t.backfill.retryAt).toBeNull()
+    })
+
+    it.each([
+      ['a rate limit', statusError(429), 'rate-limit'],
+      ['a server error', statusError(503), 'service'],
+      ['a timeout', statusError(408), 'service']
+    ])(
+      'reports %s as %s and moves the retry time out with each pause',
+      async (_name, error, reason) => {
+        const t = setup({ 'a.md': { mtimeMs: 1, texts: ['a'] } })
+        t.setEmbed(async () => {
+          throw error
+        })
+        t.backfill.kick()
+        await settle()
+        expect(t.backfill.reason).toBe(reason)
+        const first = t.backfill.retryAt as number
+
+        await vi.advanceTimersByTimeAsync(RETRY_DELAYS_MS[0])
+        await settle()
+
+        expect(t.backfill.reason).toBe(reason)
+        expect((t.backfill.retryAt as number) - first).toBe(RETRY_DELAYS_MS[1])
+      }
+    )
+
+    it.each([401, 403, 404])('reports %s as auth with no time to try again', async (status) => {
+      const t = setup({ 'a.md': { mtimeMs: 1, texts: ['a'] } })
+      t.setEmbed(async () => {
+        throw statusError(status)
+      })
+
+      t.backfill.kick()
+      await settle()
+
+      expect(t.backfill.state).toBe('paused')
+      expect(t.backfill.reason).toBe('auth')
+      expect(t.backfill.retryAt).toBeNull()
+    })
+
+    it('says nothing is wrong about a note it skipped', async () => {
+      const t = setup({ 'bad.md': { mtimeMs: 1, texts: ['x'] } })
+      t.setEmbed(async () => {
+        throw statusError(400)
+      })
+
+      t.backfill.kick()
+      await settle()
+
+      expect(t.backfill.state).toBe('idle')
+      expect(t.backfill.reason).toBeNull()
+    })
+
+    it('calls onChange when it starts, after each note, and when it ends', async () => {
+      const t = setup({
+        'a.md': { mtimeMs: 2, texts: ['a'] },
+        'b.md': { mtimeMs: 1, texts: ['b'] }
+      })
+      const seen: string[] = []
+      t.changes.mockImplementation(() => seen.push(t.backfill.state))
+
+      t.backfill.kick()
+      await settle()
+
+      expect(seen).toEqual(['running', 'running', 'running', 'idle'])
+    })
+
+    it('calls onChange when it pauses, with the reason already set', async () => {
+      const t = setup({ 'a.md': { mtimeMs: 1, texts: ['a'] } })
+      t.setEmbed(async () => {
+        throw statusError(500)
+      })
+      const seen: Array<string | null> = []
+      t.changes.mockImplementation(() => seen.push(t.backfill.reason))
+
+      t.backfill.kick()
+      await settle()
+
+      expect(seen.at(-1)).toBe('service')
+    })
+
+    it('is not stopped by a listener that throws', async () => {
+      const t = setup({
+        'a.md': { mtimeMs: 2, texts: ['a'] },
+        'b.md': { mtimeMs: 1, texts: ['b'] }
+      })
+      t.changes.mockImplementation(() => {
+        throw new Error('listener failed')
+      })
+
+      t.backfill.kick()
+      await settle()
+
+      expect(t.attached).toEqual(['a.md', 'b.md'])
+    })
+
+    it('says nothing after it is stopped', async () => {
+      const t = setup({ 'a.md': { mtimeMs: 1, texts: ['a'] } })
+      let release: (v: Float32Array[]) => void = () => {}
+      t.setEmbed(() => new Promise((resolve) => (release = resolve)))
+      t.backfill.kick()
+      await settle()
+      t.backfill.stop()
+      t.changes.mockClear()
+
+      release([Float32Array.from([1, 0, 0, 0])])
+      await settle()
+
+      expect(t.changes).not.toHaveBeenCalled()
     })
   })
 

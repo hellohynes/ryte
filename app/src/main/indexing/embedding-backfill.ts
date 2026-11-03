@@ -19,6 +19,9 @@ const MAX_STALE_RETRIES = 2
 
 export type EmbeddingBackfillState = 'idle' | 'running' | 'paused'
 
+/** Why a paused step is paused, as far as the person is told. */
+export type EmbeddingPauseReason = 'offline' | 'rate-limit' | 'service' | 'auth'
+
 export interface EmbeddingBackfillDeps {
   provider: EmbeddingProvider
   vectorStore: Pick<VectorStore, 'chunkTextsForFile' | 'attachVectors'>
@@ -28,6 +31,8 @@ export interface EmbeddingBackfillDeps {
   /** Only a class and a code are ever passed, never a message or a path. */
   log?: (message: string, detail: string) => void
   retryDelaysMs?: number[]
+  /** The state or the progress changed. Carries nothing; ask the step. A listener that throws does not stop the step. */
+  onChange?: () => void
 }
 
 /** The modification time the indexer records for a note under `notesRoot`. */
@@ -56,6 +61,8 @@ export class EmbeddingBackfill {
   private rerun = false
   private attempt = 0
   private timer: ReturnType<typeof setTimeout> | null = null
+  private pauseReason: EmbeddingPauseReason | null = null
+  private retryAtMs: number | null = null
   // Notes the service rejected, by path and modification time, so they are not sent again until they change.
   private readonly rejected = new Set<string>()
   private readonly retryDelaysMs: number[]
@@ -67,6 +74,24 @@ export class EmbeddingBackfill {
   get state(): EmbeddingBackfillState {
     if (this.running) return 'running'
     return this.paused ? 'paused' : 'idle'
+  }
+
+  /** Why the step is paused, or null when it is not. */
+  get reason(): EmbeddingPauseReason | null {
+    return this.state === 'paused' ? this.pauseReason : null
+  }
+
+  /** When a paused step will try again by itself (epoch milliseconds), or null when nothing will. */
+  get retryAt(): number | null {
+    return this.state === 'paused' ? this.retryAtMs : null
+  }
+
+  private changed(): void {
+    try {
+      this.deps.onChange?.()
+    } catch {
+      // A listener must never stop the step.
+    }
   }
 
   /** Something may have changed: look for notes without vectors. Retries a paused step at once. */
@@ -83,6 +108,8 @@ export class EmbeddingBackfill {
   stop(): void {
     this.stopped = true
     this.paused = false
+    this.pauseReason = null
+    this.retryAtMs = null
     this.clearTimer()
   }
 
@@ -91,10 +118,12 @@ export class EmbeddingBackfill {
     this.timer = null
   }
 
-  private pauseAndRetryLater(): void {
+  private pauseAndRetryLater(reason: EmbeddingPauseReason): void {
     this.paused = true
+    this.pauseReason = reason
     const delay = this.retryDelaysMs[Math.min(this.attempt, this.retryDelaysMs.length - 1)]
     this.attempt += 1
+    this.retryAtMs = Date.now() + delay
     this.timer = setTimeout(() => {
       this.timer = null
       if (!this.stopped) void this.run()
@@ -105,12 +134,18 @@ export class EmbeddingBackfill {
     if (this.running || this.stopped) return
     this.running = true
     this.paused = false
+    this.pauseReason = null
+    this.retryAtMs = null
+    this.changed()
     try {
       do {
         // A kick that arrived while a request was out asks for a try now, even if that request then failed.
         if (this.rerun && this.paused) {
           this.clearTimer()
           this.paused = false
+          this.pauseReason = null
+          this.retryAtMs = null
+          this.changed()
         }
         this.rerun = false
         await this.drain()
@@ -120,6 +155,7 @@ export class EmbeddingBackfill {
       this.deps.log?.('Ryte embedding step stopped.', describeStoreError(error))
     } finally {
       this.running = false
+      if (!this.stopped) this.changed()
     }
   }
 
@@ -186,8 +222,10 @@ export class EmbeddingBackfill {
         if (failure === 'auth') {
           this.authBlocked = true
           this.paused = true
+          this.pauseReason = 'auth'
+          this.retryAtMs = null
         } else {
-          this.pauseAndRetryLater()
+          this.pauseAndRetryLater(failure)
         }
         return
       }
@@ -208,6 +246,7 @@ export class EmbeddingBackfill {
       }
       if (result === 'attached') {
         this.attempt = 0
+        this.changed()
         continue
       }
       const stale = (staleCount.get(sourcePath) ?? 0) + 1

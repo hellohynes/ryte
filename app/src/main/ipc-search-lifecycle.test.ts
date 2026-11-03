@@ -16,6 +16,8 @@ const mocks = vi.hoisted(() => ({
   indexerSubscribe: vi.fn(),
   noticeListeners: [] as Array<(notice: unknown) => void>,
   pendingNotice: vi.fn(),
+  embeddingListeners: [] as Array<(status: unknown) => void>,
+  embeddingStatus: vi.fn(),
   dismissNotice: vi.fn(),
   applyColorMode: vi.fn(),
   listModels: vi.fn(),
@@ -69,6 +71,11 @@ vi.mock('./indexing/indexer-service', () => ({
     dismissRebuildNotice: mocks.dismissNotice,
     subscribeRebuildNotice: (callback: (notice: unknown) => void) => {
       mocks.noticeListeners.push(callback)
+      return vi.fn()
+    },
+    getEmbeddingStatus: mocks.embeddingStatus,
+    subscribeEmbeddingStatus: (callback: (status: unknown) => void) => {
+      mocks.embeddingListeners.push(callback)
       return vi.fn()
     }
   }
@@ -177,6 +184,10 @@ describe('search IPC request lifecycle', () => {
     mocks.indexerSubscribers = []
     mocks.noticeListeners = []
     mocks.pendingNotice.mockReset().mockReturnValue(null)
+    mocks.embeddingListeners = []
+    mocks.embeddingStatus
+      .mockReset()
+      .mockReturnValue({ state: 'off', total: 0, done: 0, pending: 0 })
     mocks.dismissNotice.mockReset()
     mocks.indexerSubscribe.mockReset()
     mocks.init.mockReset().mockReturnValue(true)
@@ -484,6 +495,41 @@ describe('search IPC request lifecycle', () => {
         expect(live.send.mock.calls).toEqual([
           [contract.indexer.events.rebuildNotice.channel, notice],
           [contract.indexer.events.rebuildNotice.channel, null]
+        ])
+      }
+      expect(closed.send).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('the embedding status', () => {
+    const running = { state: 'running', total: 10, done: 3, pending: 7 }
+
+    it('is answered through the registered channel with the service state each time', async () => {
+      mocks.embeddingStatus.mockReturnValue(running)
+      const asking = handler(contract.indexer.operations.getEmbeddingStatus.channel)
+
+      await expect(asking({ sender: makeWebContents() })).resolves.toEqual(running)
+      mocks.embeddingStatus.mockReturnValue({ ...running, done: 4, pending: 6 })
+      await expect(asking({ sender: makeWebContents() })).resolves.toEqual({
+        ...running,
+        done: 4,
+        pending: 6
+      })
+    })
+
+    it('is sent to every live window, once each, and not to a closed one', () => {
+      const first = makeWebContents()
+      const closed = makeWebContents()
+      closed.destroyed()
+      const second = makeWebContents()
+      mocks.windows = [{ webContents: first }, { webContents: closed }, { webContents: second }]
+
+      expect(mocks.embeddingListeners, 'one forwarder').toHaveLength(1)
+      for (const listener of mocks.embeddingListeners) listener(running)
+
+      for (const live of [first, second]) {
+        expect(live.send.mock.calls).toEqual([
+          [contract.indexer.events.embeddingStatus.channel, running]
         ])
       }
       expect(closed.send).not.toHaveBeenCalled()
