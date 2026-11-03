@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
 import type { EmbeddingStatus } from '../../../contract/indexer'
-import { clearAndRebuildConfirm, embeddingLine, formatRetryTime } from './embedding-model'
+import {
+  clearAndRebuildConfirm,
+  embeddingBarText,
+  embeddingHint,
+  embeddingLine,
+  formatRetryTime
+} from './embedding-model'
 
 const TZ = 'America/New_York'
 // 3:42 PM in New York.
@@ -128,5 +134,91 @@ describe('clearAndRebuildConfirm', () => {
       "Clear Ryte's local search index and rebuild it from the notes folder? Your notes will be sent to OpenAI again to rebuild smart search."
     )
     expect(clearAndRebuildConfirm(false)).not.toMatch(/OpenAI/)
+  })
+})
+
+describe('embeddingBarText', () => {
+  it.each([
+    [
+      'running',
+      status({ state: 'running', done: 120, pending: 3080 }),
+      'Smart search: 120 of 3,200 notes'
+    ],
+    [
+      'paused, no connection',
+      status({ state: 'paused', pending: 5, reason: 'offline' }),
+      'Smart search paused: no connection'
+    ],
+    [
+      'paused, slowed down',
+      status({ state: 'paused', pending: 5, reason: 'rate-limit' }),
+      'Smart search paused: slowed down'
+    ],
+    [
+      'paused, OpenAI problem',
+      status({ state: 'paused', pending: 5, reason: 'service' }),
+      'Smart search paused: OpenAI problem'
+    ],
+    [
+      'paused, key refused',
+      status({ state: 'paused', pending: 5, reason: 'auth' }),
+      'Smart search paused: key refused'
+    ],
+    ['paused with no reason', status({ state: 'paused', pending: 5 }), 'Smart search paused']
+  ])('says, while %s: %s', (_name, input, expected) => {
+    expect(embeddingBarText(input, true)).toBe(expected)
+  })
+
+  it('says nothing when ready, off, without a key, before main has said anything, or with smart search off', () => {
+    expect(embeddingBarText(status({}), true)).toBeNull()
+    expect(embeddingBarText(status({ done: 3199, pending: 1 }), true)).toBeNull()
+    expect(
+      embeddingBarText(
+        status({ state: 'off', total: 0, done: 0, pending: 0, reason: 'no-key' }),
+        true
+      )
+    ).toBeNull()
+    expect(embeddingBarText(null, true)).toBeNull()
+    expect(embeddingBarText(status({ state: 'running', done: 1, pending: 3199 }), false)).toBeNull()
+    expect(
+      embeddingBarText(status({ state: 'paused', pending: 5, reason: 'auth' }), false)
+    ).toBeNull()
+  })
+})
+
+describe('embeddingHint', () => {
+  const hint = 'Smart search is still catching up; results may miss notes that match by meaning.'
+  const working = status({ state: 'running', done: 120, pending: 3080 })
+  const paused = status({ state: 'paused', pending: 4, reason: 'offline' })
+
+  it('shows for Best match while notes are being added or waiting out a pause', () => {
+    expect(embeddingHint(working, true, 'auto')).toBe(hint)
+    expect(embeddingHint(paused, true, 'auto')).toBe(hint)
+    expect(embeddingHint(working, true, 'hybrid')).toBe(hint)
+  })
+
+  it('never shows for a keywords-only search', () => {
+    expect(embeddingHint(working, true, 'keyword')).toBeNull()
+    expect(embeddingHint(paused, true, 'keyword')).toBeNull()
+  })
+
+  it('does not show when smart search is ready, off, has nothing waiting, or has said nothing', () => {
+    expect(embeddingHint(status({}), true, 'auto')).toBeNull()
+    expect(embeddingHint(status({ done: 3197, pending: 3 }), true, 'auto')).toBeNull()
+    expect(
+      embeddingHint(
+        status({ state: 'off', total: 0, done: 0, pending: 0, reason: 'no-key' }),
+        true,
+        'auto'
+      )
+    ).toBeNull()
+    expect(
+      embeddingHint(status({ state: 'running', done: 3200, pending: 0 }), true, 'auto')
+    ).toBeNull()
+    expect(embeddingHint(null, true, 'auto')).toBeNull()
+  })
+
+  it('does not show with smart search switched off, whatever main reports', () => {
+    expect(embeddingHint(working, false, 'auto')).toBeNull()
   })
 })

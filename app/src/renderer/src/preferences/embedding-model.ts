@@ -67,3 +67,46 @@ export function clearAndRebuildConfirm(smartSearchOn: boolean): string {
     ? `${CLEAR_AND_REBUILD_CONFIRM} Your notes will be sent to OpenAI again to rebuild smart search.`
     : CLEAR_AND_REBUILD_CONFIRM
 }
+
+const SHORT_PAUSE_CAUSE: Record<'offline' | 'rate-limit' | 'service' | 'auth', string> = {
+  offline: 'no connection',
+  'rate-limit': 'slowed down',
+  service: 'OpenAI problem',
+  auth: 'key refused'
+}
+
+/** The short text for the status bar while smart search works or is paused; null the rest of the time. */
+export function embeddingBarText(
+  status: EmbeddingStatus | null,
+  smartSearchOn: boolean
+): string | null {
+  if (!smartSearchOn || status === null) return null
+  if (status.state === 'running') {
+    return `Smart search: ${count(status.done)} of ${count(status.total)} notes`
+  }
+  if (status.state === 'paused') {
+    const cause = status.reason && status.reason in SHORT_PAUSE_CAUSE ? status.reason : null
+    return cause
+      ? `Smart search paused: ${SHORT_PAUSE_CAUSE[cause as keyof typeof SHORT_PAUSE_CAUSE]}`
+      : 'Smart search paused'
+  }
+  return null
+}
+
+export type RetrievalMode = 'auto' | 'keyword' | 'hybrid'
+
+const CATCHING_UP_HINT =
+  'Smart search is still catching up; results may miss notes that match by meaning.'
+
+/** The quiet hint under search results: only while notes still wait for smart search, and never for a keywords-only search (the others use meaning). */
+export function embeddingHint(
+  status: EmbeddingStatus | null,
+  smartSearchOn: boolean,
+  mode: RetrievalMode
+): string | null {
+  if (!smartSearchOn || status === null || mode === 'keyword') return null
+  if ((status.state === 'running' || status.state === 'paused') && status.pending > 0) {
+    return CATCHING_UP_HINT
+  }
+  return null
+}

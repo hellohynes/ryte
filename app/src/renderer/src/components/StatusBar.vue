@@ -1,10 +1,15 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 
+import { embeddingBarText } from '../preferences/embedding-model'
+import { useEmbeddingStatusStore } from '../stores/embedding-status'
 import { useIndexStatusStore } from '../stores/index-status'
+import { useSettingsStore } from '../stores/settings'
 import { useWorkspaceStore } from '../stores/workspace'
 
 const indexStatus = useIndexStatusStore()
+const embeddingStatus = useEmbeddingStatusStore()
+const settings = useSettingsStore()
 const workspace = useWorkspaceStore()
 const visible = ref(false)
 let hideTimer: ReturnType<typeof setTimeout> | null = null
@@ -41,7 +46,7 @@ watch(
   { immediate: true }
 )
 
-const message = computed(() => {
+const localMessage = computed(() => {
   if (workspace.error) return `Workspace error: ${workspace.error}`
 
   const s = indexStatus.status
@@ -62,8 +67,26 @@ const message = computed(() => {
   }
 })
 
+// Smart search shows beside the index messages, never in place of one: it is its own, slower, background job.
+const smartSearchText = computed(() =>
+  embeddingBarText(embeddingStatus.status, settings.state?.semanticIndexEnabled === true)
+)
+
+// An index message that has faded away (the bar stays for smart search) is not repeated beside it.
+const localShown = computed(() => (visible.value ? localMessage.value : ''))
+
+const message = computed(() => {
+  const smart = smartSearchText.value
+  if (!smart || workspace.error) return localMessage.value
+  return localShown.value ? `${localShown.value} · ${smart}` : smart
+})
+
 const tone = computed(() => {
   if (workspace.error) return 'error'
+  // With nothing else to say, working is shown as busy and a pause quietly.
+  if (!localShown.value && smartSearchText.value) {
+    return embeddingStatus.status?.state === 'running' ? 'busy' : 'idle'
+  }
 
   switch (indexStatus.status.phase) {
     case 'indexing':
@@ -78,7 +101,9 @@ const tone = computed(() => {
   }
 })
 
-const isVisible = computed(() => Boolean(workspace.error) || visible.value)
+const isVisible = computed(
+  () => Boolean(workspace.error) || visible.value || Boolean(smartSearchText.value)
+)
 </script>
 
 <template>
