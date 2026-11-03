@@ -14,6 +14,9 @@ const mocks = vi.hoisted(() => ({
   triggerReindex: vi.fn(),
   indexerSubscribers: [] as Array<(status: unknown) => void>,
   indexerSubscribe: vi.fn(),
+  noticeListeners: [] as Array<(notice: unknown) => void>,
+  pendingNotice: vi.fn(),
+  dismissNotice: vi.fn(),
   applyColorMode: vi.fn(),
   listModels: vi.fn(),
   getSecret: vi.fn(),
@@ -61,7 +64,13 @@ vi.mock('./indexing/indexer-service', () => ({
       mocks.indexerSubscribers.push(callback)
       return vi.fn()
     },
-    triggerReindex: mocks.triggerReindex
+    triggerReindex: mocks.triggerReindex,
+    pendingRebuildNotice: mocks.pendingNotice,
+    dismissRebuildNotice: mocks.dismissNotice,
+    subscribeRebuildNotice: (callback: (notice: unknown) => void) => {
+      mocks.noticeListeners.push(callback)
+      return vi.fn()
+    }
   }
 }))
 vi.mock('./indexing/walker', () => ({ walkNotes: vi.fn() }))
@@ -166,6 +175,9 @@ describe('search IPC request lifecycle', () => {
     mocks.getIndexerStatus.mockReset()
     mocks.triggerReindex.mockReset().mockResolvedValue(undefined)
     mocks.indexerSubscribers = []
+    mocks.noticeListeners = []
+    mocks.pendingNotice.mockReset().mockReturnValue(null)
+    mocks.dismissNotice.mockReset()
     mocks.indexerSubscribe.mockReset()
     mocks.init.mockReset().mockReturnValue(true)
     mocks.watcherStop.mockReset().mockResolvedValue(undefined)
@@ -433,6 +445,49 @@ describe('search IPC request lifecycle', () => {
       expect(live.send).toHaveBeenCalledWith(contract.indexer.events.status.channel, status)
     }
     expect(closed.send).not.toHaveBeenCalled()
+  })
+
+  describe('the rebuild notice', () => {
+    const notice = {
+      message: 'Ryte is rebuilding its search index',
+      detail: 'Search may be incomplete.'
+    }
+
+    it('is answered through the registered channels, and asking does not dismiss it', async () => {
+      mocks.pendingNotice.mockReturnValue(notice)
+      const asking = handler(contract.indexer.operations.getRebuildNotice.channel)
+
+      await expect(asking({ sender: makeWebContents() })).resolves.toEqual(notice)
+      await expect(asking({ sender: makeWebContents() })).resolves.toEqual(notice)
+      expect(mocks.dismissNotice).not.toHaveBeenCalled()
+
+      await expect(
+        handler(contract.indexer.operations.dismissRebuildNotice.channel)({
+          sender: makeWebContents()
+        })
+      ).resolves.toBeUndefined()
+      expect(mocks.dismissNotice).toHaveBeenCalledTimes(1)
+    })
+
+    it('is sent to every live window when it appears or is dismissed, once each', () => {
+      const first = makeWebContents()
+      const closed = makeWebContents()
+      closed.destroyed()
+      const second = makeWebContents()
+      mocks.windows = [{ webContents: first }, { webContents: closed }, { webContents: second }]
+
+      expect(mocks.noticeListeners, 'one forwarder').toHaveLength(1)
+      for (const listener of mocks.noticeListeners) listener(notice)
+      for (const listener of mocks.noticeListeners) listener(null)
+
+      for (const live of [first, second]) {
+        expect(live.send.mock.calls).toEqual([
+          [contract.indexer.events.rebuildNotice.channel, notice],
+          [contract.indexer.events.rebuildNotice.channel, null]
+        ])
+      }
+      expect(closed.send).not.toHaveBeenCalled()
+    })
   })
 
   it('cancels active requests before replacing the search service for indexer settings', async () => {

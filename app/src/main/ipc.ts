@@ -6,7 +6,11 @@ import { app, BrowserWindow, clipboard, dialog, ipcMain, shell, type WebContents
 
 import { refreshAppMenu } from './app-menu'
 import { applyColorMode } from './appearance'
-import { createIndexerHandlers, forwardIndexerStatus } from './contract/indexer-handlers'
+import {
+  createIndexerHandlers,
+  forwardIndexerStatus,
+  forwardRebuildNotice
+} from './contract/indexer-handlers'
 import { createEmitter, registerOperations } from './contract/register'
 import { createSettingsHandlers } from './contract/settings-handlers'
 import { createTaskHandlers } from './contract/tasks-handlers'
@@ -283,6 +287,7 @@ export function registerIpc(): void {
   }
 
   forwardIndexerStatus(indexerService, emit)
+  forwardRebuildNotice(indexerService, emit)
 
   ipcMain.handle('files:list-tree', async () => {
     const notesRoot = settingsStore.load().notesRoot

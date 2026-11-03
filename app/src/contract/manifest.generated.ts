@@ -5,10 +5,13 @@ export const manifest = {
     operations: {
       getStatus: 'indexer:get-status',
       triggerReindex: 'indexer:trigger-reindex',
-      clearAndRebuild: 'indexer:clear-and-rebuild'
+      clearAndRebuild: 'indexer:clear-and-rebuild',
+      getRebuildNotice: 'indexer:get-rebuild-notice',
+      dismissRebuildNotice: 'indexer:dismiss-rebuild-notice'
     },
     events: {
-      status: 'indexer:status-event'
+      status: 'indexer:status-event',
+      rebuildNotice: 'indexer:rebuild-notice-event'
     }
   },
   settings: {

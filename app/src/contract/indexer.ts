@@ -12,6 +12,9 @@ const indexerStatus = z.object({
   error: z.string().optional()
 })
 
+// What a person is told when the search index is rebuilt after an update. Plain sentences: no path, no note, no key.
+const rebuildNotice = z.object({ message: z.string().max(200), detail: z.string().max(1000) })
+
 const exampleStatus = {
   phase: 'done' as const,
   filesTotal: 12,
@@ -47,15 +50,52 @@ export const clearAndRebuild = defineOperation({
   example: { input: undefined, output: undefined }
 })
 
+export const getRebuildNotice = defineOperation({
+  channel: 'indexer:get-rebuild-notice',
+  description:
+    'The notice to show after an update removed the old search index and is rebuilding it, or null when there is none. It stays until dismissed.',
+  input: z.undefined(),
+  output: rebuildNotice.nullable(),
+  example: {
+    input: undefined,
+    output: {
+      message: 'Ryte is rebuilding its search index',
+      detail: 'Search may be incomplete for a short while. Your notes are not changed.'
+    }
+  }
+})
+
+export const dismissRebuildNotice = defineOperation({
+  channel: 'indexer:dismiss-rebuild-notice',
+  description: 'Dismiss the rebuild notice; every window is told it is gone.',
+  input: z.undefined(),
+  output: z.void(),
+  example: { input: undefined, output: undefined }
+})
+
 export const status = defineEvent({
   channel: 'indexer:status-event',
   description: 'The index state changed; sent to every open window as indexing progresses.',
   payload: indexerStatus
 })
 
+export const rebuildNoticeChanged = defineEvent({
+  channel: 'indexer:rebuild-notice-event',
+  description:
+    'The rebuild notice appeared or was dismissed (null); sent to every open window, so a window that opened before the notice existed still shows it.',
+  payload: rebuildNotice.nullable()
+})
+
 export const indexer = defineArea('indexer', {
-  operations: { getStatus, triggerReindex, clearAndRebuild },
-  events: { status }
+  operations: {
+    getStatus,
+    triggerReindex,
+    clearAndRebuild,
+    getRebuildNotice,
+    dismissRebuildNotice
+  },
+  events: { status, rebuildNotice: rebuildNoticeChanged }
 })
 
 export type IndexerStatus = z.output<typeof indexerStatus>
+export type RebuildNotice = z.output<typeof rebuildNotice>

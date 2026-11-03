@@ -2,7 +2,11 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { contract } from '../../contract'
 import type { IndexerProgress } from '../indexing/indexer'
-import { createIndexerHandlers, forwardIndexerStatus } from './indexer-handlers'
+import {
+  createIndexerHandlers,
+  forwardIndexerStatus,
+  forwardRebuildNotice
+} from './indexer-handlers'
 
 const ctx = { sender: {} as never }
 
@@ -26,6 +30,9 @@ const bareStatus: IndexerProgress = {
 }
 
 interface FakeService {
+  pendingRebuildNotice: ReturnType<typeof vi.fn<() => { message: string; detail: string } | null>>
+  dismissRebuildNotice: ReturnType<typeof vi.fn<() => void>>
+  subscribeRebuildNotice: ReturnType<typeof vi.fn>
   getStatus: ReturnType<typeof vi.fn<() => IndexerProgress>>
   triggerReindex: ReturnType<typeof vi.fn<() => Promise<void>>>
   clearAndRebuild: ReturnType<typeof vi.fn<(beforeClear?: () => void) => Promise<void>>>
@@ -33,6 +40,9 @@ interface FakeService {
 
 function fakeService(overrides: Partial<Record<string, unknown>> = {}): FakeService {
   return {
+    pendingRebuildNotice: vi.fn(() => null),
+    dismissRebuildNotice: vi.fn(),
+    subscribeRebuildNotice: vi.fn(() => () => undefined),
     getStatus: vi.fn(() => fullStatus),
     triggerReindex: vi.fn(async () => undefined),
     clearAndRebuild: vi.fn(async () => undefined),
@@ -165,5 +175,61 @@ describe('forwardIndexerStatus', () => {
     stop()
 
     expect(service.unsubscribe).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('indexer rebuild notice', () => {
+  const notice = {
+    message: 'Ryte is rebuilding its search index',
+    detail: 'Search may be incomplete.'
+  }
+
+  it('returns the pending notice, and null when there is none', async () => {
+    const service = fakeService({ pendingRebuildNotice: vi.fn(() => notice) })
+    const handlers = createIndexerHandlers({ service, beforeClear: vi.fn() })
+    await expect(handlers.getRebuildNotice(undefined, ctx)).resolves.toStrictEqual(notice)
+
+    service.pendingRebuildNotice.mockReturnValue(null)
+    await expect(handlers.getRebuildNotice(undefined, ctx)).resolves.toBeNull()
+  })
+
+  it('asking for it does not dismiss it', async () => {
+    const service = fakeService({ pendingRebuildNotice: vi.fn(() => notice) })
+    const handlers = createIndexerHandlers({ service, beforeClear: vi.fn() })
+
+    await handlers.getRebuildNotice(undefined, ctx)
+
+    expect(service.dismissRebuildNotice).not.toHaveBeenCalled()
+  })
+
+  it('dismisses it through the service', async () => {
+    const service = fakeService()
+    const handlers = createIndexerHandlers({ service, beforeClear: vi.fn() })
+
+    await expect(handlers.dismissRebuildNotice(undefined, ctx)).resolves.toBeUndefined()
+    expect(service.dismissRebuildNotice).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('forwardRebuildNotice', () => {
+  it('sends every change of the notice to every window through the emitter', () => {
+    let listener: ((notice: { message: string; detail: string } | null) => void) | undefined
+    const service = {
+      subscribeRebuildNotice: vi.fn((cb: typeof listener) => {
+        listener = cb
+        return () => undefined
+      })
+    }
+    const emit = vi.fn()
+
+    forwardRebuildNotice(service as never, emit)
+    listener?.({ message: 'm', detail: 'd' })
+    listener?.(null)
+
+    expect(emit).toHaveBeenNthCalledWith(1, contract.indexer.events.rebuildNotice, {
+      message: 'm',
+      detail: 'd'
+    })
+    expect(emit).toHaveBeenNthCalledWith(2, contract.indexer.events.rebuildNotice, null)
   })
 })

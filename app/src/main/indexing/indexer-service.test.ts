@@ -695,6 +695,122 @@ describe('IndexerService index location', () => {
     expect(roots.at(-1)).toBe(notesB)
   })
 
+  describe('the notice that the search index is being rebuilt', () => {
+    it('is pending after the old single database was removed, and stays pending until it is dismissed', async () => {
+      const { IndexerService } = await import('./indexer-service')
+      writeFileSync(join(mocks.userData, 'index.db'), 'x')
+      await useNotesRoot(notesA)
+      const svc = new IndexerService()
+      svc.init()
+
+      const notice = svc.pendingRebuildNotice()
+      expect(notice?.message).toMatch(/rebuilding its search index/i)
+      // Asking does not use it up: a window that opens or reloads later still sees it.
+      expect(svc.pendingRebuildNotice()).toEqual(notice)
+
+      svc.dismissRebuildNotice()
+      expect(svc.pendingRebuildNotice()).toBeNull()
+    })
+
+    it('is still pending after a later restart that finds nothing more to remove', async () => {
+      const { IndexerService } = await import('./indexer-service')
+      writeFileSync(join(mocks.userData, 'index.db'), 'x')
+      await useNotesRoot(notesA)
+      const svc = new IndexerService()
+      svc.init()
+      svc.close()
+      svc.init()
+
+      expect(svc.pendingRebuildNotice()).not.toBeNull()
+    })
+
+    it('is not pending on a fresh install', async () => {
+      const { IndexerService } = await import('./indexer-service')
+      await useNotesRoot(notesA)
+      const svc = new IndexerService()
+      svc.init()
+
+      expect(svc.pendingRebuildNotice()).toBeNull()
+    })
+
+    it('is not pending when the old database was kept because the folder could not be read', async () => {
+      const { IndexerService } = await import('./indexer-service')
+      writeFileSync(join(mocks.userData, 'index.db'), 'x')
+      await useNotesRoot(join(mocks.userData, 'unmounted-volume'))
+      const svc = new IndexerService()
+      svc.init()
+
+      expect(svc.pendingRebuildNotice()).toBeNull()
+    })
+
+    it('is not pending when the old database could not be deleted', async () => {
+      const { IndexerService } = await import('./indexer-service')
+      const { chmodSync } = await import('node:fs')
+      const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+      writeFileSync(join(mocks.userData, 'index.db'), 'x')
+      mkdirSync(join(mocks.userData, 'index'))
+      await useNotesRoot(notesA)
+      chmodSync(mocks.userData, 0o500)
+      try {
+        const svc = new IndexerService()
+        svc.init()
+
+        expect(svc.pendingRebuildNotice()).toBeNull()
+      } finally {
+        chmodSync(mocks.userData, 0o700)
+        errors.mockRestore()
+      }
+    })
+
+    it('is not pending when the index could not be opened, so it never says "rebuilding" after a failure', async () => {
+      const { IndexerService } = await import('./indexer-service')
+      writeFileSync(join(mocks.userData, 'index.db'), 'x')
+      // A file where the index folder should be: the old database is removed, then the new one cannot be made.
+      writeFileSync(join(mocks.userData, 'index'), 'not a folder')
+      await useNotesRoot(notesA)
+      const svc = new IndexerService()
+
+      expect(svc.init()).toBe(false)
+      expect(svc.pendingRebuildNotice()).toBeNull()
+    })
+
+    it('says that notes will be sent again only when embeddings are on', async () => {
+      const { IndexerService } = await import('./indexer-service')
+      writeFileSync(join(mocks.userData, 'index.db'), 'x')
+      await useNotesRoot(notesA)
+      const local = new IndexerService()
+      local.init()
+      expect(local.pendingRebuildNotice()?.detail).not.toMatch(/openai/i)
+
+      writeFileSync(join(mocks.userData, 'index.db'), 'x')
+      await useNotesRoot(notesA, { semantic: true })
+      const cloud = new IndexerService()
+      cloud.init()
+      expect(cloud.pendingRebuildNotice()?.detail).toMatch(/sent to OpenAI again/)
+    })
+
+    it('tells listeners when it is set and when it is dismissed, and not again for a dismiss with nothing pending', async () => {
+      const { IndexerService } = await import('./indexer-service')
+      writeFileSync(join(mocks.userData, 'index.db'), 'x')
+      await useNotesRoot(notesA)
+      const svc = new IndexerService()
+      const seen: Array<unknown> = []
+      const off = svc.subscribeRebuildNotice((notice) => seen.push(notice?.message ?? null))
+
+      svc.init()
+      svc.dismissRebuildNotice()
+      svc.dismissRebuildNotice()
+      off()
+      // Once the listener is gone it hears nothing more.
+      svc.close()
+      writeFileSync(join(mocks.userData, 'index.db'), 'x')
+      svc.init()
+
+      expect(seen).toEqual(['Ryte is rebuilding its search index', null])
+      expect(svc.pendingRebuildNotice()).not.toBeNull()
+    })
+  })
+
   it('does not let a failed cleanup stop the start', async () => {
     const { IndexerService } = await import('./indexer-service')
     const errors = vi.spyOn(console, 'error').mockImplementation(() => {})

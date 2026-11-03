@@ -13,10 +13,13 @@ change or remove one.
 | `indexer.getStatus` | `indexer:get-status` | The current state of the notes index: phase, progress and when it last finished. | `none` |
 | `indexer.triggerReindex` | `indexer:trigger-reindex` | Start indexing changed notes and return at once; progress arrives as status events. | `none` |
 | `indexer.clearAndRebuild` | `indexer:clear-and-rebuild` | Empty the index and rebuild it from the notes folder, stopping running searches once the rebuild is certain. | `none` |
+| `indexer.getRebuildNotice` | `indexer:get-rebuild-notice` | The notice to show after an update removed the old search index and is rebuilding it, or null when there is none. It stays until dismissed. | `none` |
+| `indexer.dismissRebuildNotice` | `indexer:dismiss-rebuild-notice` | Dismiss the rebuild notice; every window is told it is gone. | `none` |
 
 | Event | Channel | What it means | Payload |
 | --- | --- | --- | --- |
 | `indexer.status` | `indexer:status-event` | The index state changed; sent to every open window as indexing progresses. | `{ phase: 'idle' \| 'walking' \| 'indexing' \| 'done' \| 'error', filesTotal: number, filesDone: number, chunksTotal: number, chunksDone: number, lastIndexedAt: string \| null, error?: string }` |
+| `indexer.rebuildNotice` | `indexer:rebuild-notice-event` | The rebuild notice appeared or was dismissed (null); sent to every open window, so a window that opened before the notice existed still shows it. | `see schema` |
 
 ## settings
 
