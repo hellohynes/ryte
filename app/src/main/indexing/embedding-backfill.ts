@@ -55,6 +55,9 @@ export function fileMtimeReader(notesRoot: string): (sourcePath: string) => Prom
 export class EmbeddingBackfill {
   private stopped = false
   private running = false
+  // A note is being sent or about to be: only then does the step say it is running. A run that finds nothing to do is silent, so
+  // every pass and every edit does not flash "running" in the windows.
+  private working = false
   private paused = false
   // A bad or refused key: nothing is sent again until the settings change, which makes a new instance.
   private authBlocked = false
@@ -72,7 +75,7 @@ export class EmbeddingBackfill {
   }
 
   get state(): EmbeddingBackfillState {
-    if (this.running) return 'running'
+    if (this.working) return 'running'
     return this.paused ? 'paused' : 'idle'
   }
 
@@ -107,6 +110,7 @@ export class EmbeddingBackfill {
 
   stop(): void {
     this.stopped = true
+    this.working = false
     this.paused = false
     this.pauseReason = null
     this.retryAtMs = null
@@ -136,7 +140,6 @@ export class EmbeddingBackfill {
     this.paused = false
     this.pauseReason = null
     this.retryAtMs = null
-    this.changed()
     try {
       do {
         // A kick that arrived while a request was out asks for a try now, even if that request then failed.
@@ -145,7 +148,6 @@ export class EmbeddingBackfill {
           this.paused = false
           this.pauseReason = null
           this.retryAtMs = null
-          this.changed()
         }
         this.rerun = false
         await this.drain()
@@ -155,6 +157,7 @@ export class EmbeddingBackfill {
       this.deps.log?.('Ryte embedding step stopped.', describeStoreError(error))
     } finally {
       this.running = false
+      this.working = false
       if (!this.stopped) this.changed()
     }
   }
@@ -202,6 +205,11 @@ export class EmbeddingBackfill {
       if (chunks.length === 0) {
         deferred.add(sourcePath)
         continue
+      }
+
+      if (!this.working) {
+        this.working = true
+        this.changed()
       }
 
       let vectors: Float32Array[]

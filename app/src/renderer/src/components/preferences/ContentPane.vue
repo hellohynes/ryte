@@ -105,7 +105,16 @@ async function clearAndRebuildIndex(): Promise<void> {
         >
           {{ summary.text }}
         </StText>
-        <StText v-if="smartSearchLine" as="p" kind="body" size="sm" tone="muted" role="status">
+        <!-- The counts change twice a second while it works; only a change of state is worth a screen reader's voice. -->
+        <StText
+          v-if="smartSearchLine"
+          as="p"
+          kind="body"
+          size="sm"
+          tone="muted"
+          role="status"
+          :aria-live="embeddingStatus.status?.state === 'running' ? 'off' : 'polite'"
+        >
           {{ smartSearchLine }}
         </StText>
       </StStack>

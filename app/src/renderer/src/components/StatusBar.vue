@@ -6,6 +6,7 @@ import { useEmbeddingStatusStore } from '../stores/embedding-status'
 import { useIndexStatusStore } from '../stores/index-status'
 import { useSettingsStore } from '../stores/settings'
 import { useWorkspaceStore } from '../stores/workspace'
+import { statusBarView } from './status-bar-model'
 
 const indexStatus = useIndexStatusStore()
 const embeddingStatus = useEmbeddingStatusStore()
@@ -46,64 +47,23 @@ watch(
   { immediate: true }
 )
 
-const localMessage = computed(() => {
-  if (workspace.error) return `Workspace error: ${workspace.error}`
-
-  const s = indexStatus.status
-  switch (s.phase) {
-    case 'walking':
-      return 'Walking notes…'
-    case 'indexing': {
-      const total = s.chunksTotal || '?'
-      return `Indexing ${s.chunksDone}/${total} chunks · ${s.filesDone}/${s.filesTotal} files`
-    }
-    case 'done':
-      if (s.chunksTotal === 0 && s.filesTotal === 0) return ''
-      return `Index ready: ${s.chunksTotal} chunks across ${s.filesTotal} files`
-    case 'error':
-      return `Indexing error: ${s.error ?? 'unknown'}`
-    default:
-      return ''
-  }
-})
-
-// Smart search shows beside the index messages, never in place of one: it is its own, slower, background job.
+// Smart search shows beside the index messages, never in place of one: see `statusBarView`.
 const smartSearchText = computed(() =>
   embeddingBarText(embeddingStatus.status, settings.state?.semanticIndexEnabled === true)
 )
 
-// An index message that has faded away (the bar stays for smart search) is not repeated beside it.
-const localShown = computed(() => (visible.value ? localMessage.value : ''))
-
-const message = computed(() => {
-  const smart = smartSearchText.value
-  if (!smart || workspace.error) return localMessage.value
-  return localShown.value ? `${localShown.value} · ${smart}` : smart
-})
-
-const tone = computed(() => {
-  if (workspace.error) return 'error'
-  // With nothing else to say, working is shown as busy and a pause quietly.
-  if (!localShown.value && smartSearchText.value) {
-    return embeddingStatus.status?.state === 'running' ? 'busy' : 'idle'
-  }
-
-  switch (indexStatus.status.phase) {
-    case 'indexing':
-    case 'walking':
-      return 'busy'
-    case 'error':
-      return 'error'
-    case 'done':
-      return 'ready'
-    default:
-      return 'idle'
-  }
-})
-
-const isVisible = computed(
-  () => Boolean(workspace.error) || visible.value || Boolean(smartSearchText.value)
+const view = computed(() =>
+  statusBarView({
+    workspaceError: workspace.error,
+    index: indexStatus.status,
+    localVisible: visible.value,
+    smartText: smartSearchText.value,
+    smartRunning: embeddingStatus.status?.state === 'running'
+  })
 )
+const message = computed(() => view.value.message)
+const tone = computed(() => view.value.tone)
+const isVisible = computed(() => view.value.visible)
 </script>
 
 <template>

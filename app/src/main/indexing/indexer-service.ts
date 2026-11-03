@@ -124,6 +124,7 @@ export class IndexerService extends EventEmitter {
       } catch (rebuildError) {
         this.close()
         this.broadcastIndexingError(rebuildError)
+        this.publishEmbeddingStatus()
         return false
       }
     }
@@ -197,26 +198,24 @@ export class IndexerService extends EventEmitter {
    * search is on but cannot send (no key, or no saved agreement for this provider and model).
    */
   getEmbeddingStatus(): EmbeddingStatus {
-    const backfill = this.backfill
+    const kind = this.embeddingKind()
     const indexState = this.indexState
-    if (!backfill || !indexState) {
-      return {
-        state: 'off',
-        total: 0,
-        done: 0,
-        pending: 0,
-        ...(this.embeddingProblem ? { reason: this.embeddingProblem } : {})
-      }
-    }
+    if (kind.state === 'off' || !indexState) return { ...kind, total: 0, done: 0, pending: 0 }
     const total = indexState.embeddableCount()
     const pending = Math.min(indexState.unembeddedCount(), total)
+    return { ...kind, total, done: total - pending, pending }
+  }
+
+  /** The state, the reason and the retry time: what changes the sentence, without the counts, which cost a query. */
+  private embeddingKind(): Pick<EmbeddingStatus, 'state' | 'reason' | 'retryAt'> {
+    const backfill = this.backfill
+    if (!backfill || !this.indexState) {
+      return { state: 'off', ...(this.embeddingProblem ? { reason: this.embeddingProblem } : {}) }
+    }
     const reason = backfill.reason
     const retryAt = backfill.retryAt
     return {
       state: backfill.state,
-      total,
-      done: total - pending,
-      pending,
       ...(reason ? { reason } : {}),
       ...(retryAt !== null ? { retryAt: new Date(retryAt).toISOString() } : {})
     }
@@ -233,17 +232,16 @@ export class IndexerService extends EventEmitter {
    * (the counts) at most every half second, so a long run does not flood the windows. Unchanged is not sent.
    */
   private publishEmbeddingStatus(): void {
-    const next = this.getEmbeddingStatus()
+    const kind = this.embeddingKind()
     const last = this.lastPublishedStatus
     const sameKind =
       last !== null &&
-      last.state === next.state &&
-      last.reason === next.reason &&
-      last.retryAt === next.retryAt
-    if (last !== null && sameKind && last.done === next.done && last.total === next.total) return
+      last.state === kind.state &&
+      last.reason === kind.reason &&
+      last.retryAt === kind.retryAt
     const wait = this.lastPublishedAt + EMBEDDING_STATUS_INTERVAL_MS - Date.now()
     if (sameKind && wait > 0) {
-      // Progress inside the interval: send the latest once the interval is over.
+      // Progress inside the interval: send the latest once the interval is over, without counting now.
       if (!this.embeddingStatusTimer) {
         this.embeddingStatusTimer = setTimeout(() => {
           this.embeddingStatusTimer = null
@@ -252,6 +250,8 @@ export class IndexerService extends EventEmitter {
       }
       return
     }
+    const next = this.getEmbeddingStatus()
+    if (last !== null && sameKind && last.done === next.done && last.total === next.total) return
     this.clearEmbeddingStatusTimer()
     this.lastPublishedStatus = next
     this.lastPublishedAt = Date.now()
@@ -385,6 +385,7 @@ export class IndexerService extends EventEmitter {
     // Whatever opens next says what smart search is doing then; an old half-second wait must not speak for it.
     this.clearEmbeddingStatusTimer()
     this.lastPublishedStatus = null
+    this.embeddingProblem = null
     this.vectorStore?.close()
     this.vectorStore = null
     this.indexState = null

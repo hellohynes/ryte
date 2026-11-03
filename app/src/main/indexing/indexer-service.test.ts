@@ -734,6 +734,16 @@ describe('IndexerService embedding step', () => {
       expect(svc.getEmbeddingStatus()).toMatchObject({ total: 2, pending: 2, done: 0 })
     })
 
+    it('forgets why it was off once the indexer is closed', async () => {
+      const svc = await configure({}, null)
+      svc.init()
+      expect(svc.getEmbeddingStatus().reason).toBe('no-key')
+
+      svc.close()
+
+      expect('reason' in svc.getEmbeddingStatus()).toBe(false)
+    })
+
     it('is off before the indexer has started', async () => {
       const { IndexerService } = await import('./indexer-service')
 
@@ -834,6 +844,41 @@ describe('IndexerService embedding step', () => {
       // 3,000 notes took 6 seconds of fake time.
       expect(heard.length).toBeLessThanOrEqual(6 * 3)
       expect(heard.at(-1)).toMatchObject({ pending: 200, done: 3000 })
+    })
+
+    it('does not count the notes while progress waits out the half second', async () => {
+      mocks.embeddableCount.mockReturnValue(100)
+      mocks.unembeddedCount.mockReturnValue(100)
+      mocks.backfillState.value = 'running'
+      await started()
+      await vi.advanceTimersByTimeAsync(1_000)
+      mocks.embeddableCount.mockClear()
+      mocks.unembeddedCount.mockClear()
+
+      for (let pending = 99; pending >= 80; pending -= 1) {
+        mocks.unembeddedCount.mockReturnValue(pending)
+        mocks.backfillOnChange.value?.()
+      }
+      // The first is sent at once, and counted; the other nineteen wait out the half second without a query.
+      expect(mocks.embeddableCount).toHaveBeenCalledTimes(1)
+      expect(mocks.unembeddedCount).toHaveBeenCalledTimes(1)
+
+      await vi.advanceTimersByTimeAsync(500)
+      expect(mocks.embeddableCount).toHaveBeenCalledTimes(2)
+    })
+
+    it('says smart search is off when the indexer fails to come back after a corrupt index', async () => {
+      vi.useFakeTimers()
+      const svc = await configure({})
+      const heard: Array<Record<string, unknown>> = []
+      svc.subscribeEmbeddingStatus((status) => heard.push({ ...status }))
+      mocks.vectorStoreInit.mockImplementation(() => {
+        throw new Error('database disk image is malformed')
+      })
+
+      expect(svc.init()).toBe(false)
+
+      expect(heard.at(-1)).toMatchObject({ state: 'off' })
     })
 
     it('sends nothing when nothing changed', async () => {

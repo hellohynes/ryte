@@ -633,6 +633,44 @@ describe('EmbeddingBackfill', () => {
       expect(seen).toEqual(['running', 'running', 'running', 'idle'])
     })
 
+    it('says nothing while it finds nothing to send, and only reports being idle again at the end', async () => {
+      const t = setup({})
+      const seen: string[] = []
+      t.changes.mockImplementation(() => seen.push(t.backfill.state))
+
+      t.backfill.kick()
+      await settle()
+
+      expect(seen).toEqual(['idle'])
+      expect(t.provider.embed).not.toHaveBeenCalled()
+    })
+
+    it('does not report running for notes it skips: changed on disk, gone, or already rejected', async () => {
+      const t = setup({ 'edited.md': { mtimeMs: 2, texts: ['x'] } })
+      t.onDisk.set('edited.md', 9)
+      const seen: string[] = []
+      t.changes.mockImplementation(() => seen.push(t.backfill.state))
+
+      t.backfill.kick()
+      await settle()
+
+      expect(seen).toEqual(['idle'])
+    })
+
+    it('reports running once before the first note is sent', async () => {
+      const t = setup({ 'a.md': { mtimeMs: 1, texts: ['a'] } })
+      let runningWhenSent: string | null = null
+      t.setEmbed(async (texts) => {
+        runningWhenSent = t.backfill.state
+        return texts.map(() => Float32Array.from([1, 0, 0, 0]))
+      })
+
+      t.backfill.kick()
+      await settle()
+
+      expect(runningWhenSent).toBe('running')
+    })
+
     it('calls onChange when it pauses, with the reason already set', async () => {
       const t = setup({ 'a.md': { mtimeMs: 1, texts: ['a'] } })
       t.setEmbed(async () => {
