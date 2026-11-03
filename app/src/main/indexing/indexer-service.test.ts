@@ -974,6 +974,254 @@ describe('IndexerService embedding step', () => {
   })
 })
 
+describe('IndexerService when the indexer is closed under a running pass', () => {
+  interface HeldPass {
+    opts: { onProgress?: (p: unknown) => void; shouldStop?: () => boolean }
+    resolve: (summary: unknown) => void
+    reject: (error: Error) => void
+  }
+
+  let held: HeldPass | null
+
+  /** Makes the next pass wait until the test lets it end, and keeps what the service told it. */
+  function holdNextPass(): void {
+    held = null
+    mocks.indexerIndexAll.mockImplementationOnce(
+      (opts: HeldPass['opts']) =>
+        new Promise((resolve, reject) => {
+          held = { opts, resolve, reject }
+        })
+    )
+  }
+
+  async function started(): Promise<{
+    svc: InstanceType<typeof import('./indexer-service').IndexerService>
+    statuses: Array<{ phase: string; error?: string }>
+  }> {
+    const { IndexerService } = await import('./indexer-service')
+    const svc = new IndexerService()
+    const statuses: Array<{ phase: string; error?: string }> = []
+    svc.subscribe((status) => statuses.push({ phase: status.phase, error: status.error }))
+    svc.init()
+    return { svc, statuses }
+  }
+
+  /** What the restarter does: close, then open again. */
+  function restart(svc: { close(): void; init(): boolean }): void {
+    svc.close()
+    svc.init()
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.vectorStoreInit.mockReturnValue(undefined)
+    mocks.indexerIndexAll.mockReset()
+    mocks.indexerIndexAll.mockResolvedValue({ filesIndexed: 0, chunksIndexed: 0 })
+    mocks.indexerIndexFile.mockReset()
+    mocks.indexerIndexFile.mockResolvedValue({ chunkCount: 1, skipped: false })
+    mocks.embeddableCount.mockReturnValue(0)
+    mocks.unembeddedCount.mockReturnValue(0)
+    held = null
+  })
+
+  it('drops the failure of a pass whose stores were closed under it: no error is reported', async () => {
+    const { svc, statuses } = await started()
+    holdNextPass()
+    const pass = svc.triggerReindex()
+    await vi.waitFor(() => expect(held).not.toBeNull())
+
+    restart(svc)
+    held!.reject(new Error('The database connection is not open'))
+    await pass
+
+    expect(statuses.map((status) => status.phase)).not.toContain('error')
+    expect(svc.getStatus().error).toBeUndefined()
+  })
+
+  it('tells the pass to stop once the indexer is closed, and passes on none of its progress', async () => {
+    const { svc, statuses } = await started()
+    holdNextPass()
+    const pass = svc.triggerReindex()
+    await vi.waitFor(() => expect(held).not.toBeNull())
+    expect(held!.opts.shouldStop?.()).toBe(false)
+    held!.opts.onProgress?.({
+      phase: 'indexing',
+      filesTotal: 100,
+      filesDone: 1,
+      chunksTotal: 1,
+      chunksDone: 1
+    })
+    expect(statuses.at(-1)).toMatchObject({ phase: 'indexing' })
+
+    restart(svc)
+    const heard = statuses.length
+    expect(held!.opts.shouldStop?.()).toBe(true)
+    held!.opts.onProgress?.({
+      phase: 'indexing',
+      filesTotal: 100,
+      filesDone: 2,
+      chunksTotal: 2,
+      chunksDone: 2
+    })
+    held!.opts.onProgress?.({
+      phase: 'done',
+      filesTotal: 100,
+      filesDone: 100,
+      chunksTotal: 100,
+      chunksDone: 100
+    })
+    held!.resolve({ filesIndexed: 1, chunksIndexed: 1, stopped: true })
+    await pass
+
+    expect(
+      statuses.slice(heard).some((status) => status.phase === 'done' && status.error === undefined)
+    ).toBe(false)
+  })
+
+  it('never reaches recovery with a stale pass: the new index file is left alone', async () => {
+    const { svc } = await started()
+    const { existsSync, writeFileSync } = await import('node:fs')
+    const { VectorStore } = await import('./vector-store')
+    const dbPath = String(vi.mocked(VectorStore).mock.calls[0]?.[0])
+    mkdirSync(join(dbPath, '..'), { recursive: true })
+    writeFileSync(dbPath, 'the new folder index')
+    holdNextPass()
+    const pass = svc.triggerReindex()
+    await vi.waitFor(() => expect(held).not.toBeNull())
+    restart(svc)
+    const opened = mocks.vectorStoreInit.mock.calls.length
+
+    held!.reject(new Error('database disk image is malformed'))
+    await pass
+
+    expect(existsSync(dbPath)).toBe(true)
+    expect(mocks.vectorStoreInit.mock.calls.length).toBe(opened)
+  })
+
+  it('still reports a failure of a pass that was not stale, and one earlier cut pass does not hide it', async () => {
+    const { svc, statuses } = await started()
+    holdNextPass()
+    const first = svc.triggerReindex()
+    await vi.waitFor(() => expect(held).not.toBeNull())
+    restart(svc)
+    mocks.indexerIndexAll.mockRejectedValueOnce(new Error('disk full'))
+    held!.resolve({ filesIndexed: 0, chunksIndexed: 0, stopped: true })
+    await first
+
+    await vi.waitFor(() =>
+      expect(statuses.at(-1)).toMatchObject({ phase: 'error', error: 'disk full' })
+    )
+  })
+
+  it('does not stop a pass because of the close that its own corrupt-index recovery makes', async () => {
+    const { svc } = await started()
+    mocks.indexerIndexAll
+      .mockRejectedValueOnce(new Error('database disk image is malformed'))
+      .mockResolvedValueOnce({ filesIndexed: 0, chunksIndexed: 0 })
+
+    await svc.triggerReindex()
+
+    expect(mocks.indexerIndexAll).toHaveBeenCalledTimes(2)
+    const retryOpts = mocks.indexerIndexAll.mock.calls[1]?.[0] as HeldPass['opts']
+    expect(retryOpts.shouldStop?.()).toBe(false)
+  })
+
+  it('does not stop a rebuild because of the close that it makes itself', async () => {
+    const { svc } = await started()
+
+    await svc.clearAndRebuild()
+
+    const opts = mocks.indexerIndexAll.mock.calls[0]?.[0] as HeldPass['opts']
+    expect(opts.shouldStop?.()).toBe(false)
+  })
+
+  it('lets a rebuild that is cut by a folder change end without an error, and asks for a pass for the new folder', async () => {
+    const { svc, statuses } = await started()
+    holdNextPass()
+    const rebuild = svc.clearAndRebuild()
+    await vi.waitFor(() => expect(held).not.toBeNull())
+
+    restart(svc)
+    held!.reject(new Error('The database connection is not open'))
+    await expect(rebuild).resolves.toBeUndefined()
+
+    expect(statuses.map((status) => status.phase)).not.toContain('error')
+    await vi.waitFor(() => expect(mocks.indexerIndexAll).toHaveBeenCalledTimes(2))
+  })
+
+  it('asks for one more pass when the indexer was restarted for the same folder', async () => {
+    const { svc } = await started()
+    holdNextPass()
+    const pass = svc.triggerReindex()
+    await vi.waitFor(() => expect(held).not.toBeNull())
+
+    restart(svc)
+    held!.resolve({ filesIndexed: 3, chunksIndexed: 3, stopped: true })
+    await pass
+
+    await vi.waitFor(() => expect(mocks.indexerIndexAll).toHaveBeenCalledTimes(2))
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(mocks.indexerIndexAll).toHaveBeenCalledTimes(2)
+  })
+
+  it('asks for exactly one more pass after two restarts in a row', async () => {
+    const { svc } = await started()
+    holdNextPass()
+    const pass = svc.triggerReindex()
+    await vi.waitFor(() => expect(held).not.toBeNull())
+
+    restart(svc)
+    restart(svc)
+    held!.resolve({ filesIndexed: 0, chunksIndexed: 0, stopped: true })
+    await pass
+
+    await vi.waitFor(() => expect(mocks.indexerIndexAll).toHaveBeenCalledTimes(2))
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(mocks.indexerIndexAll).toHaveBeenCalledTimes(2)
+  })
+
+  it('asks for nothing, and opens nothing, when the app is quitting', async () => {
+    const { svc, statuses } = await started()
+    holdNextPass()
+    const pass = svc.triggerReindex()
+    await vi.waitFor(() => expect(held).not.toBeNull())
+    const opened = mocks.vectorStoreInit.mock.calls.length
+
+    svc.close()
+    held!.reject(new Error('The database connection is not open'))
+    await pass
+    await new Promise((resolve) => setTimeout(resolve, 20))
+
+    expect(mocks.indexerIndexAll).toHaveBeenCalledTimes(1)
+    expect(mocks.vectorStoreInit.mock.calls.length).toBe(opened)
+    expect(statuses.map((status) => status.phase)).not.toContain('error')
+  })
+
+  it('does not tell the embedding step to look for work after a pass that was cut short', async () => {
+    const { settingsStore } = await import('../settings/settings-store')
+    vi.mocked(settingsStore.getSecret).mockReturnValue('sk-test')
+    vi.mocked(settingsStore.load).mockReturnValue({
+      ...vi.mocked(settingsStore.load)(),
+      semanticIndexEnabled: true,
+      semanticIndexAcknowledgement: AGREED
+    })
+    const { svc } = await started()
+    mocks.backfillKick.mockClear()
+    holdNextPass()
+    const pass = svc.triggerReindex()
+    await vi.waitFor(() => expect(held).not.toBeNull())
+
+    restart(svc)
+    mocks.backfillKick.mockClear()
+    held!.resolve({ filesIndexed: 0, chunksIndexed: 0, stopped: true })
+    await pass
+    expect(mocks.backfillKick).not.toHaveBeenCalled()
+
+    // The pass asked for afterwards is a whole one, and it does.
+    await vi.waitFor(() => expect(mocks.backfillKick).toHaveBeenCalledTimes(1))
+  })
+})
+
 describe('IndexerService index location', () => {
   let notesA: string
   let notesB: string

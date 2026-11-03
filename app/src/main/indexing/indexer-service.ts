@@ -57,6 +57,9 @@ export class IndexerService extends EventEmitter {
     lastIndexedAt: null
   }
   private running = false
+  // Bumped whenever the indexer is closed. A pass remembers the number it started under; if it has moved, the pass was working on
+  // stores that are gone (the folder changed, the indexer was restarted, the app is quitting) and stops quietly.
+  private generation = 0
   // Set when a start removed the old single index database and cleared when the person dismisses it; held here, not sent once,
   // so a window that opens or reloads later still shows it.
   private pendingNotice: RebuildNotice | null = null
@@ -274,15 +277,13 @@ export class IndexerService extends EventEmitter {
     }
     this.running = true
     try {
-      await this.indexAll()
-      this.backfill?.kick()
-      this.publishEmbeddingStatus()
+      this.afterPass(await this.indexAll())
     } catch (err) {
+      // Only a pass that was still wanted gets here: a stale pass's failure is dropped by `indexAll`, so it can never reach recovery.
       if (this.recoverIndexStore(err)) {
         try {
-          await this.indexAll()
-          this.backfill?.kick()
-          this.publishEmbeddingStatus()
+          // Recovery closed and reopened the stores, so this pass starts under the new generation.
+          this.afterPass(await this.indexAll())
         } catch (retryErr) {
           this.broadcastIndexingError(retryErr)
         }
@@ -343,9 +344,7 @@ export class IndexerService extends EventEmitter {
       // asked for during the rebuild still runs after it. A rebuild that fails before this point
       // leaves the request to run afterwards.
       this.reindexQueued = false
-      await this.indexAll()
-      this.backfill?.kick()
-      this.publishEmbeddingStatus()
+      this.afterPass(await this.indexAll())
     } catch (err) {
       this.broadcastIndexingError(err)
       throw err
@@ -378,6 +377,8 @@ export class IndexerService extends EventEmitter {
   }
 
   close(): void {
+    // A pass in flight is stale from here on.
+    this.generation += 1
     // Before the store closes: a request still out must find the step stopped when it answers.
     this.backfill?.stop()
     this.backfill = null
@@ -403,10 +404,44 @@ export class IndexerService extends EventEmitter {
     this.emit(STATUS_EVENT, this.lastStatus)
   }
 
-  private async indexAll(): Promise<void> {
-    await this.indexer!.indexAll({
-      onProgress: (p) => this.broadcast(p)
-    })
+  /**
+   * Runs one pass over the notes folder. The pass is stale once the indexer has been closed under it: it is told to stop at its next
+   * checkpoint, its progress is no longer passed on, and a failure it ends with (its stores are closed) is dropped rather than
+   * reported or recovered from. Returns whether it ended stale.
+   */
+  private async indexAll(): Promise<{ stale: boolean }> {
+    const generation = this.generation
+    const stale = (): boolean => this.generation !== generation
+    try {
+      await this.indexer!.indexAll({
+        onProgress: (p) => {
+          if (!stale()) this.broadcast(p)
+        },
+        shouldStop: stale
+      })
+    } catch (error) {
+      if (!stale()) throw error
+      const code = (error as { code?: unknown } | null)?.code
+      console.warn(
+        'Ryte dropped an index pass cut short.',
+        typeof code === 'string' ? code : 'UNKNOWN'
+      )
+      return { stale: true }
+    }
+    return { stale: stale() }
+  }
+
+  /** What follows a pass: the embedding step looks for work after a pass that finished; a pass that was cut short asks for another. */
+  private afterPass(result: { stale: boolean }): void {
+    if (!result.stale) {
+      this.backfill?.kick()
+      this.publishEmbeddingStatus()
+      return
+    }
+    // A new indexer, opened after the old stores were closed, has not done the work this pass was doing. Ask for one pass for it; a
+    // folder change or a setting change that asks for its own is collapsed with this. When the app is quitting there is no
+    // indexer and nothing is asked for.
+    if (this.indexer) this.reindexQueued = true
   }
 
   private async enqueueIncrementalOperation(
