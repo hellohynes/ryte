@@ -26,11 +26,19 @@ export interface IndexerProgress {
 
 export interface IndexAllOptions {
   onProgress?: (p: IndexerProgress) => void
+  /**
+   * Asked between units of work, never inside a write. When it answers true the pass returns at once with `stopped` set, sends no
+   * `done`, and leaves every note it wrote whole. Used when what the pass was indexing is no longer wanted, such as the folder
+   * having changed under it.
+   */
+  shouldStop?: () => boolean
 }
 
 export interface IndexAllSummary {
   filesIndexed: number
   chunksIndexed: number
+  /** The pass was told to stop and did. Absent for a pass that ran to its end. */
+  stopped?: boolean
 }
 
 const LOCAL_INDEX_YIELD_BATCH_SIZE = 8
@@ -52,13 +60,17 @@ export class Indexer {
   async indexAll(opts: IndexAllOptions = {}): Promise<IndexAllSummary> {
     const { notesRoot, vectorStore, indexState } = this.deps
     const emit = (p: IndexerProgress): void => opts.onProgress?.(p)
+    const stopNow = (): boolean => opts.shouldStop?.() === true
 
     emit({ phase: 'walking', filesTotal: 0, filesDone: 0, chunksTotal: 0, chunksDone: 0 })
     const allPaths = await walkNotes(notesRoot)
+    // The scan cannot be cut short, so this is the first place a pass can notice it is no longer wanted.
+    if (stopNow()) return { filesIndexed: 0, chunksIndexed: 0, stopped: true }
     const currentRelPaths = new Set(allPaths.map((absPath) => relative(notesRoot, absPath)))
 
     for (const sourcePath of indexState.allSourcePaths()) {
       if (currentRelPaths.has(sourcePath)) continue
+      if (stopNow()) return { filesIndexed: 0, chunksIndexed: 0, stopped: true }
       vectorStore.deleteFileChunks(sourcePath)
       indexState.markRemoved(sourcePath)
     }
@@ -69,6 +81,7 @@ export class Indexer {
     for (const absPath of allPaths) {
       const relPath = relative(notesRoot, absPath)
       const stats = await stat(absPath)
+      if (stopNow()) return { filesIndexed: 0, chunksIndexed: 0, stopped: true }
       const mtimeMs = Math.floor(stats.mtimeMs)
       if (!indexState.shouldReindex(relPath, mtimeMs)) continue
       pending.push({ absPath, relPath, mtimeMs })
@@ -81,6 +94,7 @@ export class Indexer {
     let filesSkipped = 0
 
     if (filesTotal === 0) {
+      if (stopNow()) return { filesIndexed: 0, chunksIndexed: 0, stopped: true }
       const totals = indexState.totals()
       emit({
         phase: 'done',
@@ -97,6 +111,10 @@ export class Indexer {
     // Phase 2: chunk and write file-by-file. This preserves the memory ceiling at
     // roughly one source file plus its chunks instead of all pending chunks.
     for (const [index, file] of pending.entries()) {
+      // Before a note is read or written, so a note is never left half done.
+      if (stopNow()) {
+        return { filesIndexed: filesDone - filesSkipped, chunksIndexed: chunksDone, stopped: true }
+      }
       let chunks: ReturnType<typeof chunkFile>
       try {
         chunks = chunkFile(file.absPath, notesRoot)
@@ -137,6 +155,9 @@ export class Indexer {
       }
     }
 
+    if (stopNow()) {
+      return { filesIndexed: filesDone - filesSkipped, chunksIndexed: chunksDone, stopped: true }
+    }
     emit({ phase: 'done', filesTotal, filesDone, chunksTotal, chunksDone })
     return { filesIndexed: filesDone - filesSkipped, chunksIndexed: chunksDone }
   }

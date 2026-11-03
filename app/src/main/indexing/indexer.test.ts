@@ -10,7 +10,7 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 // Excluded from `pnpm test` (vitest.config.ts); run by `pnpm test:native`, which uses Electron's Node.
 
@@ -181,6 +181,147 @@ describe('Indexer', () => {
       expect(store.fileCount()).toBe(3)
     }
   )
+
+  describe('being told to stop', () => {
+    function writeNotes(count: number): void {
+      for (let i = 0; i < count; i += 1) {
+        writeFileSync(
+          join(notesRoot, `n${String(i).padStart(2, '0')}.md`),
+          `# N${i}\n\nbody ${i}\n`
+        )
+      }
+    }
+
+    /** True once the call number given has been reached: the Nth time the indexer asks whether to stop. */
+    function stopAtCheck(n: number): { shouldStop: () => boolean; asked: () => number } {
+      let asked = 0
+      return {
+        shouldStop: () => ++asked >= n,
+        asked: () => asked
+      }
+    }
+
+    it('reports nothing special, and keeps no `stopped` field, when it is never told to stop', async () => {
+      writeNotes(3)
+
+      const summary = await makeIndexer().indexAll({ shouldStop: () => false })
+
+      expect(summary).toEqual({ filesIndexed: 3, chunksIndexed: 3 })
+      expect('stopped' in summary).toBe(false)
+    })
+
+    it('stops right after the folder scan, before it reads or changes the index', async () => {
+      writeNotes(3)
+      await makeIndexer().indexAll()
+      unlinkSync(join(notesRoot, 'n00.md'))
+      const events: IndexerProgress[] = []
+
+      const summary = await makeIndexer().indexAll({
+        shouldStop: () => true,
+        onProgress: (p) => events.push({ ...p })
+      })
+
+      expect(summary).toMatchObject({ filesIndexed: 0, chunksIndexed: 0, stopped: true })
+      // The row of the vanished note is still there: nothing was removed.
+      expect(state.allSourcePaths()).toContain('n00.md')
+      expect(events.map((e) => e.phase)).not.toContain('done')
+    })
+
+    it('stops before it removes the rows of a note that has gone', async () => {
+      writeNotes(3)
+      await makeIndexer().indexAll()
+      unlinkSync(join(notesRoot, 'n00.md'))
+      // The first question comes after the scan; the second is asked before the first removal.
+      const { shouldStop } = stopAtCheck(2)
+
+      const summary = await makeIndexer().indexAll({ shouldStop })
+
+      expect(summary.stopped).toBe(true)
+      expect(state.allSourcePaths()).toContain('n00.md')
+      expect(store.fileCount()).toBe(3)
+    })
+
+    it('stops while it looks at which notes changed, having written nothing', async () => {
+      writeNotes(6)
+      const { shouldStop, asked } = stopAtCheck(4)
+
+      const summary = await makeIndexer().indexAll({ shouldStop })
+
+      expect(summary).toMatchObject({ filesIndexed: 0, stopped: true })
+      expect(store.chunkCount()).toBe(0)
+      expect(state.allSourcePaths()).toEqual([])
+      expect(asked()).toBe(4)
+    })
+
+    it('stops before the next note once told to, and what it wrote is complete', async () => {
+      writeNotes(10)
+      const events: IndexerProgress[] = []
+
+      const summary = await makeIndexer().indexAll({
+        // Asked before each note of the writing loop, among other places: stop once four notes are in.
+        shouldStop: () => store.fileCount() >= 4,
+        onProgress: (p) => events.push({ ...p })
+      })
+
+      expect(summary).toMatchObject({ filesIndexed: 4, chunksIndexed: 4, stopped: true })
+      expect(store.fileCount()).toBe(4)
+      // Every row of the index state has its chunks, and the other way round.
+      expect(state.allSourcePaths()).toHaveLength(4)
+      expect(state.totals()).toEqual({ files: 4, chunks: 4 })
+      expect(events.map((e) => e.phase)).not.toContain('done')
+    })
+
+    it('stops before it writes the first note when told just before the writing begins', async () => {
+      writeNotes(3)
+      // One question after the scan, one for each of the three notes in the stat loop, then the first note of the writing loop.
+      const { shouldStop } = stopAtCheck(5)
+
+      const summary = await makeIndexer().indexAll({ shouldStop })
+
+      expect(summary).toMatchObject({ filesIndexed: 0, chunksIndexed: 0, stopped: true })
+      expect(store.chunkCount()).toBe(0)
+      expect(state.allSourcePaths()).toEqual([])
+    })
+
+    it('sends no `done` when it is told to stop only after the last note was written', async () => {
+      writeNotes(3)
+      const events: IndexerProgress[] = []
+
+      const summary = await makeIndexer().indexAll({
+        shouldStop: () => store.fileCount() >= 3,
+        onProgress: (p) => events.push({ ...p })
+      })
+
+      expect(summary).toMatchObject({ filesIndexed: 3, stopped: true })
+      expect(events.map((e) => e.phase)).not.toContain('done')
+    })
+
+    it('never stops in the middle of a note: the one being written is whole, then it stops', async () => {
+      writeNotes(5)
+      let stop = false
+      const original = store.replaceFileTextChunks.bind(store)
+      vi.spyOn(store, 'replaceFileTextChunks').mockImplementation((path, chunks) => {
+        original(path, chunks)
+        stop = true
+      })
+
+      const summary = await makeIndexer().indexAll({ shouldStop: () => stop })
+
+      expect(summary).toMatchObject({ filesIndexed: 1, stopped: true })
+      expect(store.fileCount()).toBe(1)
+      expect(state.totals()).toEqual({ files: 1, chunks: 1 })
+    })
+
+    it('finishes the notes it did not reach on a later pass', async () => {
+      writeNotes(8)
+      await makeIndexer().indexAll({ shouldStop: () => store.fileCount() >= 3 })
+
+      const later = await makeIndexer().indexAll()
+
+      expect(later.filesIndexed).toBe(5)
+      expect(store.fileCount()).toBe(8)
+    })
+  })
 
   it('indexAll skips files unchanged since prior run', async () => {
     writeFileSync(join(notesRoot, 'a.md'), '# A\n\nbody A\n')
