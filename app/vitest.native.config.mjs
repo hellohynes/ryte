@@ -7,7 +7,8 @@ export default defineConfig({
     include: [
       'src/main/indexing/vector-store.test.ts',
       'src/main/indexing/index-state.test.ts',
-      'src/main/indexing/indexer.test.ts'
+      'src/main/indexing/indexer.test.ts',
+      'src/main/indexing/indexer-service.native.test.ts'
     ],
     environment: 'node',
     globals: false,
