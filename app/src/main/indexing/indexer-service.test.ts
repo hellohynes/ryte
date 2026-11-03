@@ -11,13 +11,17 @@ const mocks = vi.hoisted(() => ({
   indexerIndexAll: vi.fn(),
   indexerIndexFile: vi.fn(),
   backfillKick: vi.fn(),
-  backfillStop: vi.fn()
+  backfillStop: vi.fn(),
+  backfillState: { value: 'idle' as 'idle' | 'running' | 'paused' }
 }))
 
 vi.mock('./embedding-backfill', () => ({
   EmbeddingBackfill: vi.fn().mockImplementation(() => ({
     kick: mocks.backfillKick,
-    stop: mocks.backfillStop
+    stop: mocks.backfillStop,
+    get state() {
+      return mocks.backfillState.value
+    }
   })),
   fileMtimeReader: vi.fn().mockReturnValue(vi.fn())
 }))
@@ -394,6 +398,7 @@ describe('IndexerService embedding step', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.useRealTimers()
+    mocks.backfillState.value = 'idle'
     mocks.vectorStoreInit.mockReturnValue(undefined)
     mocks.indexerIndexAll.mockReset()
     mocks.indexerIndexAll.mockResolvedValue({ filesIndexed: 0, chunksIndexed: 0 })
@@ -546,6 +551,31 @@ describe('IndexerService embedding step', () => {
 
       svc.init()
       expect(mocks.backfillKick).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(2_000)
+
+      expect(mocks.backfillKick).toHaveBeenCalledTimes(1)
+    })
+
+    it('not at startup when the step is already paused: a failure keeps its own wait', async () => {
+      vi.useFakeTimers()
+      const svc = await configure({})
+      svc.init()
+      mocks.backfillState.value = 'paused'
+
+      await vi.advanceTimersByTimeAsync(5_000)
+
+      expect(mocks.backfillKick).not.toHaveBeenCalled()
+    })
+
+    it('after an edit even when the step is paused, which brings its next try forward', async () => {
+      vi.useFakeTimers()
+      const svc = await configure({})
+      svc.init()
+      await vi.advanceTimersByTimeAsync(5_000)
+      mocks.backfillKick.mockClear()
+      mocks.backfillState.value = 'paused'
+
+      await svc.notifyFileChanged('/tmp/notes/a.md')
       await vi.advanceTimersByTimeAsync(2_000)
 
       expect(mocks.backfillKick).toHaveBeenCalledTimes(1)

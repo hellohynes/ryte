@@ -87,7 +87,7 @@ export class IndexerService extends EventEmitter {
       mkdirSync(location.directory, { recursive: true })
       this.initializeStores(dbPath, settings.notesRoot, embedder)
       if (legacyRemoved) this.setNotice(rebuildNotice({ cloud: embedder !== null }))
-      this.scheduleBackfillKick()
+      this.scheduleBackfillKick({ onlyIfIdle: true })
       return true
     } catch (error) {
       this.close()
@@ -100,7 +100,7 @@ export class IndexerService extends EventEmitter {
       try {
         this.initializeStores(dbPath, settings.notesRoot, embedder)
         if (legacyRemoved) this.setNotice(rebuildNotice({ cloud: embedder !== null }))
-        this.scheduleBackfillKick()
+        this.scheduleBackfillKick({ onlyIfIdle: true })
         return true
       } catch (rebuildError) {
         this.close()
@@ -364,14 +364,18 @@ export class IndexerService extends EventEmitter {
 
   /**
    * Looks for notes without vectors once edits have stopped for a moment, so a burst of edits makes
-   * one look. Skipped while an index pass runs: that pass looks when it ends.
+   * one look. Skipped while an index pass runs: that pass looks when it ends. The look made after
+   * the indexer starts leaves a paused step alone, so a failure at startup keeps its own wait
+   * instead of being retried early; an edit does bring a paused step's next try forward.
    */
-  private scheduleBackfillKick(): void {
+  private scheduleBackfillKick(options: { onlyIfIdle?: boolean } = {}): void {
     if (!this.backfill) return
     this.clearBackfillKickTimer()
     this.backfillKickTimer = setTimeout(() => {
       this.backfillKickTimer = null
-      if (!this.running) this.backfill?.kick()
+      if (this.running || !this.backfill) return
+      if (options.onlyIfIdle && this.backfill.state !== 'idle') return
+      this.backfill.kick()
     }, EMBED_AFTER_EDIT_DELAY_MS)
   }
 
