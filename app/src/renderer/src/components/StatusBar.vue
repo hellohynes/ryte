@@ -1,10 +1,16 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 
+import { embeddingBarText } from '../preferences/embedding-model'
+import { useEmbeddingStatusStore } from '../stores/embedding-status'
 import { useIndexStatusStore } from '../stores/index-status'
+import { useSettingsStore } from '../stores/settings'
 import { useWorkspaceStore } from '../stores/workspace'
+import { statusBarView } from './status-bar-model'
 
 const indexStatus = useIndexStatusStore()
+const embeddingStatus = useEmbeddingStatusStore()
+const settings = useSettingsStore()
 const workspace = useWorkspaceStore()
 const visible = ref(false)
 let hideTimer: ReturnType<typeof setTimeout> | null = null
@@ -41,44 +47,23 @@ watch(
   { immediate: true }
 )
 
-const message = computed(() => {
-  if (workspace.error) return `Workspace error: ${workspace.error}`
+// Smart search shows beside the index messages, never in place of one: see `statusBarView`.
+const smartSearchText = computed(() =>
+  embeddingBarText(embeddingStatus.status, settings.state?.semanticIndexEnabled === true)
+)
 
-  const s = indexStatus.status
-  switch (s.phase) {
-    case 'walking':
-      return 'Walking notes…'
-    case 'indexing': {
-      const total = s.chunksTotal || '?'
-      return `Indexing ${s.chunksDone}/${total} chunks · ${s.filesDone}/${s.filesTotal} files`
-    }
-    case 'done':
-      if (s.chunksTotal === 0 && s.filesTotal === 0) return ''
-      return `Index ready: ${s.chunksTotal} chunks across ${s.filesTotal} files`
-    case 'error':
-      return `Indexing error: ${s.error ?? 'unknown'}`
-    default:
-      return ''
-  }
-})
-
-const tone = computed(() => {
-  if (workspace.error) return 'error'
-
-  switch (indexStatus.status.phase) {
-    case 'indexing':
-    case 'walking':
-      return 'busy'
-    case 'error':
-      return 'error'
-    case 'done':
-      return 'ready'
-    default:
-      return 'idle'
-  }
-})
-
-const isVisible = computed(() => Boolean(workspace.error) || visible.value)
+const view = computed(() =>
+  statusBarView({
+    workspaceError: workspace.error,
+    index: indexStatus.status,
+    localVisible: visible.value,
+    smartText: smartSearchText.value,
+    smartRunning: embeddingStatus.status?.state === 'running'
+  })
+)
+const message = computed(() => view.value.message)
+const tone = computed(() => view.value.tone)
+const isVisible = computed(() => view.value.visible)
 </script>
 
 <template>

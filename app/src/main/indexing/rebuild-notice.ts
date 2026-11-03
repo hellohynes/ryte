@@ -14,7 +14,7 @@ export function rebuildNotice({ cloud }: { cloud: boolean }): RebuildNotice {
   ]
   if (cloud) {
     detail.push(
-      'Because smart search is on, your notes will be sent to OpenAI again to rebuild it. This needs an internet connection. If it fails, choose Rebuild index in Preferences, under Content.'
+      'Search works as soon as Ryte has scanned your notes. Because smart search is on, your notes will be sent to OpenAI again so smart search can fill in afterwards. This needs an internet connection. If it fails, search keeps working and Ryte tries again on its own. You can also choose Rebuild index in Preferences, under Content.'
     )
   }
   return { message: 'Ryte is rebuilding its search index', detail: detail.join('\n\n') }

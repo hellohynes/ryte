@@ -7,11 +7,13 @@ export const manifest = {
       triggerReindex: 'indexer:trigger-reindex',
       clearAndRebuild: 'indexer:clear-and-rebuild',
       getRebuildNotice: 'indexer:get-rebuild-notice',
-      dismissRebuildNotice: 'indexer:dismiss-rebuild-notice'
+      dismissRebuildNotice: 'indexer:dismiss-rebuild-notice',
+      getEmbeddingStatus: 'indexer:get-embedding-status'
     },
     events: {
       status: 'indexer:status-event',
-      rebuildNotice: 'indexer:rebuild-notice-event'
+      rebuildNotice: 'indexer:rebuild-notice-event',
+      embeddingStatus: 'indexer:embedding-status-event'
     }
   },
   settings: {

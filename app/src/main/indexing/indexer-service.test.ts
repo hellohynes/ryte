@@ -12,17 +12,31 @@ const mocks = vi.hoisted(() => ({
   indexerIndexFile: vi.fn(),
   backfillKick: vi.fn(),
   backfillStop: vi.fn(),
-  backfillState: { value: 'idle' as 'idle' | 'running' | 'paused' }
+  backfillState: { value: 'idle' as 'idle' | 'running' | 'paused' },
+  backfillReason: { value: null as string | null },
+  backfillRetryAt: { value: null as number | null },
+  backfillOnChange: { value: undefined as (() => void) | undefined },
+  embeddableCount: vi.fn(),
+  unembeddedCount: vi.fn()
 }))
 
 vi.mock('./embedding-backfill', () => ({
-  EmbeddingBackfill: vi.fn().mockImplementation(() => ({
-    kick: mocks.backfillKick,
-    stop: mocks.backfillStop,
-    get state() {
-      return mocks.backfillState.value
+  EmbeddingBackfill: vi.fn().mockImplementation((deps: { onChange?: () => void }) => {
+    mocks.backfillOnChange.value = deps.onChange
+    return {
+      kick: mocks.backfillKick,
+      stop: mocks.backfillStop,
+      get state() {
+        return mocks.backfillState.value
+      },
+      get reason() {
+        return mocks.backfillReason.value
+      },
+      get retryAt() {
+        return mocks.backfillRetryAt.value
+      }
     }
-  })),
+  }),
   fileMtimeReader: vi.fn().mockReturnValue(vi.fn())
 }))
 
@@ -37,7 +51,9 @@ vi.mock('./vector-store', () => ({
 vi.mock('./index-state', () => ({
   IndexStateStore: vi.fn().mockImplementation(() => ({
     init: vi.fn(),
-    totals: vi.fn().mockReturnValue({ files: 0, chunks: 0 })
+    totals: vi.fn().mockReturnValue({ files: 0, chunks: 0 }),
+    embeddableCount: mocks.embeddableCount,
+    unembeddedCount: mocks.unembeddedCount
   }))
 }))
 
@@ -399,6 +415,11 @@ describe('IndexerService embedding step', () => {
     vi.clearAllMocks()
     vi.useRealTimers()
     mocks.backfillState.value = 'idle'
+    mocks.backfillReason.value = null
+    mocks.backfillRetryAt.value = null
+    mocks.backfillOnChange.value = undefined
+    mocks.embeddableCount.mockReturnValue(0)
+    mocks.unembeddedCount.mockReturnValue(0)
     mocks.vectorStoreInit.mockReturnValue(undefined)
     mocks.indexerIndexAll.mockReset()
     mocks.indexerIndexAll.mockResolvedValue({ filesIndexed: 0, chunksIndexed: 0 })
@@ -610,6 +631,324 @@ describe('IndexerService embedding step', () => {
       await vi.advanceTimersByTimeAsync(10_000)
 
       expect(mocks.backfillKick).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('what smart search is doing', () => {
+    it('is off, with no reason, when smart search is off', async () => {
+      const svc = await configure({ semanticIndexEnabled: false })
+      svc.init()
+
+      expect(svc.getEmbeddingStatus()).toStrictEqual({
+        state: 'off',
+        total: 0,
+        done: 0,
+        pending: 0
+      })
+    })
+
+    it.each([
+      ['no key is saved', {}, null, 'no-key'],
+      [
+        'the agreement is missing',
+        { semanticIndexAcknowledgement: null },
+        'sk-test',
+        'no-agreement'
+      ],
+      [
+        'the agreement is for another model',
+        { semanticIndexAcknowledgement: { ...AGREED, model: 'text-embedding-3-large' } },
+        'sk-test',
+        'no-agreement'
+      ],
+      [
+        'both the key and the agreement are missing: the key comes first',
+        { semanticIndexAcknowledgement: null },
+        null,
+        'no-key'
+      ]
+    ])('is off because %s', async (_name, overrides, secret, reason) => {
+      const svc = await configure(overrides, secret)
+      svc.init()
+
+      expect(svc.getEmbeddingStatus()).toStrictEqual({
+        state: 'off',
+        total: 0,
+        done: 0,
+        pending: 0,
+        reason
+      })
+    })
+
+    it('reports a step that works with the counts of the index, and no reason or time', async () => {
+      mocks.embeddableCount.mockReturnValue(3200)
+      mocks.unembeddedCount.mockReturnValue(3080)
+      mocks.backfillState.value = 'running'
+      const svc = await configure({})
+      svc.init()
+
+      expect(svc.getEmbeddingStatus()).toStrictEqual({
+        state: 'running',
+        total: 3200,
+        done: 120,
+        pending: 3080
+      })
+    })
+
+    it('reports why a paused step is paused and when it tries again, as an ISO time', async () => {
+      mocks.embeddableCount.mockReturnValue(10)
+      mocks.unembeddedCount.mockReturnValue(4)
+      mocks.backfillState.value = 'paused'
+      mocks.backfillReason.value = 'rate-limit'
+      mocks.backfillRetryAt.value = Date.UTC(2026, 10, 3, 15, 42)
+      const svc = await configure({})
+      svc.init()
+
+      expect(svc.getEmbeddingStatus()).toStrictEqual({
+        state: 'paused',
+        total: 10,
+        done: 6,
+        pending: 4,
+        reason: 'rate-limit',
+        retryAt: '2026-11-03T15:42:00.000Z'
+      })
+    })
+
+    it('has no time to try again for a refused key', async () => {
+      mocks.backfillState.value = 'paused'
+      mocks.backfillReason.value = 'auth'
+      const svc = await configure({})
+      svc.init()
+
+      const status = svc.getEmbeddingStatus()
+      expect(status.reason).toBe('auth')
+      expect('retryAt' in status).toBe(false)
+    })
+
+    it('never reports more notes waiting than there are notes', async () => {
+      mocks.embeddableCount.mockReturnValue(2)
+      mocks.unembeddedCount.mockReturnValue(5)
+      const svc = await configure({})
+      svc.init()
+
+      expect(svc.getEmbeddingStatus()).toMatchObject({ total: 2, pending: 2, done: 0 })
+    })
+
+    it('forgets why it was off once the indexer is closed', async () => {
+      const svc = await configure({}, null)
+      svc.init()
+      expect(svc.getEmbeddingStatus().reason).toBe('no-key')
+
+      svc.close()
+
+      expect('reason' in svc.getEmbeddingStatus()).toBe(false)
+    })
+
+    it('is off before the indexer has started', async () => {
+      const { IndexerService } = await import('./indexer-service')
+
+      expect(new IndexerService().getEmbeddingStatus()).toStrictEqual({
+        state: 'off',
+        total: 0,
+        done: 0,
+        pending: 0
+      })
+    })
+  })
+
+  describe('telling the windows', () => {
+    async function started(): Promise<{
+      svc: InstanceType<typeof import('./indexer-service').IndexerService>
+      heard: Array<Record<string, unknown>>
+    }> {
+      vi.useFakeTimers()
+      const svc = await configure({})
+      const heard: Array<Record<string, unknown>> = []
+      svc.subscribeEmbeddingStatus((status) => heard.push({ ...status }))
+      svc.init()
+      return { svc, heard }
+    }
+
+    it('says what smart search is doing when the indexer starts', async () => {
+      mocks.embeddableCount.mockReturnValue(7)
+      mocks.unembeddedCount.mockReturnValue(7)
+      const { heard } = await started()
+
+      expect(heard).toEqual([{ state: 'idle', total: 7, done: 0, pending: 7 }])
+    })
+
+    it('says smart search is off, with the reason, when the indexer starts without a key', async () => {
+      vi.useFakeTimers()
+      const svc = await configure({}, null)
+      const heard: Array<Record<string, unknown>> = []
+      svc.subscribeEmbeddingStatus((status) => heard.push({ ...status }))
+
+      svc.init()
+
+      expect(heard).toEqual([{ state: 'off', total: 0, done: 0, pending: 0, reason: 'no-key' }])
+    })
+
+    it('sends a change of state at once, even right after another message', async () => {
+      const { heard } = await started()
+      heard.length = 0
+
+      mocks.backfillState.value = 'running'
+      mocks.backfillOnChange.value?.()
+      mocks.backfillState.value = 'paused'
+      mocks.backfillReason.value = 'offline'
+      mocks.backfillRetryAt.value = Date.now() + 60_000
+      mocks.backfillOnChange.value?.()
+      mocks.backfillState.value = 'running'
+      mocks.backfillReason.value = null
+      mocks.backfillRetryAt.value = null
+      mocks.backfillOnChange.value?.()
+
+      expect(heard.map((status) => status.state)).toEqual(['running', 'paused', 'running'])
+    })
+
+    it('sends progress at most every half second: the first at once, then the latest after the wait', async () => {
+      mocks.embeddableCount.mockReturnValue(100)
+      mocks.unembeddedCount.mockReturnValue(100)
+      mocks.backfillState.value = 'running'
+      const { heard } = await started()
+      heard.length = 0
+
+      for (let pending = 99; pending >= 90; pending -= 1) {
+        mocks.unembeddedCount.mockReturnValue(pending)
+        mocks.backfillOnChange.value?.()
+        await vi.advanceTimersByTimeAsync(20)
+      }
+      // Ten notes in 200 ms: none of them is a change of state, so none goes out yet.
+      expect(heard).toEqual([])
+
+      await vi.advanceTimersByTimeAsync(500)
+
+      expect(heard).toEqual([{ state: 'running', total: 100, done: 10, pending: 90 }])
+    })
+
+    it('keeps to 3 messages a second over a long run of one-note steps', async () => {
+      mocks.embeddableCount.mockReturnValue(3200)
+      mocks.unembeddedCount.mockReturnValue(3200)
+      mocks.backfillState.value = 'running'
+      const { heard } = await started()
+      await vi.advanceTimersByTimeAsync(1_000)
+      heard.length = 0
+
+      for (let note = 0; note < 3000; note += 1) {
+        mocks.unembeddedCount.mockReturnValue(3200 - note - 1)
+        mocks.backfillOnChange.value?.()
+        await vi.advanceTimersByTimeAsync(2)
+      }
+      await vi.advanceTimersByTimeAsync(1_000)
+
+      // 3,000 notes took 6 seconds of fake time.
+      expect(heard.length).toBeLessThanOrEqual(6 * 3)
+      expect(heard.at(-1)).toMatchObject({ pending: 200, done: 3000 })
+    })
+
+    it('does not count the notes while progress waits out the half second', async () => {
+      mocks.embeddableCount.mockReturnValue(100)
+      mocks.unembeddedCount.mockReturnValue(100)
+      mocks.backfillState.value = 'running'
+      await started()
+      await vi.advanceTimersByTimeAsync(1_000)
+      mocks.embeddableCount.mockClear()
+      mocks.unembeddedCount.mockClear()
+
+      for (let pending = 99; pending >= 80; pending -= 1) {
+        mocks.unembeddedCount.mockReturnValue(pending)
+        mocks.backfillOnChange.value?.()
+      }
+      // The first is sent at once, and counted; the other nineteen wait out the half second without a query.
+      expect(mocks.embeddableCount).toHaveBeenCalledTimes(1)
+      expect(mocks.unembeddedCount).toHaveBeenCalledTimes(1)
+
+      await vi.advanceTimersByTimeAsync(500)
+      expect(mocks.embeddableCount).toHaveBeenCalledTimes(2)
+    })
+
+    it('says smart search is off when the indexer fails to come back after a corrupt index', async () => {
+      vi.useFakeTimers()
+      const svc = await configure({})
+      const heard: Array<Record<string, unknown>> = []
+      svc.subscribeEmbeddingStatus((status) => heard.push({ ...status }))
+      mocks.vectorStoreInit.mockImplementation(() => {
+        throw new Error('database disk image is malformed')
+      })
+
+      expect(svc.init()).toBe(false)
+
+      expect(heard.at(-1)).toMatchObject({ state: 'off' })
+    })
+
+    it('sends nothing when nothing changed', async () => {
+      const { heard } = await started()
+      heard.length = 0
+
+      mocks.backfillOnChange.value?.()
+      mocks.backfillOnChange.value?.()
+      await vi.advanceTimersByTimeAsync(2_000)
+
+      expect(heard).toEqual([])
+    })
+
+    it('says so after an index pass and after a note is written, when the counts moved', async () => {
+      mocks.embeddableCount.mockReturnValue(5)
+      mocks.unembeddedCount.mockReturnValue(0)
+      const { svc, heard } = await started()
+      heard.length = 0
+      await vi.advanceTimersByTimeAsync(1_000)
+
+      mocks.embeddableCount.mockReturnValue(6)
+      mocks.unembeddedCount.mockReturnValue(1)
+      await svc.triggerReindex()
+      expect(heard.at(-1)).toMatchObject({ total: 6, pending: 1 })
+
+      await vi.advanceTimersByTimeAsync(1_000)
+      mocks.embeddableCount.mockReturnValue(7)
+      mocks.unembeddedCount.mockReturnValue(2)
+      await svc.notifyFileChanged('/tmp/notes/a.md')
+      expect(heard.at(-1)).toMatchObject({ total: 7, pending: 2 })
+    })
+
+    it('does not let a wait that began before a close speak for the next index', async () => {
+      mocks.embeddableCount.mockReturnValue(100)
+      mocks.unembeddedCount.mockReturnValue(100)
+      mocks.backfillState.value = 'running'
+      const { svc, heard } = await started()
+      await vi.advanceTimersByTimeAsync(1_000)
+      mocks.unembeddedCount.mockReturnValue(90)
+      mocks.backfillOnChange.value?.()
+      mocks.unembeddedCount.mockReturnValue(80)
+      mocks.backfillOnChange.value?.()
+      heard.length = 0
+
+      svc.close()
+      await vi.advanceTimersByTimeAsync(2_000)
+
+      expect(heard).toEqual([])
+    })
+
+    it('says the same again for a new index even if nothing differs', async () => {
+      const { svc, heard } = await started()
+      heard.length = 0
+
+      svc.close()
+      svc.init()
+
+      expect(heard).toHaveLength(1)
+    })
+
+    it('stops sending to a listener that unsubscribed', async () => {
+      vi.useFakeTimers()
+      const svc = await configure({})
+      const heard: unknown[] = []
+      const stop = svc.subscribeEmbeddingStatus((status) => heard.push(status))
+      stop()
+
+      svc.init()
+
+      expect(heard).toEqual([])
     })
   })
 

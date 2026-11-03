@@ -5,6 +5,8 @@ import { useDocumentTitles } from '../composables/useDocumentTitles'
 import { useRenderedAnswer } from '../composables/useRenderedAnswer'
 import { useSearchPresentation } from '../composables/useSearchPresentation'
 import { render } from '../markdown/renderer'
+import { embeddingHint } from '../preferences/embedding-model'
+import { useEmbeddingStatusStore } from '../stores/embedding-status'
 import { useSearchStore } from '../stores/search'
 import { recentSearches, type HistoryEntry } from '../stores/search-history'
 import { useSettingsStore } from '../stores/settings'
@@ -43,6 +45,7 @@ const HISTORY_LIST_ID = 'search-history-list'
 
 const search = useSearchStore()
 const settings = useSettingsStore()
+const embeddingStatus = useEmbeddingStatusStore()
 const workspace = useWorkspaceStore()
 const inputRef = ref<InstanceType<typeof StInput> | null>(null)
 const localQuery = ref('')
@@ -128,6 +131,14 @@ const showProviderSetupNotice = computed(
     settings.state?.cloudAnswersEnabled === true &&
     !hasConfiguredAnswerProvider.value &&
     !providerSetupNoticeDismissed.value
+)
+// Notes still waiting for smart search can be missed by meaning; say so, quietly, only where it matters.
+const smartSearchHint = computed(() =>
+  embeddingHint(
+    embeddingStatus.status,
+    settings.state?.semanticIndexEnabled === true,
+    retrievalMode.value
+  )
 )
 // With Cloud Answers off, a search is just its results; the summary is offered, not reported missing.
 const cloudAnswersOff = computed(() => settings.state?.cloudAnswersEnabled === false)
@@ -632,6 +643,7 @@ async function closeOverlay(): Promise<void> {
                   </span>
                 </label>
               </div>
+              <p v-if="smartSearchHint" class="results-hint">{{ smartSearchHint }}</p>
               <ul
                 v-show="resultsOpen || cloudAnswersOff"
                 id="search-results-list"
@@ -829,6 +841,12 @@ async function closeOverlay(): Promise<void> {
   margin-left: var(--st-space-75);
   color: var(--sp-text-3);
   font-size: var(--st-type-body-sm-size);
+}
+
+.results-hint {
+  margin: 0 0 var(--st-space-100);
+  font-size: var(--st-type-body-sm-size);
+  color: var(--sp-text-3);
 }
 
 .results-header {

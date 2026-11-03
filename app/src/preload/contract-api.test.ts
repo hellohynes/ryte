@@ -49,13 +49,24 @@ const INDEXER_REQUEST_CHANNELS = [
 ]
 const INDEXER_EVENT_CHANNELS = ['indexer:status-event']
 const INDEXER_MEMBERS = ['clearAndRebuild', 'getStatus', 'onStatus', 'triggerReindex']
-// Added after the migration (additive only): the rebuild notice, two operations and one event.
-const INDEXER_ADDED_MEMBERS = ['dismissRebuildNotice', 'getRebuildNotice', 'onRebuildNotice']
+// Added after the migration (additive only): the rebuild notice (two operations, one event) and the embedding status (one
+// operation, one event).
+const INDEXER_ADDED_MEMBERS = [
+  'dismissRebuildNotice',
+  'getEmbeddingStatus',
+  'getRebuildNotice',
+  'onEmbeddingStatus',
+  'onRebuildNotice'
+]
 const INDEXER_ADDED_REQUEST_CHANNELS = [
   'indexer:dismiss-rebuild-notice',
+  'indexer:get-embedding-status',
   'indexer:get-rebuild-notice'
 ]
-const INDEXER_ADDED_EVENT_CHANNELS = ['indexer:rebuild-notice-event']
+const INDEXER_ADDED_EVENT_CHANNELS = [
+  'indexer:embedding-status-event',
+  'indexer:rebuild-notice-event'
+]
 // The settings wire strings and `window.ryte.settings` members, copied from the hand-written preload
 // (preload/index.ts at 322bfd7) before the area moved.
 const SETTINGS_REQUEST_CHANNELS = [
@@ -130,17 +141,19 @@ describe('createContractApi from the generated manifest', () => {
     expect(on.mock.calls.map((call) => call[0])).toEqual(INDEXER_EVENT_CHANNELS)
   })
 
-  it('builds the rebuild notice members on the generated channels', async () => {
+  it('builds the rebuild notice and embedding status members on the generated channels', async () => {
     const { ipc, invoke, on } = fakeIpc()
     const api = createContractApi(ipc)
 
     await api.indexer.getRebuildNotice()
     await api.indexer.dismissRebuildNotice()
+    await api.indexer.getEmbeddingStatus()
     api.indexer.onRebuildNotice(() => undefined)
+    api.indexer.onEmbeddingStatus(() => undefined)
 
     expect(invoke.mock.calls.map((call) => call[0]).sort()).toEqual(INDEXER_ADDED_REQUEST_CHANNELS)
     expect(invoke.mock.calls.every((call) => call.length === 1)).toBe(true)
-    expect(on.mock.calls.map((call) => call[0])).toEqual(INDEXER_ADDED_EVENT_CHANNELS)
+    expect(on.mock.calls.map((call) => call[0]).sort()).toEqual(INDEXER_ADDED_EVENT_CHANNELS)
   })
 
   it('builds window.ryte.settings with the members and channels recorded before the migration', async () => {

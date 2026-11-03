@@ -20,12 +20,15 @@ describe('rebuildNotice', () => {
     )
   })
 
-  it('also tells a cloud user that the notes will be sent again, that it needs a connection, and how to retry', () => {
+  it('also tells a cloud user that search works once the scan is done, that the notes will be sent again so smart search fills in, that it needs a connection, and that a failure does not stop search', () => {
     const { detail } = rebuildNotice({ cloud: true })
 
     expect(detail).toMatch(/search may be incomplete/i)
+    expect(detail).toMatch(/search works as soon as ryte has scanned your notes/i)
     expect(detail).toMatch(/notes will be sent to OpenAI again/i)
+    expect(detail).toMatch(/smart search can fill in afterwards/i)
     expect(detail).toMatch(/internet connection/i)
+    expect(detail).toMatch(/search keeps working and Ryte tries again on its own/i)
     expect(detail).toMatch(/Rebuild index in Preferences, under Content/)
   })
 

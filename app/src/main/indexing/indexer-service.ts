@@ -1,6 +1,7 @@
 import { EventEmitter } from 'node:events'
 import { mkdirSync, rmSync } from 'node:fs'
 
+import type { EmbeddingStatus } from '../../contract/indexer'
 import { Indexer, type IndexerProgress } from './indexer'
 import { IndexStateStore } from './index-state'
 import { OpenAIEmbeddingProvider } from './embedder'
@@ -14,6 +15,9 @@ import { rebuildNotice, type RebuildNotice } from './rebuild-notice'
 const STATUS_EVENT = 'status'
 const IDLE_EVENT = 'idle'
 const REBUILD_NOTICE_EVENT = 'rebuild-notice'
+const EMBEDDING_STATUS_EVENT = 'embedding-status'
+// Progress is sent at most this often; a change of state or reason is always sent at once.
+const EMBEDDING_STATUS_INTERVAL_MS = 500
 // After a note is written by the watcher, how long to wait for more edits before looking for notes to embed.
 const EMBED_AFTER_EDIT_DELAY_MS = 2_000
 
@@ -39,6 +43,11 @@ export class IndexerService extends EventEmitter {
   private embedder: OpenAIEmbeddingProvider | null = null
   private backfill: EmbeddingBackfill | null = null
   private backfillKickTimer: ReturnType<typeof setTimeout> | null = null
+  // Why smart search is on but nothing is embedded: the key or the saved agreement is missing. Null when it is off or working.
+  private embeddingProblem: 'no-key' | 'no-agreement' | null = null
+  private lastPublishedStatus: EmbeddingStatus | null = null
+  private lastPublishedAt = 0
+  private embeddingStatusTimer: ReturnType<typeof setTimeout> | null = null
   private lastStatus: IndexerProgress = {
     phase: 'idle',
     filesTotal: 0,
@@ -72,8 +81,15 @@ export class IndexerService extends EventEmitter {
       acknowledgement !== null &&
       acknowledgement.provider === settings.embeddingProvider &&
       acknowledgement.model === settings.embeddingModel
-    const openaiKey =
-      settings.semanticIndexEnabled && acknowledged ? settingsStore.getSecret('openai') : null
+    const savedKey = settings.semanticIndexEnabled ? settingsStore.getSecret('openai') : null
+    const openaiKey = acknowledged ? savedKey : null
+    this.embeddingProblem = !settings.semanticIndexEnabled
+      ? null
+      : !savedKey
+        ? 'no-key'
+        : !acknowledged
+          ? 'no-agreement'
+          : null
     const embedder = openaiKey
       ? new OpenAIEmbeddingProvider(openaiKey, { model: settings.embeddingModel })
       : null
@@ -88,11 +104,13 @@ export class IndexerService extends EventEmitter {
       this.initializeStores(dbPath, settings.notesRoot, embedder)
       if (legacyRemoved) this.setNotice(rebuildNotice({ cloud: embedder !== null }))
       this.scheduleBackfillKick({ onlyIfIdle: true })
+      this.publishEmbeddingStatus()
       return true
     } catch (error) {
       this.close()
       if (!isRecoverableIndexStoreError(error)) {
         this.broadcastIndexingError(error)
+        this.publishEmbeddingStatus()
         return false
       }
 
@@ -101,10 +119,12 @@ export class IndexerService extends EventEmitter {
         this.initializeStores(dbPath, settings.notesRoot, embedder)
         if (legacyRemoved) this.setNotice(rebuildNotice({ cloud: embedder !== null }))
         this.scheduleBackfillKick({ onlyIfIdle: true })
+        this.publishEmbeddingStatus()
         return true
       } catch (rebuildError) {
         this.close()
         this.broadcastIndexingError(rebuildError)
+        this.publishEmbeddingStatus()
         return false
       }
     }
@@ -131,7 +151,8 @@ export class IndexerService extends EventEmitter {
           vectorStore: this.vectorStore,
           indexState: this.indexState,
           fileMtimeMs: fileMtimeReader(notesRoot),
-          log: (message, detail) => console.warn(message, detail)
+          log: (message, detail) => console.warn(message, detail),
+          onChange: () => this.publishEmbeddingStatus()
         })
       : null
 
@@ -172,6 +193,76 @@ export class IndexerService extends EventEmitter {
     return this.lastStatus
   }
 
+  /**
+   * What smart search is doing, from the embedding step and the index. `off` when no step runs, with the reason when smart
+   * search is on but cannot send (no key, or no saved agreement for this provider and model).
+   */
+  getEmbeddingStatus(): EmbeddingStatus {
+    const kind = this.embeddingKind()
+    const indexState = this.indexState
+    if (kind.state === 'off' || !indexState) return { ...kind, total: 0, done: 0, pending: 0 }
+    const total = indexState.embeddableCount()
+    const pending = Math.min(indexState.unembeddedCount(), total)
+    return { ...kind, total, done: total - pending, pending }
+  }
+
+  /** The state, the reason and the retry time: what changes the sentence, without the counts, which cost a query. */
+  private embeddingKind(): Pick<EmbeddingStatus, 'state' | 'reason' | 'retryAt'> {
+    const backfill = this.backfill
+    if (!backfill || !this.indexState) {
+      return { state: 'off', ...(this.embeddingProblem ? { reason: this.embeddingProblem } : {}) }
+    }
+    const reason = backfill.reason
+    const retryAt = backfill.retryAt
+    return {
+      state: backfill.state,
+      ...(reason ? { reason } : {}),
+      ...(retryAt !== null ? { retryAt: new Date(retryAt).toISOString() } : {})
+    }
+  }
+
+  /** Every change of what smart search is doing, for the windows. */
+  subscribeEmbeddingStatus(callback: (status: EmbeddingStatus) => void): () => void {
+    this.on(EMBEDDING_STATUS_EVENT, callback)
+    return () => this.off(EMBEDDING_STATUS_EVENT, callback)
+  }
+
+  /**
+   * Tells the windows what smart search is doing. A change of state, reason or retry time goes out at once; progress alone
+   * (the counts) at most every half second, so a long run does not flood the windows. Unchanged is not sent.
+   */
+  private publishEmbeddingStatus(): void {
+    const kind = this.embeddingKind()
+    const last = this.lastPublishedStatus
+    const sameKind =
+      last !== null &&
+      last.state === kind.state &&
+      last.reason === kind.reason &&
+      last.retryAt === kind.retryAt
+    const wait = this.lastPublishedAt + EMBEDDING_STATUS_INTERVAL_MS - Date.now()
+    if (sameKind && wait > 0) {
+      // Progress inside the interval: send the latest once the interval is over, without counting now.
+      if (!this.embeddingStatusTimer) {
+        this.embeddingStatusTimer = setTimeout(() => {
+          this.embeddingStatusTimer = null
+          this.publishEmbeddingStatus()
+        }, wait)
+      }
+      return
+    }
+    const next = this.getEmbeddingStatus()
+    if (last !== null && sameKind && last.done === next.done && last.total === next.total) return
+    this.clearEmbeddingStatusTimer()
+    this.lastPublishedStatus = next
+    this.lastPublishedAt = Date.now()
+    this.emit(EMBEDDING_STATUS_EVENT, next)
+  }
+
+  private clearEmbeddingStatusTimer(): void {
+    if (this.embeddingStatusTimer) clearTimeout(this.embeddingStatusTimer)
+    this.embeddingStatusTimer = null
+  }
+
   async triggerReindex(): Promise<void> {
     if (this.running) {
       this.reindexQueued = true
@@ -185,11 +276,13 @@ export class IndexerService extends EventEmitter {
     try {
       await this.indexAll()
       this.backfill?.kick()
+      this.publishEmbeddingStatus()
     } catch (err) {
       if (this.recoverIndexStore(err)) {
         try {
           await this.indexAll()
           this.backfill?.kick()
+          this.publishEmbeddingStatus()
         } catch (retryErr) {
           this.broadcastIndexingError(retryErr)
         }
@@ -252,6 +345,7 @@ export class IndexerService extends EventEmitter {
       this.reindexQueued = false
       await this.indexAll()
       this.backfill?.kick()
+      this.publishEmbeddingStatus()
     } catch (err) {
       this.broadcastIndexingError(err)
       throw err
@@ -288,6 +382,10 @@ export class IndexerService extends EventEmitter {
     this.backfill?.stop()
     this.backfill = null
     this.clearBackfillKickTimer()
+    // Whatever opens next says what smart search is doing then; an old half-second wait must not speak for it.
+    this.clearEmbeddingStatusTimer()
+    this.lastPublishedStatus = null
+    this.embeddingProblem = null
     this.vectorStore?.close()
     this.vectorStore = null
     this.indexState = null
@@ -360,6 +458,8 @@ export class IndexerService extends EventEmitter {
       chunksTotal: totals.chunks,
       chunksDone: totals.chunks
     })
+    // The note's chunks changed or went, so the counts did.
+    this.publishEmbeddingStatus()
   }
 
   /**

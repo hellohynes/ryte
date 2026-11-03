@@ -12,11 +12,23 @@ type Assert<T extends true> = T
 // object type so it can be compared with the single declaration it replaced.
 type Flatten<T> = { [K in keyof T]: T[K] }
 
-// What was added after the freeze (additive only): the rebuild notice, with the exact types it is expected to have.
+// What was added after the freeze (additive only): the rebuild notice and the embedding status, with the exact types they are
+// expected to have.
 interface AddedIndexerApi {
   getRebuildNotice(): Promise<{ message: string; detail: string } | null>
   dismissRebuildNotice(): Promise<void>
   onRebuildNotice(cb: (notice: { message: string; detail: string } | null) => void): () => void
+  getEmbeddingStatus(): Promise<ExpectedEmbeddingStatus>
+  onEmbeddingStatus(cb: (status: ExpectedEmbeddingStatus) => void): () => void
+}
+
+interface ExpectedEmbeddingStatus {
+  state: 'off' | 'idle' | 'running' | 'paused'
+  total: number
+  done: number
+  pending: number
+  reason?: 'no-key' | 'no-agreement' | 'offline' | 'rate-limit' | 'service' | 'auth'
+  retryAt?: string
 }
 
 type Api = Flatten<ContractApi['indexer']>
