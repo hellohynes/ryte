@@ -35,6 +35,11 @@ export interface IndexAllSummary {
 
 const LOCAL_INDEX_YIELD_BATCH_SIZE = 8
 
+function errorCode(error: unknown): string {
+  const code = (error as { code?: unknown } | null)?.code
+  return typeof code === 'string' ? code : 'UNKNOWN'
+}
+
 interface PendingFile {
   absPath: string
   relPath: string
@@ -73,6 +78,7 @@ export class Indexer {
     let chunksTotal = 0
     let chunksDone = 0
     let filesDone = 0
+    let filesSkipped = 0
 
     if (filesTotal === 0) {
       const totals = indexState.totals()
@@ -91,7 +97,18 @@ export class Indexer {
     // Phase 2: chunk and write file-by-file. This preserves the memory ceiling at
     // roughly one source file plus its chunks instead of all pending chunks.
     for (const [index, file] of pending.entries()) {
-      const chunks = chunkFile(file.absPath, notesRoot)
+      let chunks: ReturnType<typeof chunkFile>
+      try {
+        chunks = chunkFile(file.absPath, notesRoot)
+      } catch (error) {
+        // A note that cannot be read (permissions, gone since the walk) is left out, not allowed to stop the others. It has no
+        // row, so the next pass tries it again. Only the code is logged, never a path.
+        console.warn('Ryte could not index a note.', errorCode(error))
+        filesDone += 1
+        filesSkipped += 1
+        emit({ phase: 'indexing', filesTotal, filesDone, chunksTotal, chunksDone })
+        continue
+      }
       chunksTotal += chunks.length
 
       if (chunks.length === 0) {
@@ -121,7 +138,7 @@ export class Indexer {
     }
 
     emit({ phase: 'done', filesTotal, filesDone, chunksTotal, chunksDone })
-    return { filesIndexed: filesDone, chunksIndexed: chunksDone }
+    return { filesIndexed: filesDone - filesSkipped, chunksIndexed: chunksDone }
   }
 
   async indexFile(absPath: string): Promise<{ chunkCount: number; skipped: boolean }> {

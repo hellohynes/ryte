@@ -2,11 +2,16 @@ import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
+import matter from 'gray-matter'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
 import { chunkFile, chunkMarkdown } from './chunker'
 
 let tempDir: string
+
+// gray-matter keeps every text it has parsed here, but its types do not declare it.
+const grayMatterCache = (): Record<string, unknown> =>
+  (matter as unknown as { cache: Record<string, unknown> }).cache
 
 describe('chunker', () => {
   beforeEach(() => {
@@ -73,6 +78,54 @@ describe('chunker', () => {
       for (const c of chunks) {
         expect(c.text.length).toBeLessThanOrEqual(4000)
       }
+    })
+  })
+
+  describe('chunkFile — front matter that is not valid YAML', () => {
+    // An unquoted colon inside a value is the usual way a note ends up here.
+    const broken =
+      '---\ntitle: A note\ndescription: Live data from the store: one model, one order\n---\n\n# Heading\n\nbody text about harbours\n'
+
+    it('indexes the note instead of throwing, with no front matter fields', () => {
+      const filePath = join(tempDir, 'broken.md')
+      writeFileSync(filePath, broken)
+
+      const chunks = chunkFile(filePath, tempDir)
+
+      expect(chunks.length).toBeGreaterThan(0)
+      expect(chunks.every((chunk) => Object.keys(chunk.frontmatter).length === 0)).toBe(true)
+    })
+
+    it('keeps the whole note searchable, including the lines it could not parse', () => {
+      const filePath = join(tempDir, 'broken.md')
+      writeFileSync(filePath, broken)
+
+      const text = chunkFile(filePath, tempDir)
+        .map((chunk) => chunk.text)
+        .join('\n')
+
+      expect(text).toContain('body text about harbours')
+      expect(text).toContain('Live data from the store')
+    })
+
+    it('does not leave the text of every note it reads in gray-matter cache for the life of the app', () => {
+      const filePath = join(tempDir, 'fine.md')
+      writeFileSync(filePath, '---\ntitle: unique-cache-probe\n---\n\n# Heading\n\nbody\n')
+      const before = Object.keys(grayMatterCache()).length
+
+      chunkFile(filePath, tempDir)
+
+      expect(Object.keys(grayMatterCache())).toHaveLength(before)
+    })
+
+    it('still reads valid front matter as before', () => {
+      const filePath = join(tempDir, 'fine.md')
+      writeFileSync(filePath, '---\ntitle: A note\ntags: [a, b]\n---\n\n# Heading\n\nbody\n')
+
+      const chunks = chunkFile(filePath, tempDir)
+
+      expect(chunks[0].frontmatter).toMatchObject({ title: 'A note', tags: ['a', 'b'] })
+      expect(chunks.map((chunk) => chunk.text).join('\n')).not.toContain('tags: [a, b]')
     })
   })
 
