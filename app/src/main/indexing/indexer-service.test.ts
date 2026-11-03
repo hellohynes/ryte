@@ -1,6 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
+  userData: '',
   vectorStoreInit: vi.fn(),
   vectorStoreClose: vi.fn(),
   indexerIndexAll: vi.fn(),
@@ -53,8 +58,17 @@ vi.mock('../settings/settings-store', () => ({
 }))
 
 vi.mock('../paths', () => ({
-  indexDbPath: vi.fn().mockReturnValue('/tmp/test-indexer-service.db')
+  userDataDir: () => mocks.userData
 }))
+
+// Every test gets its own data folder, so the index files the service creates and removes are real and isolated.
+beforeEach(() => {
+  mocks.userData = mkdtempSync(join(tmpdir(), 'ryte-indexer-service-'))
+})
+
+afterEach(() => {
+  rmSync(mocks.userData, { recursive: true, force: true })
+})
 
 const mockEmbed = vi.fn().mockResolvedValue([Float32Array.from([1, 0, 0])])
 
@@ -433,5 +447,389 @@ describe('IndexerService.clearAndRebuild() with embeddings on', () => {
     await rebuild
     expect(mocks.indexerIndexAll).toHaveBeenCalledTimes(2)
     expect(mocks.vectorStoreClose).toHaveBeenCalled()
+  })
+})
+
+describe('IndexerService index location', () => {
+  let notesA: string
+  let notesB: string
+
+  async function useNotesRoot(
+    notesRoot: string,
+    options: { semantic?: boolean } = {}
+  ): Promise<void> {
+    const { settingsStore } = await import('../settings/settings-store')
+    vi.mocked(settingsStore.getSecret).mockReturnValue(options.semantic ? 'sk-test' : null)
+    vi.mocked(settingsStore.load).mockReturnValue({
+      ...vi.mocked(settingsStore.load)(),
+      notesRoot,
+      semanticIndexEnabled: options.semantic ?? false
+    })
+  }
+
+  async function constructedPaths(): Promise<string[]> {
+    const { VectorStore } = await import('./vector-store')
+    return vi.mocked(VectorStore).mock.calls.map((call) => String(call[0]))
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.vectorStoreInit.mockReturnValue(undefined)
+    mocks.indexerIndexAll.mockResolvedValue({ filesIndexed: 0, chunksIndexed: 0 })
+    mockEmbed.mockResolvedValue([Float32Array.from([1, 0, 0])])
+    notesA = join(mocks.userData, 'notes-a')
+    notesB = join(mocks.userData, 'notes-b')
+    mkdirSync(notesA)
+    mkdirSync(notesB)
+  })
+
+  it("opens a different index file for a different notes folder, under the app's data folder", async () => {
+    const { IndexerService } = await import('./indexer-service')
+    const svc = new IndexerService()
+
+    await useNotesRoot(notesA)
+    svc.init()
+    svc.close()
+    await useNotesRoot(notesB)
+    svc.init()
+
+    const [first, second] = await constructedPaths()
+    expect(first).not.toBe(second)
+    expect(first?.startsWith(join(mocks.userData, 'index'))).toBe(true)
+    expect(second?.startsWith(join(mocks.userData, 'index'))).toBe(true)
+    // Nothing is created inside either notes folder.
+    expect(existsSync(join(notesA, 'index'))).toBe(false)
+  })
+
+  it('reopens the same file for the same folder', async () => {
+    const { IndexerService } = await import('./indexer-service')
+    const svc = new IndexerService()
+
+    await useNotesRoot(notesA)
+    svc.init()
+    svc.close()
+    svc.init()
+
+    const [first, second] = await constructedPaths()
+    expect(first).toBe(second)
+  })
+
+  it("removes the previous folder's index file when another folder is opened", async () => {
+    const { IndexerService } = await import('./indexer-service')
+    const svc = new IndexerService()
+    await useNotesRoot(notesA)
+    svc.init()
+    const [pathA] = await constructedPaths()
+    writeFileSync(pathA as string, 'index of folder A')
+    writeFileSync(`${pathA}-wal`, 'x')
+    svc.close()
+
+    await useNotesRoot(notesB)
+    svc.init()
+
+    expect(existsSync(pathA as string)).toBe(false)
+    expect(existsSync(`${pathA}-wal`)).toBe(false)
+  })
+
+  it("keeps the current folder's own index file when it is opened again", async () => {
+    const { IndexerService } = await import('./indexer-service')
+    const svc = new IndexerService()
+    await useNotesRoot(notesA)
+    svc.init()
+    const [pathA] = await constructedPaths()
+    writeFileSync(pathA as string, 'index of folder A')
+    svc.close()
+
+    svc.init()
+
+    expect(existsSync(pathA as string)).toBe(true)
+  })
+
+  it('deletes the old single index database on the first start, and nothing else', async () => {
+    const { IndexerService } = await import('./indexer-service')
+    for (const name of ['index.db', 'index.db-wal', 'index.db-shm', 'settings.json']) {
+      writeFileSync(join(mocks.userData, name), 'x')
+    }
+    mkdirSync(join(mocks.userData, 'index'))
+    writeFileSync(join(mocks.userData, 'index', 'notes.txt'), 'x')
+    await useNotesRoot(notesA)
+
+    expect(new IndexerService().init()).toBe(true)
+
+    for (const name of ['index.db', 'index.db-wal', 'index.db-shm']) {
+      expect(existsSync(join(mocks.userData, name))).toBe(false)
+    }
+    expect(existsSync(join(mocks.userData, 'settings.json'))).toBe(true)
+    expect(existsSync(join(mocks.userData, 'index', 'notes.txt'))).toBe(true)
+  })
+
+  it('deletes nothing when the notes folder cannot be read', async () => {
+    const { IndexerService } = await import('./indexer-service')
+    writeFileSync(join(mocks.userData, 'index.db'), 'x')
+    await useNotesRoot(join(mocks.userData, 'unmounted-volume'))
+
+    expect(new IndexerService().init()).toBe(true)
+
+    expect(existsSync(join(mocks.userData, 'index.db'))).toBe(true)
+  })
+
+  it('reports an indexing error and does not start when the index folder cannot be made', async () => {
+    const { IndexerService } = await import('./indexer-service')
+    // A file where the index folder should be.
+    writeFileSync(join(mocks.userData, 'index'), 'not a folder')
+    await useNotesRoot(notesA)
+    const svc = new IndexerService()
+
+    expect(svc.init()).toBe(false)
+    expect(svc.getStatus().phase).toBe('error')
+  })
+
+  it("clears and rebuilds the current folder's file, not another's", async () => {
+    const { IndexerService } = await import('./indexer-service')
+    const svc = new IndexerService()
+    await useNotesRoot(notesA)
+    svc.init()
+    const [pathA] = await constructedPaths()
+    writeFileSync(pathA as string, 'old index of folder A')
+
+    await svc.clearAndRebuild()
+
+    // Cleared, then reopened for the same folder.
+    const paths = await constructedPaths()
+    expect(paths).toHaveLength(2)
+    expect(paths[1]).toBe(pathA)
+    expect(existsSync(pathA as string)).toBe(false)
+  })
+
+  it("recovers a corrupt index by clearing and reopening the same folder's file", async () => {
+    const { IndexerService } = await import('./indexer-service')
+    mocks.vectorStoreInit
+      .mockImplementationOnce(() => {
+        throw new Error('database disk image is malformed')
+      })
+      .mockImplementation(() => undefined)
+    await useNotesRoot(notesA)
+
+    new IndexerService().init()
+
+    const [first, second] = await constructedPaths()
+    expect(first).toBe(second)
+  })
+
+  it("recovers a corrupt index found while reindexing in the same folder's file", async () => {
+    const { IndexerService } = await import('./indexer-service')
+    await useNotesRoot(notesA)
+    const svc = new IndexerService()
+    svc.init()
+    const [pathA] = await constructedPaths()
+    writeFileSync(pathA as string, 'corrupt')
+    mocks.indexerIndexAll
+      .mockRejectedValueOnce(new Error('database disk image is malformed'))
+      .mockResolvedValueOnce({ filesIndexed: 0, chunksIndexed: 0 })
+
+    await svc.triggerReindex()
+
+    const paths = await constructedPaths()
+    expect(new Set(paths)).toEqual(new Set([pathA]))
+    expect(existsSync(pathA as string)).toBe(false)
+  })
+
+  it('keeps the keyword fallback on the folder the rebuild started with when the folder changes during the pass', async () => {
+    const { IndexerService } = await import('./indexer-service')
+    const { Indexer } = await import('./indexer')
+    const { settingsStore } = await import('../settings/settings-store')
+    await useNotesRoot(notesA, { semantic: true })
+    const svc = new IndexerService()
+    svc.init()
+    const [pathA] = await constructedPaths()
+    const settingsOfA = vi.mocked(settingsStore.load)()
+    mocks.indexerIndexAll
+      .mockImplementationOnce(async () => {
+        // The folder is changed while the full pass is running, and then the pass fails.
+        vi.mocked(settingsStore.load).mockReturnValue({ ...settingsOfA, notesRoot: notesB })
+        throw new Error('Rate limit reached')
+      })
+      .mockResolvedValueOnce({ filesIndexed: 0, chunksIndexed: 0 })
+
+    await svc.clearAndRebuild()
+
+    const { VectorStore } = await import('./vector-store')
+    const opened = vi.mocked(VectorStore).mock.calls.map((call) => String(call[0]))
+    const roots = vi.mocked(Indexer).mock.calls.map((call) => call[0].notesRoot)
+    // Every store and indexer made for this rebuild belongs to the folder it started with.
+    expect(new Set(opened.slice(1))).toEqual(new Set([pathA]))
+    expect(new Set(roots.slice(1))).toEqual(new Set([notesA]))
+  })
+
+  it('runs exactly one more pass, on the new folder, when the folder changes while a pass is running', async () => {
+    const { IndexerService } = await import('./indexer-service')
+    const { Indexer } = await import('./indexer')
+    await useNotesRoot(notesA)
+    const svc = new IndexerService()
+    svc.init()
+    let failOldPass!: (error: Error) => void
+    mocks.indexerIndexAll.mockImplementationOnce(
+      () =>
+        new Promise((_resolve, reject) => {
+          failOldPass = reject
+        })
+    )
+    const oldPass = svc.triggerReindex()
+    await vi.waitFor(() => expect(mocks.indexerIndexAll).toHaveBeenCalledTimes(1))
+
+    // What the restart does after the folder changed, then the reindex it asks for.
+    svc.close()
+    await useNotesRoot(notesB)
+    svc.init()
+    await svc.triggerReindex()
+    expect(mocks.indexerIndexAll).toHaveBeenCalledTimes(1)
+
+    // The old pass fails on its closed store; the queued request then runs once, on the new indexer.
+    failOldPass(new Error('The database connection is not open'))
+    await oldPass
+    await vi.waitFor(() => expect(mocks.indexerIndexAll).toHaveBeenCalledTimes(2))
+    await new Promise((resolve) => setTimeout(resolve, 20))
+
+    expect(mocks.indexerIndexAll).toHaveBeenCalledTimes(2)
+    const roots = vi.mocked(Indexer).mock.calls.map((call) => call[0].notesRoot)
+    expect(roots.at(-1)).toBe(notesB)
+  })
+
+  describe('the notice that the search index is being rebuilt', () => {
+    it('is pending after the old single database was removed, and stays pending until it is dismissed', async () => {
+      const { IndexerService } = await import('./indexer-service')
+      writeFileSync(join(mocks.userData, 'index.db'), 'x')
+      await useNotesRoot(notesA)
+      const svc = new IndexerService()
+      svc.init()
+
+      const notice = svc.pendingRebuildNotice()
+      expect(notice?.message).toMatch(/rebuilding its search index/i)
+      // Asking does not use it up: a window that opens or reloads later still sees it.
+      expect(svc.pendingRebuildNotice()).toEqual(notice)
+
+      svc.dismissRebuildNotice()
+      expect(svc.pendingRebuildNotice()).toBeNull()
+    })
+
+    it('is still pending after a later restart that finds nothing more to remove', async () => {
+      const { IndexerService } = await import('./indexer-service')
+      writeFileSync(join(mocks.userData, 'index.db'), 'x')
+      await useNotesRoot(notesA)
+      const svc = new IndexerService()
+      svc.init()
+      svc.close()
+      svc.init()
+
+      expect(svc.pendingRebuildNotice()).not.toBeNull()
+    })
+
+    it('is not pending on a fresh install', async () => {
+      const { IndexerService } = await import('./indexer-service')
+      await useNotesRoot(notesA)
+      const svc = new IndexerService()
+      svc.init()
+
+      expect(svc.pendingRebuildNotice()).toBeNull()
+    })
+
+    it('is not pending when the old database was kept because the folder could not be read', async () => {
+      const { IndexerService } = await import('./indexer-service')
+      writeFileSync(join(mocks.userData, 'index.db'), 'x')
+      await useNotesRoot(join(mocks.userData, 'unmounted-volume'))
+      const svc = new IndexerService()
+      svc.init()
+
+      expect(svc.pendingRebuildNotice()).toBeNull()
+    })
+
+    it('is not pending when the old database could not be deleted', async () => {
+      const { IndexerService } = await import('./indexer-service')
+      const { chmodSync } = await import('node:fs')
+      const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+      writeFileSync(join(mocks.userData, 'index.db'), 'x')
+      mkdirSync(join(mocks.userData, 'index'))
+      await useNotesRoot(notesA)
+      chmodSync(mocks.userData, 0o500)
+      try {
+        const svc = new IndexerService()
+        svc.init()
+
+        expect(svc.pendingRebuildNotice()).toBeNull()
+      } finally {
+        chmodSync(mocks.userData, 0o700)
+        errors.mockRestore()
+      }
+    })
+
+    it('is not pending when the index could not be opened, so it never says "rebuilding" after a failure', async () => {
+      const { IndexerService } = await import('./indexer-service')
+      writeFileSync(join(mocks.userData, 'index.db'), 'x')
+      // A file where the index folder should be: the old database is removed, then the new one cannot be made.
+      writeFileSync(join(mocks.userData, 'index'), 'not a folder')
+      await useNotesRoot(notesA)
+      const svc = new IndexerService()
+
+      expect(svc.init()).toBe(false)
+      expect(svc.pendingRebuildNotice()).toBeNull()
+    })
+
+    it('says that notes will be sent again only when embeddings are on', async () => {
+      const { IndexerService } = await import('./indexer-service')
+      writeFileSync(join(mocks.userData, 'index.db'), 'x')
+      await useNotesRoot(notesA)
+      const local = new IndexerService()
+      local.init()
+      expect(local.pendingRebuildNotice()?.detail).not.toMatch(/openai/i)
+
+      writeFileSync(join(mocks.userData, 'index.db'), 'x')
+      await useNotesRoot(notesA, { semantic: true })
+      const cloud = new IndexerService()
+      cloud.init()
+      expect(cloud.pendingRebuildNotice()?.detail).toMatch(/sent to OpenAI again/)
+    })
+
+    it('tells listeners when it is set and when it is dismissed, and not again for a dismiss with nothing pending', async () => {
+      const { IndexerService } = await import('./indexer-service')
+      writeFileSync(join(mocks.userData, 'index.db'), 'x')
+      await useNotesRoot(notesA)
+      const svc = new IndexerService()
+      const seen: Array<unknown> = []
+      const off = svc.subscribeRebuildNotice((notice) => seen.push(notice?.message ?? null))
+
+      svc.init()
+      svc.dismissRebuildNotice()
+      svc.dismissRebuildNotice()
+      off()
+      // Once the listener is gone it hears nothing more.
+      svc.close()
+      writeFileSync(join(mocks.userData, 'index.db'), 'x')
+      svc.init()
+
+      expect(seen).toEqual(['Ryte is rebuilding its search index', null])
+      expect(svc.pendingRebuildNotice()).not.toBeNull()
+    })
+  })
+
+  it('does not let a failed cleanup stop the start', async () => {
+    const { IndexerService } = await import('./indexer-service')
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      // A legacy database the process may not delete: its folder is read-only.
+      writeFileSync(join(mocks.userData, 'index.db'), 'x')
+      mkdirSync(join(mocks.userData, 'index'))
+      await useNotesRoot(notesA)
+      const { chmodSync } = await import('node:fs')
+      chmodSync(mocks.userData, 0o500)
+      try {
+        expect(new IndexerService().init()).toBe(true)
+        expect(existsSync(join(mocks.userData, 'index.db'))).toBe(true)
+        expect(errors).toHaveBeenCalledWith(expect.any(String), 'EACCES')
+      } finally {
+        chmodSync(mocks.userData, 0o700)
+      }
+    } finally {
+      errors.mockRestore()
+    }
   })
 })

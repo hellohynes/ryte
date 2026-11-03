@@ -6,12 +6,14 @@ import { applyFont } from './fonts/load-fonts'
 import FileOpenOverlay from './components/FileOpenOverlay.vue'
 import SearchOverlay from './components/SearchOverlay.vue'
 import PreferencesModal from './components/preferences/PreferencesModal.vue'
+import RebuildNotice from './components/RebuildNotice.vue'
 import ShellRail from './components/ShellRail.vue'
 import Sidebar from './components/Sidebar.vue'
 import StatusBar from './components/StatusBar.vue'
 import Viewer from './components/Viewer.vue'
 import WorkspaceTabs from './components/WorkspaceTabs.vue'
 import { useIndexStatusStore } from './stores/index-status'
+import { useRebuildNoticeStore } from './stores/rebuild-notice'
 import { useSearchStore } from './stores/search'
 import { useSettingsStore } from './stores/settings'
 import { useViewerStore } from './stores/viewer'
@@ -27,6 +29,7 @@ import {
 
 const settings = useSettingsStore()
 const indexStatus = useIndexStatusStore()
+const rebuildNotice = useRebuildNoticeStore()
 const viewer = useViewerStore()
 const search = useSearchStore()
 const workspace = useWorkspaceStore()
@@ -51,7 +54,12 @@ onMounted(async () => {
   window.addEventListener('keyup', onGlobalAppKeyup, true)
   window.addEventListener('blur', hideControlShortcutBadges)
   _unbindMenuCommand = window.ryte.app.onMenuCommand(handleMenuCommand)
-  await Promise.all([settings.hydrate(), indexStatus.bind(), workspace.hydrate()])
+  await Promise.all([
+    settings.hydrate(),
+    indexStatus.bind(),
+    rebuildNotice.bind(),
+    workspace.hydrate()
+  ])
   applySearchHistorySettings()
 
   await viewer.hydrate()
@@ -479,6 +487,7 @@ function onGlobalAppKeyup(event: KeyboardEvent): void {
       </section>
     </main>
 
+    <RebuildNotice />
     <StatusBar />
 
     <FileOpenOverlay v-if="showFileOpen" @close="showFileOpen = false" />

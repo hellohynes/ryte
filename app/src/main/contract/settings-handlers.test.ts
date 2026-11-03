@@ -70,7 +70,7 @@ function setup(): Setup {
   const applyColorMode = vi.fn((mode: string) => {
     calls.push(`applyColorMode:${mode}`)
   })
-  const restartIndexing = vi.fn(async () => {
+  const restartIndexing = vi.fn<(options: { reindex: boolean }) => Promise<void>>(async () => {
     calls.push('restartIndexing')
   })
   const validateProviderKey = vi.fn<
@@ -162,6 +162,70 @@ describe('save', () => {
     await handlers.save({ semanticIndexEnabled: true }, ctx)
 
     expect(restartIndexing).toHaveBeenCalledTimes(1)
+  })
+
+  describe('asking the restart to reindex', () => {
+    it('asks for a reindex when the notes folder changed', async () => {
+      const { handlers, restartIndexing } = setup()
+
+      await handlers.save({ notesRoot: '/synthetic/new-root' }, ctx)
+
+      expect(restartIndexing).toHaveBeenCalledTimes(1)
+      expect(restartIndexing).toHaveBeenCalledWith({ reindex: true })
+    })
+
+    it('does not ask for one when the restart is for another reason', async () => {
+      const { handlers, restartIndexing } = setup()
+
+      await handlers.save({ semanticIndexEnabled: true }, ctx)
+      await handlers.save({ deleteProviderKeys: ['openai'] }, ctx)
+      await handlers.save({ openaiKey: SECRET }, ctx)
+
+      expect(restartIndexing.mock.calls.map(([options]) => options)).toEqual([
+        { reindex: false },
+        { reindex: false },
+        { reindex: false }
+      ])
+    })
+
+    it('does not restart or ask for anything when the folder is saved again unchanged', async () => {
+      const { handlers, restartIndexing, settings } = setup()
+
+      await handlers.save({ notesRoot: String(settings.notesRoot) }, ctx)
+
+      expect(restartIndexing).not.toHaveBeenCalled()
+    })
+
+    it('asks for a reindex when the folder and an embedding setting change together, once', async () => {
+      const { handlers, restartIndexing } = setup()
+
+      await handlers.save({ notesRoot: '/synthetic/new-root', semanticIndexEnabled: true }, ctx)
+
+      expect(restartIndexing).toHaveBeenCalledTimes(1)
+      expect(restartIndexing).toHaveBeenCalledWith({ reindex: true })
+    })
+
+    it('compares the folder as written, so the same folder spelled another way restarts and reindexes once', async () => {
+      const { handlers, restartIndexing, settings } = setup()
+
+      await handlers.save({ notesRoot: `${String(settings.notesRoot)}/` }, ctx)
+
+      expect(restartIndexing).toHaveBeenCalledTimes(1)
+      expect(restartIndexing).toHaveBeenCalledWith({ reindex: true })
+    })
+
+    it('does not wait for the index pass, which the restart starts in the background', async () => {
+      const { handlers, restartIndexing } = setup()
+      let released = false
+      restartIndexing.mockImplementation(async () => {
+        // The restart itself finishes; the pass it started is not awaited by anyone.
+        released = true
+      })
+
+      await handlers.save({ notesRoot: '/synthetic/new-root' }, ctx)
+
+      expect(released).toBe(true)
+    })
   })
 
   it('rejects with the settings already saved and the color mode applied when the restart fails', async () => {

@@ -1,5 +1,5 @@
 import { contract, type Contract } from '../../contract'
-import type { IndexerStatus } from '../../contract/indexer'
+import type { IndexerStatus, RebuildNotice } from '../../contract/indexer'
 import type { IndexerProgress } from '../indexing/indexer'
 import type { Emit, Handlers } from './register'
 
@@ -8,6 +8,8 @@ export interface IndexerHandlerDependencies {
     getStatus(): IndexerProgress
     triggerReindex(): Promise<void>
     clearAndRebuild(beforeClear?: () => void): Promise<void>
+    pendingRebuildNotice(): RebuildNotice | null
+    dismissRebuildNotice(): void
   }
   /**
    * Runs only when the service is certain the rebuild will happen, so a refused or failed rebuild never
@@ -36,6 +38,13 @@ export function createIndexerHandlers({
 
     clearAndRebuild: async () => {
       await service.clearAndRebuild(beforeClear)
+    },
+
+    // Asking never uses the notice up: a window that opens or reloads later still shows it, until it is dismissed.
+    getRebuildNotice: async () => service.pendingRebuildNotice(),
+
+    dismissRebuildNotice: async () => {
+      service.dismissRebuildNotice()
     }
   }
 }
@@ -46,4 +55,14 @@ export function forwardIndexerStatus(
   emit: Emit
 ): () => void {
   return service.subscribe((progress) => emit(contract.indexer.events.status, toStatus(progress)))
+}
+
+/** Sends every change of the rebuild notice to every window through the registry's emitter. */
+export function forwardRebuildNotice(
+  service: { subscribeRebuildNotice(callback: (notice: RebuildNotice | null) => void): () => void },
+  emit: Emit
+): () => void {
+  return service.subscribeRebuildNotice((notice) =>
+    emit(contract.indexer.events.rebuildNotice, notice)
+  )
 }

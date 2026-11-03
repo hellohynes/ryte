@@ -1,15 +1,18 @@
 import { EventEmitter } from 'node:events'
-import { rmSync } from 'node:fs'
+import { mkdirSync, rmSync } from 'node:fs'
 
 import { Indexer, type IndexerProgress } from './indexer'
 import { IndexStateStore } from './index-state'
 import { OpenAIEmbeddingProvider } from './embedder'
 import { VectorStore } from './vector-store'
 import { settingsStore } from '../settings/settings-store'
-import { indexDbPath } from '../paths'
+import { userDataDir } from '../paths'
+import { indexLocationFor, removeStaleIndexFiles } from './index-location'
+import { rebuildNotice, type RebuildNotice } from './rebuild-notice'
 
 const STATUS_EVENT = 'status'
 const IDLE_EVENT = 'idle'
+const REBUILD_NOTICE_EVENT = 'rebuild-notice'
 // How long the embedding service gets to answer the check made before an index is cleared.
 const EMBEDDING_CHECK_TIMEOUT_MS = 15_000
 
@@ -54,6 +57,9 @@ export class IndexerService extends EventEmitter {
     lastIndexedAt: null
   }
   private running = false
+  // Set when a start removed the old single index database and cleared when the person dismisses it; held here, not sent once,
+  // so a window that opens or reloads later still shows it.
+  private pendingNotice: RebuildNotice | null = null
   // A reindex asked for during a run: the run may be working on settings that have just changed.
   private reindexQueued = false
   // Callers of clearAndRebuild waiting for a run to end; they will index everything themselves.
@@ -73,10 +79,16 @@ export class IndexerService extends EventEmitter {
     const embedder = openaiKey
       ? new OpenAIEmbeddingProvider(openaiKey, { model: settings.embeddingModel })
       : null
-    const dbPath = indexDbPath()
+    // Each notes folder has its own index file, so a folder change never meets another folder's rows.
+    const location = indexLocationFor(userDataDir(), settings.notesRoot)
+    const dbPath = location.path
 
+    let legacyRemoved = false
     try {
+      legacyRemoved = removeStaleIndexFiles(userDataDir(), location).legacyRemoved
+      mkdirSync(location.directory, { recursive: true })
       this.initializeStores(dbPath, settings.notesRoot, embedder)
+      if (legacyRemoved) this.setNotice(rebuildNotice({ cloud: embedder !== null }))
       return true
     } catch (error) {
       this.close()
@@ -88,6 +100,7 @@ export class IndexerService extends EventEmitter {
       removeIndexDatabaseFiles(dbPath)
       try {
         this.initializeStores(dbPath, settings.notesRoot, embedder)
+        if (legacyRemoved) this.setNotice(rebuildNotice({ cloud: embedder !== null }))
         return true
       } catch (rebuildError) {
         this.close()
@@ -125,6 +138,27 @@ export class IndexerService extends EventEmitter {
       chunksDone: totals.chunks,
       lastIndexedAt: null
     }
+  }
+
+  /** The notice that the search index is being rebuilt, from a start that removed the old index until it is dismissed. */
+  pendingRebuildNotice(): RebuildNotice | null {
+    return this.pendingNotice
+  }
+
+  dismissRebuildNotice(): void {
+    this.setNotice(null)
+  }
+
+  /** Every change of the notice (set, and dismissed), for the windows. */
+  subscribeRebuildNotice(callback: (notice: RebuildNotice | null) => void): () => void {
+    this.on(REBUILD_NOTICE_EVENT, callback)
+    return () => this.off(REBUILD_NOTICE_EVENT, callback)
+  }
+
+  private setNotice(notice: RebuildNotice | null): void {
+    if (this.pendingNotice === null && notice === null) return
+    this.pendingNotice = notice
+    this.emit(REBUILD_NOTICE_EVENT, notice)
   }
 
   getStatus(): IndexerProgress {
@@ -211,7 +245,9 @@ export class IndexerService extends EventEmitter {
         chunksDone: 0
       })
       beforeClear?.()
-      const dbPath = indexDbPath()
+      // The folder and its file are taken once, so a folder change during the rebuild cannot mix them.
+      const notesRoot = settingsStore.load().notesRoot
+      const dbPath = indexLocationFor(userDataDir(), notesRoot).path
       this.close()
       removeIndexDatabaseFiles(dbPath)
       if (!this.init()) {
@@ -221,7 +257,7 @@ export class IndexerService extends EventEmitter {
         await this.indexAll()
       } catch (err) {
         if (!this.embedder) throw err
-        await this.rebuildForKeywordSearch(dbPath, err, beforeClear)
+        await this.rebuildForKeywordSearch(dbPath, notesRoot, err, beforeClear)
       }
     } catch (err) {
       this.broadcastIndexingError(err)
@@ -233,11 +269,11 @@ export class IndexerService extends EventEmitter {
 
   private async rebuildForKeywordSearch(
     dbPath: string,
+    notesRoot: string,
     cause: unknown,
     beforeClear?: () => void
   ): Promise<void> {
     const embedder = this.embedder
-    const notesRoot = settingsStore.load().notesRoot
     // The store is replaced twice more, so anything holding the current one must let go first.
     beforeClear?.()
     this.close()
@@ -363,7 +399,7 @@ export class IndexerService extends EventEmitter {
 
   private recoverIndexStore(error: unknown): boolean {
     if (!isRecoverableIndexStoreError(error)) return false
-    const dbPath = indexDbPath()
+    const dbPath = indexLocationFor(userDataDir(), settingsStore.load().notesRoot).path
     this.close()
     removeIndexDatabaseFiles(dbPath)
     return this.init()

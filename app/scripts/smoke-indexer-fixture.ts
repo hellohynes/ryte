@@ -5,11 +5,12 @@
  * user's real notes folder and does not print note body content.
  */
 
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { Indexer } from '../src/main/indexing/indexer'
+import { indexLocationFor } from '../src/main/indexing/index-location'
 import { IndexStateStore } from '../src/main/indexing/index-state'
 import { VectorStore } from '../src/main/indexing/vector-store'
 import type { EmbeddingProvider } from '../src/main/indexing/embedder'
@@ -65,6 +66,81 @@ function writeFixtureCorpus(notesRoot: string): { alphaPath: string } {
   writeFileSync(join(notesRoot, 'ignored.txt'), 'not markdown')
 
   return { alphaPath }
+}
+
+async function indexFolderInto(notesRoot: string, dbPath: string): Promise<VectorStore> {
+  mkdirSync(join(dbPath, '..'), { recursive: true })
+  const store = new VectorStore(dbPath)
+  store.init(DIM)
+  const state = new IndexStateStore(store.database)
+  state.init()
+  await new Indexer({
+    notesRoot,
+    embedder: fakeEmbedder,
+    vectorStore: store,
+    indexState: state
+  }).indexAll()
+  return store
+}
+
+function storedText(store: VectorStore, sourcePath: string): string {
+  const rows = store.database
+    .prepare('SELECT text FROM chunks WHERE source_path = ?')
+    .all(sourcePath) as Array<{ text: string }>
+  return rows.map((row) => row.text).join('\n')
+}
+
+/**
+ * A note at the same relative path in two folders. The folder indexed second has the older copy, so a shared index keeps the first
+ * folder's text; one index file per folder does not.
+ */
+async function sameRelativePathScenario(): Promise<void> {
+  const tempDir = mkdtempSync(join(tmpdir(), 'ryte-fixture-two-folders-'))
+  try {
+    const first = join(tempDir, 'first')
+    const second = join(tempDir, 'second')
+    mkdirSync(first)
+    mkdirSync(second)
+    writeFileSync(join(first, 'shared.md'), '# Shared\n\nFIRST folder text about gardens.')
+    writeFileSync(join(second, 'shared.md'), '# Shared\n\nSECOND folder text about harbours.')
+    const twoDaysAgo = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000)
+    utimesSync(join(second, 'shared.md'), twoDaysAgo, twoDaysAgo)
+
+    // The old layout: one file for every folder. This must still show the stale text, or the check below proves nothing.
+    const sharedPath = join(tempDir, 'shared-index', 'index.db')
+    await indexFolderInto(first, sharedPath).then((store) => store.close())
+    const shared = await indexFolderInto(second, sharedPath)
+    const staleText = storedText(shared, 'shared.md')
+    shared.close()
+    assert(
+      staleText.includes('FIRST') && !staleText.includes('SECOND'),
+      'the fixture no longer reproduces stale content in a shared index, so the per-folder check proves nothing'
+    )
+
+    // One file per folder: each folder's file holds only that folder's text.
+    const userData = join(tempDir, 'user-data')
+    const firstStore = await indexFolderInto(first, indexLocationFor(userData, first).path)
+    const secondStore = await indexFolderInto(second, indexLocationFor(userData, second).path)
+    const firstText = storedText(firstStore, 'shared.md')
+    const secondText = storedText(secondStore, 'shared.md')
+    firstStore.close()
+    secondStore.close()
+    assert(
+      indexLocationFor(userData, first).path !== indexLocationFor(userData, second).path,
+      'expected two folders to have two index files'
+    )
+    assert(
+      secondText.includes('SECOND') && !secondText.includes('FIRST'),
+      "expected the second folder's index to hold only its own text for a path both folders have"
+    )
+    assert(
+      firstText.includes('FIRST') && !firstText.includes('SECOND'),
+      'expected the first folder to keep its own text'
+    )
+    console.log('Same-path two-folder check passed (one index file per folder).')
+  } finally {
+    rmSync(tempDir, { recursive: true, force: true })
+  }
 }
 
 async function main(): Promise<void> {
@@ -126,6 +202,7 @@ async function main(): Promise<void> {
     console.log('Safe indexer smoke test passed.')
     console.log(`  files indexed: ${first.filesIndexed}`)
     console.log(`  chunks indexed: ${first.chunksIndexed}`)
+    await sameRelativePathScenario()
   } finally {
     rmSync(tempDir, { recursive: true, force: true })
   }
