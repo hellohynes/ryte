@@ -1,11 +1,13 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 import type { FileCatalogChangeEvent, FileCatalogEntry } from '../../../shared/files'
+import { useSettingsStore } from './settings'
 
 const CATALOG_REFRESH_DEBOUNCE_MS = 100
 
 export const useFileCatalogStore = defineStore('file-catalog', () => {
+  const settings = useSettingsStore()
   const files = ref<FileCatalogEntry[]>([])
   const notesRoot = ref<string | null>(null)
   const loading = ref(false)
@@ -70,6 +72,35 @@ export const useFileCatalogStore = defineStore('file-catalog', () => {
       .filter((change) => change.revision > changeRevision)
       .map((change) => change.event)
   }
+
+  // The catalog belongs to one notes folder. When the folder changes, nothing of the old one may stay on screen, and an answer
+  // still on its way for the old one must not land. A screen that is using the catalog gets the new folder's at once; with none
+  // bound, the next one to bind loads it (the first bind always loads).
+  function followNotesFolder(): void {
+    refreshRequestId += 1
+    if (refreshTimer) {
+      clearTimeout(refreshTimer)
+      refreshTimer = null
+    }
+    catalogChanges.length = 0
+    files.value = []
+    notesRoot.value = null
+    error.value = null
+    loading.value = false
+    revision.value += 1
+    if (bindCount > 0) void refreshCatalog()
+  }
+
+  watch(
+    () => settings.state?.notesRoot,
+    (next, previous) => {
+      // The watch fires only when the folder itself differs, never for another setting. The first folder the settings report is
+      // not a change.
+      if (previous === undefined || next === undefined) return
+      followNotesFolder()
+    },
+    { flush: 'sync' }
+  )
 
   async function hydrate(): Promise<void> {
     const wasUnbound = bindCount === 0

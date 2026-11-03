@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { FileCatalogResponse } from '../../../shared/files'
 import { useFileCatalogStore } from './file-catalog'
+import { useSettingsStore } from './settings'
 
 type CatalogChangeEvent =
   | { type: 'upsert'; file: FileCatalogResponse['files'][number] }
@@ -232,6 +233,229 @@ describe('useFileCatalogStore', () => {
 
     await catalog.hydrate()
     expect(onCatalogChanged).toHaveBeenCalledTimes(2)
+    expect(listCatalog).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('useFileCatalogStore when the notes folder changes', () => {
+  function catalogOf(root: string, ...paths: string[]): FileCatalogResponse {
+    return { notesRoot: root, files: paths.map(catalogEntry) }
+  }
+
+  function install(listCatalog: ReturnType<typeof vi.fn>): {
+    changed: Array<(event?: CatalogChangeEvent) => void>
+  } {
+    const changed: Array<(event?: CatalogChangeEvent) => void> = []
+    vi.stubGlobal('window', {
+      ryte: {
+        files: {
+          listCatalog,
+          onCatalogChanged: vi.fn((cb: (event?: CatalogChangeEvent) => void) => {
+            changed.push(cb)
+            return vi.fn()
+          })
+        }
+      }
+    })
+    return { changed }
+  }
+
+  function setFolder(root: string | null): void {
+    const settings = useSettingsStore()
+    settings.state = (root === null ? null : { notesRoot: root, fontFamily: 'geist' }) as never
+  }
+
+  beforeEach(() => {
+    setActivePinia(createPinia())
+    vi.unstubAllGlobals()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it("drops the old folder's entries at once and loads the new folder's", async () => {
+    const second = deferred<FileCatalogResponse>()
+    const listCatalog = vi
+      .fn()
+      .mockResolvedValueOnce(catalogOf('/a', 'a1.md', 'a2.md'))
+      .mockReturnValueOnce(second.promise)
+    install(listCatalog)
+    const catalog = useFileCatalogStore()
+    setFolder('/a')
+    await catalog.hydrate()
+    expect(catalog.files).toHaveLength(2)
+
+    setFolder('/b')
+
+    expect(catalog.files).toEqual([])
+    expect(catalog.notesRoot).toBeNull()
+    expect(catalog.loading).toBe(true)
+    expect(listCatalog).toHaveBeenCalledTimes(2)
+
+    second.resolve(catalogOf('/b', 'b1.md'))
+    await flushAsync()
+
+    expect(catalog.notesRoot).toBe('/b')
+    expect(catalog.files.map((file) => file.sourcePath)).toEqual(['b1.md'])
+    expect(catalog.loading).toBe(false)
+  })
+
+  it("never lets a load started for the old folder replace the new folder's entries", async () => {
+    const first = deferred<FileCatalogResponse>()
+    const listCatalog = vi
+      .fn()
+      .mockReturnValueOnce(first.promise)
+      .mockResolvedValueOnce(catalogOf('/b', 'b1.md'))
+    install(listCatalog)
+    const catalog = useFileCatalogStore()
+    setFolder('/a')
+    const hydrating = catalog.hydrate()
+
+    setFolder('/b')
+    await flushAsync()
+    first.resolve(catalogOf('/a', 'a1.md', 'a2.md'))
+    await hydrating
+    await flushAsync()
+
+    expect(catalog.notesRoot).toBe('/b')
+    expect(catalog.files.map((file) => file.sourcePath)).toEqual(['b1.md'])
+  })
+
+  it('does not load again for a settings change that keeps the folder', async () => {
+    const listCatalog = vi.fn().mockResolvedValue(catalogOf('/a', 'a1.md'))
+    install(listCatalog)
+    const catalog = useFileCatalogStore()
+    setFolder('/a')
+    await catalog.hydrate()
+
+    setFolder('/a')
+    useSettingsStore().state = { notesRoot: '/a', fontFamily: 'roboto' } as never
+    await flushAsync()
+
+    expect(listCatalog).toHaveBeenCalledTimes(1)
+    expect(catalog.files).toHaveLength(1)
+  })
+
+  it('does not load again when the settings first arrive', async () => {
+    const listCatalog = vi.fn().mockResolvedValue(catalogOf('/a', 'a1.md'))
+    install(listCatalog)
+    const catalog = useFileCatalogStore()
+    await catalog.hydrate()
+
+    setFolder('/a')
+    await flushAsync()
+
+    expect(listCatalog).toHaveBeenCalledTimes(1)
+    expect(catalog.files).toHaveLength(1)
+  })
+
+  it('loads nothing while no screen uses the catalog, and the next screen gets the new folder', async () => {
+    const listCatalog = vi
+      .fn()
+      .mockResolvedValueOnce(catalogOf('/a', 'a1.md'))
+      .mockResolvedValueOnce(catalogOf('/b', 'b1.md', 'b2.md'))
+    install(listCatalog)
+    const catalog = useFileCatalogStore()
+    setFolder('/a')
+    await catalog.hydrate()
+    catalog.unbind()
+
+    setFolder('/b')
+    await flushAsync()
+    expect(listCatalog).toHaveBeenCalledTimes(1)
+    expect(catalog.files).toEqual([])
+
+    await catalog.hydrate()
+    expect(catalog.notesRoot).toBe('/b')
+    expect(catalog.files).toHaveLength(2)
+  })
+
+  it("shows an error and none of the old folder's entries when the new folder's load fails", async () => {
+    const listCatalog = vi
+      .fn()
+      .mockResolvedValueOnce(catalogOf('/a', 'a1.md'))
+      .mockRejectedValueOnce(new Error('cannot list'))
+    install(listCatalog)
+    const catalog = useFileCatalogStore()
+    setFolder('/a')
+    await catalog.hydrate()
+
+    setFolder('/b')
+    await flushAsync()
+
+    expect(catalog.error).toBe('cannot list')
+    expect(catalog.files).toEqual([])
+  })
+
+  it('keeps a change for the new folder that arrives while its catalog loads', async () => {
+    const second = deferred<FileCatalogResponse>()
+    const listCatalog = vi
+      .fn()
+      .mockResolvedValueOnce(catalogOf('/a', 'a1.md'))
+      .mockReturnValueOnce(second.promise)
+    const { changed } = install(listCatalog)
+    const catalog = useFileCatalogStore()
+    setFolder('/a')
+    await catalog.hydrate()
+
+    setFolder('/b')
+    changed[0]?.({ type: 'upsert', file: catalogEntry('b-new.md') })
+    second.resolve(catalogOf('/b', 'b1.md'))
+    await flushAsync()
+
+    expect(catalog.files.map((file) => file.sourcePath).sort()).toEqual(['b-new.md', 'b1.md'])
+  })
+
+  it('never lets a load that was still running for the old folder land after the screen using it is gone', async () => {
+    const first = deferred<FileCatalogResponse>()
+    const listCatalog = vi.fn().mockReturnValueOnce(first.promise)
+    install(listCatalog)
+    const catalog = useFileCatalogStore()
+    setFolder('/a')
+    const hydrating = catalog.hydrate()
+    catalog.unbind()
+
+    setFolder('/b')
+    first.resolve(catalogOf('/a', 'a1.md'))
+    await hydrating
+    await flushAsync()
+
+    expect(catalog.files).toEqual([])
+    expect(catalog.notesRoot).toBeNull()
+    expect(catalog.loading).toBe(false)
+  })
+
+  it('forgets a failed load of the old folder when the folder changes', async () => {
+    const listCatalog = vi.fn().mockRejectedValueOnce(new Error('cannot list'))
+    install(listCatalog)
+    const catalog = useFileCatalogStore()
+    setFolder('/a')
+    await catalog.hydrate()
+    expect(catalog.error).toBe('cannot list')
+    catalog.unbind()
+
+    setFolder('/b')
+
+    expect(catalog.error).toBeNull()
+  })
+
+  it('cancels a refresh that was waiting for the old folder, so it does not load twice', async () => {
+    vi.useFakeTimers()
+    const listCatalog = vi
+      .fn()
+      .mockResolvedValueOnce(catalogOf('/a', 'a1.md'))
+      .mockResolvedValue(catalogOf('/b', 'b1.md'))
+    const { changed } = install(listCatalog)
+    const catalog = useFileCatalogStore()
+    setFolder('/a')
+    await catalog.hydrate()
+    changed[0]?.()
+
+    setFolder('/b')
+    await vi.advanceTimersByTimeAsync(300)
+    await flushAsync()
+
     expect(listCatalog).toHaveBeenCalledTimes(2)
   })
 })
