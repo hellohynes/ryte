@@ -8,7 +8,16 @@ vi.mock('openai', () => ({
   }))
 }))
 
-import { OpenAIEmbeddingProvider, BATCH_SIZE } from './embedder'
+import OpenAI from 'openai'
+
+import {
+  BATCH_SIZE,
+  EmbeddingReplyError,
+  OpenAIEmbeddingProvider,
+  REQUEST_TIMEOUT_MS,
+  classifyEmbeddingError,
+  describeEmbeddingError
+} from './embedder'
 
 function fakeResponse(count: number): {
   data: Array<{ embedding: number[]; index: number }>
@@ -21,9 +30,9 @@ function fakeResponse(count: number): {
   }
 }
 
-function rateLimitError(): Error {
-  const e = new Error('rate limit')
-  ;(e as Error & { status: number }).status = 429
+function statusError(status: number, message = 'failed'): Error {
+  const e = new Error(message)
+  ;(e as Error & { status: number }).status = status
   return e
 }
 
@@ -74,32 +83,71 @@ describe('OpenAIEmbeddingProvider', () => {
     expect(result[2][0]).toBe(2)
   })
 
-  it('retries on 429 up to 3 times before succeeding', async () => {
-    createMock
-      .mockRejectedValueOnce(rateLimitError())
-      .mockRejectedValueOnce(rateLimitError())
-      .mockResolvedValueOnce(fakeResponse(1))
-    const provider = new OpenAIEmbeddingProvider('sk-test', { retryDelaysMs: [1, 1, 1] })
-    const result = await provider.embed(['a'])
-    expect(createMock).toHaveBeenCalledTimes(3)
-    expect(result).toHaveLength(1)
+  it('builds the client with a 60 second timeout and no retries of its own', () => {
+    vi.mocked(OpenAI).mockClear()
+
+    new OpenAIEmbeddingProvider('sk-test')
+
+    expect(REQUEST_TIMEOUT_MS).toBe(60_000)
+    expect(vi.mocked(OpenAI)).toHaveBeenCalledWith(
+      expect.objectContaining({ timeout: 60_000, maxRetries: 0 })
+    )
   })
 
-  it('throws when 429 persists past max attempts', async () => {
-    createMock
-      .mockRejectedValueOnce(rateLimitError())
-      .mockRejectedValueOnce(rateLimitError())
-      .mockRejectedValueOnce(rateLimitError())
-    const provider = new OpenAIEmbeddingProvider('sk-test', { retryDelaysMs: [1, 1, 1] })
-    await expect(provider.embed(['a'])).rejects.toThrow('rate limit')
+  it('makes one request per failure, whatever the status: the embedding step owns the retries', async () => {
+    for (const status of [429, 500, 400, 401]) {
+      createMock.mockReset()
+      createMock.mockRejectedValueOnce(statusError(status))
+      const provider = new OpenAIEmbeddingProvider('sk-test')
+      await expect(provider.embed(['a'])).rejects.toThrow('failed')
+      expect(createMock).toHaveBeenCalledTimes(1)
+    }
+  })
+})
+
+describe('classifyEmbeddingError', () => {
+  it('sorts a failure into what to do next, by status', () => {
+    expect(classifyEmbeddingError(statusError(401))).toBe('auth')
+    expect(classifyEmbeddingError(statusError(403))).toBe('auth')
+    expect(classifyEmbeddingError(statusError(429))).toBe('rate-limit')
+    expect(classifyEmbeddingError(statusError(500))).toBe('service')
+    expect(classifyEmbeddingError(statusError(503))).toBe('service')
+    expect(classifyEmbeddingError(statusError(400))).toBe('bad-input')
+    expect(classifyEmbeddingError(statusError(413))).toBe('bad-input')
+    expect(classifyEmbeddingError(statusError(422))).toBe('bad-input')
   })
 
-  it('does not retry on non-429 errors', async () => {
-    const badReq = new Error('bad request')
-    ;(badReq as Error & { status: number }).status = 400
-    createMock.mockRejectedValueOnce(badReq)
-    const provider = new OpenAIEmbeddingProvider('sk-test', { retryDelaysMs: [1, 1, 1] })
-    await expect(provider.embed(['a'])).rejects.toThrow('bad request')
-    expect(createMock).toHaveBeenCalledTimes(1)
+  it('does not blame the note for a timeout, a conflict or a model the key cannot use', () => {
+    expect(classifyEmbeddingError(statusError(408))).toBe('service')
+    expect(classifyEmbeddingError(statusError(409))).toBe('service')
+    expect(classifyEmbeddingError(statusError(404))).toBe('auth')
+    expect(classifyEmbeddingError(statusError(418))).toBe('service')
+  })
+
+  it('treats a failure with no status, as a refused or timed-out connection gives, as offline', () => {
+    expect(classifyEmbeddingError(new Error('Connection error.'))).toBe('offline')
+    expect(classifyEmbeddingError(Object.assign(new Error('x'), { code: 'ECONNREFUSED' }))).toBe(
+      'offline'
+    )
+    expect(classifyEmbeddingError(undefined)).toBe('offline')
+  })
+
+  it('treats a reply that is not one vector per text as the service failing', () => {
+    expect(classifyEmbeddingError(new EmbeddingReplyError('1 vectors for 2 chunks'))).toBe(
+      'service'
+    )
+  })
+})
+
+describe('describeEmbeddingError', () => {
+  it('gives the class and the status or code, and never the message', () => {
+    const secret = 'sk-live-abc123 and the note title Quarterly Plan'
+
+    expect(describeEmbeddingError(statusError(401, secret))).toBe('auth 401')
+    expect(describeEmbeddingError(Object.assign(new Error(secret), { code: 'ETIMEDOUT' }))).toBe(
+      'offline ETIMEDOUT'
+    )
+    expect(describeEmbeddingError(new Error(secret))).toBe('offline')
+    expect(describeEmbeddingError(new EmbeddingReplyError(secret))).toBe('service')
   })
 })

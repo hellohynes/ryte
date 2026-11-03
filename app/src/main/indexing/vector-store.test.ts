@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 // compiled for Electron ABI during dev. Kept for reference / manual run
 // under Node ABI. Behavior validated via scripts/smoke-indexer.ts + TS-001.
 
+import { IndexStateStore } from './index-state'
 import { VectorStore, type ChunkWithVector } from './vector-store'
 
 const DIM = 4 // small dim for tests
@@ -184,5 +185,160 @@ describe('VectorStore — FTS5 + hybridSearch (native, excluded from pnpm test)'
     expect(store.keywordSearch('walrus', 5)).toEqual([])
     const fresh = store.keywordSearch('penguin', 5)
     expect(fresh.map((r) => r.text)).toEqual(['new content penguin'])
+  })
+})
+
+describe('VectorStore.attachVectors', () => {
+  let tempDir: string
+  let store: VectorStore
+  let state: IndexStateStore
+
+  const vec = (n: number): Float32Array => Float32Array.from([n, 0, 0, 0])
+
+  /** A note as the local pass leaves it: keyword rows, a file state at `mtimeMs`, no vectors. */
+  function indexLocally(path: string, texts: string[], mtimeMs = 100, indexedAtMs = 5000): void {
+    store.replaceFileTextChunks(
+      path,
+      texts.map((text) => fakeChunk(path, ['H'], text).chunk)
+    )
+    state.markIndexed(path, mtimeMs, texts.length, indexedAtMs, false)
+  }
+
+  function attachmentsFor(
+    path: string,
+    number = 1
+  ): Array<{ id: number; text: string; vector: Float32Array }> {
+    return store.chunkTextsForFile(path).map((chunk) => ({ ...chunk, vector: vec(number) }))
+  }
+
+  function vectorIds(): number[] {
+    return (
+      store.database
+        .prepare('SELECT rowid AS id FROM chunk_vectors ORDER BY rowid')
+        .all() as Array<{
+        id: number
+      }>
+    ).map((row) => row.id)
+  }
+
+  function fileState(path: string): { mtime: number; indexedAt: number; embedded: number } {
+    return store.database
+      .prepare(
+        'SELECT mtime_ms AS mtime, indexed_at_ms AS indexedAt, embedded FROM file_state WHERE source_path = ?'
+      )
+      .get(path) as { mtime: number; indexedAt: number; embedded: number }
+  }
+
+  beforeEach(() => {
+    tempDir = mkdtempSync(join(tmpdir(), 'ryte-attach-'))
+    store = new VectorStore(join(tempDir, 'index.db'))
+    store.init(DIM)
+    state = new IndexStateStore(store.database)
+    state.init()
+  })
+
+  afterEach(() => {
+    store.close()
+    rmSync(tempDir, { recursive: true, force: true })
+  })
+
+  it('gives every chunk its vector and marks the note embedded, leaving the keyword rows and times alone', () => {
+    indexLocally('a.md', ['alpha harbour', 'beta garden'])
+    const before = store.chunkTextsForFile('a.md')
+
+    expect(store.attachVectors('a.md', 100, attachmentsFor('a.md'))).toBe('attached')
+
+    expect(vectorIds()).toEqual(before.map((chunk) => chunk.id))
+    expect(store.chunkTextsForFile('a.md')).toEqual(before)
+    expect(store.keywordSearch('harbour', 5).map((row) => row.text)).toEqual(['alpha harbour'])
+    expect(fileState('a.md')).toEqual({ mtime: 100, indexedAt: 5000, embedded: 1 })
+    expect(state.unembeddedCount()).toBe(0)
+    expect(store.sourcePathsIndexedAfter(4999)).toEqual(['a.md'])
+  })
+
+  it('makes the note findable by meaning', () => {
+    indexLocally('a.md', ['alpha harbour'])
+    store.attachVectors('a.md', 100, attachmentsFor('a.md'))
+
+    expect(store.hybridSearch('zzzz', vec(1), 3, 3).map((row) => row.sourcePath)).toEqual(['a.md'])
+  })
+
+  it('attaches nothing when the file changed since the vectors were made', () => {
+    indexLocally('a.md', ['alpha harbour'], 200)
+
+    expect(store.attachVectors('a.md', 100, attachmentsFor('a.md'))).toBe('stale')
+
+    expect(vectorIds()).toEqual([])
+    expect(fileState('a.md').embedded).toBe(0)
+  })
+
+  it('attaches nothing when the note was indexed again and its chunks have new ids', () => {
+    indexLocally('a.md', ['alpha harbour'])
+    const old = attachmentsFor('a.md')
+    indexLocally('a.md', ['alpha harbour'])
+
+    expect(store.attachVectors('a.md', 100, old)).toBe('stale')
+
+    // No orphan vector points at a chunk that no longer exists.
+    expect(vectorIds()).toEqual([])
+  })
+
+  it('attaches nothing when a chunk has the same id but different text', () => {
+    indexLocally('a.md', ['alpha harbour'])
+    const old = attachmentsFor('a.md')
+    old[0] = { ...old[0], text: 'something else' }
+
+    expect(store.attachVectors('a.md', 100, old)).toBe('stale')
+    expect(vectorIds()).toEqual([])
+  })
+
+  it('attaches nothing when the number of chunks differs', () => {
+    indexLocally('a.md', ['alpha', 'beta'])
+    const [first] = attachmentsFor('a.md')
+
+    expect(store.attachVectors('a.md', 100, [first])).toBe('stale')
+    expect(store.attachVectors('a.md', 100, [])).toBe('stale')
+    expect(vectorIds()).toEqual([])
+  })
+
+  it('attaches nothing for a note that is not indexed or was removed', () => {
+    expect(store.attachVectors('missing.md', 100, [])).toBe('stale')
+
+    indexLocally('a.md', ['alpha'])
+    const old = attachmentsFor('a.md')
+    store.deleteFileChunks('a.md')
+    state.markRemoved('a.md')
+
+    expect(store.attachVectors('a.md', 100, old)).toBe('stale')
+    expect(vectorIds()).toEqual([])
+  })
+
+  it('does not attach twice to a note that already has its vectors', () => {
+    indexLocally('a.md', ['alpha'])
+    expect(store.attachVectors('a.md', 100, attachmentsFor('a.md'))).toBe('attached')
+
+    expect(store.attachVectors('a.md', 100, attachmentsFor('a.md', 2))).toBe('stale')
+    expect(vectorIds()).toHaveLength(1)
+  })
+
+  it("writes none of a note's vectors when one has the wrong size", () => {
+    indexLocally('a.md', ['alpha', 'beta'])
+    const items = attachmentsFor('a.md')
+    items[1] = { ...items[1], vector: Float32Array.from([1, 0]) }
+
+    expect(() => store.attachVectors('a.md', 100, items)).toThrow(/dim/i)
+
+    expect(vectorIds()).toEqual([])
+    expect(fileState('a.md').embedded).toBe(0)
+  })
+
+  it('leaves other notes untouched', () => {
+    indexLocally('a.md', ['alpha'])
+    indexLocally('b.md', ['beta'])
+
+    store.attachVectors('a.md', 100, attachmentsFor('a.md'))
+
+    expect(fileState('b.md').embedded).toBe(0)
+    expect(state.unembeddedSources().map((source) => source.sourcePath)).toEqual(['b.md'])
   })
 })

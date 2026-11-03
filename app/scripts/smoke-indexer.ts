@@ -1,7 +1,7 @@
 /**
  * Synthetic smoke test for the indexer pipeline.
- * Runs against an explicitly provided notes folder with a FAKE embedder
- * (no API key needed). This script can inspect and sample real note content,
+ * Runs against an explicitly provided notes folder as a local keyword pass
+ * (no embeddings, no API key needed). This script can inspect and sample real note content,
  * so it intentionally requires an explicit path argument.
  *
  * Validates: walker discovers files, chunker handles real markdown,
@@ -18,14 +18,8 @@ import { join } from 'node:path'
 import { Indexer } from '../src/main/indexing/indexer'
 import { IndexStateStore } from '../src/main/indexing/index-state'
 import { VectorStore } from '../src/main/indexing/vector-store'
-import type { EmbeddingProvider } from '../src/main/indexing/embedder'
 
 const DIM = 1536
-
-const fakeEmbedder: EmbeddingProvider = {
-  dim: DIM,
-  embed: async (texts) => texts.map(() => new Float32Array(DIM))
-}
 
 async function main(): Promise<void> {
   const notesRoot = process.argv.find(
@@ -50,12 +44,7 @@ async function main(): Promise<void> {
   const state = new IndexStateStore(store.database)
   state.init()
 
-  const indexer = new Indexer({
-    notesRoot,
-    embedder: fakeEmbedder,
-    vectorStore: store,
-    indexState: state
-  })
+  const indexer = new Indexer({ notesRoot, vectorStore: store, indexState: state })
 
   const start = Date.now()
   let lastReport = start

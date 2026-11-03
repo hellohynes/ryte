@@ -5,6 +5,11 @@ export interface IndexTotals {
   chunks: number
 }
 
+export interface UnembeddedSource {
+  sourcePath: string
+  mtimeMs: number
+}
+
 export interface IndexedSourceState {
   sourcePath: string
   mtimeMs: number
@@ -136,6 +141,25 @@ export class IndexStateStore {
       )
       .all(indexedAfterMs) as IndexedSourceState[]
     return rows
+  }
+
+  /** Notes that have chunks but no vectors yet, most recently changed first: the embedding queue. */
+  unembeddedSources(): UnembeddedSource[] {
+    return this.db
+      .prepare(
+        `SELECT source_path AS sourcePath, mtime_ms AS mtimeMs
+         FROM file_state
+         WHERE embedded = 0 AND chunk_count > 0
+         ORDER BY mtime_ms DESC, source_path`
+      )
+      .all() as UnembeddedSource[]
+  }
+
+  unembeddedCount(): number {
+    const row = this.db
+      .prepare('SELECT COUNT(*) AS n FROM file_state WHERE embedded = 0 AND chunk_count > 0')
+      .get() as { n: number }
+    return row.n
   }
 
   totals(): IndexTotals {

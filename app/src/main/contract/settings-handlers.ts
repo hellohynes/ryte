@@ -31,6 +31,12 @@ export interface SettingsHandlerDependencies {
   listAuthorizedOpenAIModels: (apiKey: string) => Promise<string[]>
 }
 
+/** What the indexer needs from the saved agreement to send notes to a provider: that it exists and is for this provider and model. */
+function agreementKey(settings: SettingsFile): string | null {
+  const agreement = settings.semanticIndexAcknowledgement
+  return agreement ? `${agreement.provider}/${agreement.model}` : null
+}
+
 /** Whether a settings change means the index has to be rebuilt on a new root, key or embedding choice. */
 export function settingsPatchRequiresIndexerRestart(
   patch: SettingsUpdate,
@@ -43,7 +49,9 @@ export function settingsPatchRequiresIndexerRestart(
     patch.deleteProviderKeys?.includes('openai') === true ||
     before.semanticIndexEnabled !== after.semanticIndexEnabled ||
     before.embeddingProvider !== after.embeddingProvider ||
-    before.embeddingModel !== after.embeddingModel
+    before.embeddingModel !== after.embeddingModel ||
+    // Main embeds only with the agreement, so taking it back or changing what it covers stops or starts that.
+    agreementKey(before) !== agreementKey(after)
   )
 }
 

@@ -79,7 +79,6 @@ describe('Indexer memory behavior', () => {
 
     const indexer = new Indexer({
       notesRoot,
-      embedder: null,
       vectorStore,
       indexState
     })

@@ -6,7 +6,7 @@ Local macOS app for searching and browsing a user-selected markdown folder — a
 
 - **Indexes** your notes corpus into a local SQLite database with keyword search by default
 - **Searches locally** in Auto, Keyword, or Hybrid retrieval modes; keyword mode works offline
-- **Optionally adds semantic search** using OpenAI embeddings when explicitly enabled in Preferences (AI Tools); turning it on gives existing notes embeddings the next time they are indexed, and any note whose embedding failed is retried then
+- **Optionally adds semantic search** using OpenAI embeddings when explicitly enabled in Preferences (AI Tools); it needs your saved agreement to send notes to OpenAI, and turning it on adds embeddings in the background after the keyword index is ready, so search works at once and a note whose embedding failed is retried automatically
 - **Optionally generates answers** using a configured OpenAI or Anthropic model. An answer is a short TL;DR followed by collapsible sections, one per area the notes cover, and newer notes carry more weight than older ones. When the question asks about a plan, timeline, progress or next steps, a Done / In Progress / Backlog timeline comes between the TL;DR and the sections, with consecutive Backlog steps listed under one node. Tickets and pull requests a note gives as a full web address (a GitHub pull request or issue, or an Atlassian Cloud ticket) are copied into the timeline as written and open in your browser; a bare key or number such as `PR #123` shows as plain text.
 - **Browses** your notes in a file tree sidebar with clean markdown rendering and syntax-highlighted code blocks
 - **Manages files** from sidebar and tab context menus with copy, inline rename, Finder, path, close, and confirmed Trash actions

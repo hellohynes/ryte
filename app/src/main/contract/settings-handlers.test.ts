@@ -269,6 +269,12 @@ describe('settingsPatchRequiresIndexerRestart', () => {
       {},
       true
     ],
+    [
+      'the agreement to send notes to a provider was given',
+      {},
+      { semanticIndexAcknowledgement: { acknowledgedAt: 't', provider: 'openai', model: 'm' } },
+      true
+    ],
     ['nothing relevant changed', { colorMode: 'dark' }, {}, false],
     ['an Anthropic key was supplied', { anthropicKey: 'k' }, {}, false],
     ['a Gemini key was supplied', { geminiKey: 'k' }, {}, false],
@@ -279,6 +285,20 @@ describe('settingsPatchRequiresIndexerRestart', () => {
     expect(
       settingsPatchRequiresIndexerRestart(patch as never, settings(), settings(afterChanges))
     ).toBe(expected)
+  })
+
+  it('restarts when the agreement is taken back or covers another model, and not when only its date changes', () => {
+    const agreed = (model: string, acknowledgedAt = 't'): Record<string, unknown> => ({
+      semanticIndexAcknowledgement: { acknowledgedAt, provider: 'openai', model }
+    })
+
+    expect(settingsPatchRequiresIndexerRestart({}, settings(agreed('a')), settings())).toBe(true)
+    expect(
+      settingsPatchRequiresIndexerRestart({}, settings(agreed('a')), settings(agreed('b')))
+    ).toBe(true)
+    expect(
+      settingsPatchRequiresIndexerRestart({}, settings(agreed('a')), settings(agreed('a', 'later')))
+    ).toBe(false)
   })
 
   it('compares the settings before and after, not the patch, for the notes root', () => {
