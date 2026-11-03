@@ -160,4 +160,38 @@ describe('IndexStateStore', () => {
     store2.init()
     expect(store2.totals()).toEqual({ files: 1, chunks: 5 })
   })
+
+  describe('the embedding queue', () => {
+    it('lists notes with chunks and no vectors, most recently changed first', () => {
+      store.markIndexed('old.md', 100, 2)
+      store.markIndexed('new.md', 300, 1)
+      store.markIndexed('mid.md', 200, 1)
+
+      expect(store.unembeddedSources()).toEqual([
+        { sourcePath: 'new.md', mtimeMs: 300 },
+        { sourcePath: 'mid.md', mtimeMs: 200 },
+        { sourcePath: 'old.md', mtimeMs: 100 }
+      ])
+      expect(store.unembeddedCount()).toBe(3)
+    })
+
+    it('leaves out embedded notes and notes with nothing to embed', () => {
+      store.markIndexed('done.md', 100, 2, 1, true)
+      store.markIndexed('empty.md', 100, 0, 1, true)
+      store.markIndexed('empty-unflagged.md', 100, 0, 1, false)
+      store.markIndexed('waiting.md', 100, 1)
+
+      expect(store.unembeddedSources().map((source) => source.sourcePath)).toEqual(['waiting.md'])
+      expect(store.unembeddedCount()).toBe(1)
+    })
+
+    it('puts a note back in the queue when it is indexed again', () => {
+      store.markIndexed('a.md', 100, 1, 1, true)
+      expect(store.unembeddedCount()).toBe(0)
+
+      store.markIndexed('a.md', 200, 1)
+
+      expect(store.unembeddedSources()).toEqual([{ sourcePath: 'a.md', mtimeMs: 200 }])
+    })
+  })
 })

@@ -32,6 +32,20 @@ const fakeEmbedder: EmbeddingProvider = {
   embed: async (texts: string[]): Promise<Float32Array[]> => texts.map(vectorFor)
 }
 
+/** What the embedding step does after a local pass: vectors for every note that has none yet. */
+async function attachFakeVectors(store: VectorStore, state: IndexStateStore): Promise<void> {
+  for (const { sourcePath, mtimeMs } of state.unembeddedSources()) {
+    const chunks = store.chunkTextsForFile(sourcePath)
+    const vectors = await fakeEmbedder.embed(chunks.map((chunk) => chunk.text))
+    const result = store.attachVectors(
+      sourcePath,
+      mtimeMs,
+      chunks.map((chunk, index) => ({ ...chunk, vector: vectors[index] }))
+    )
+    assert(result === 'attached', `expected vectors to attach to ${sourcePath}, got ${result}`)
+  }
+}
+
 function assert(condition: boolean, message: string): void {
   if (!condition) throw new Error(message)
 }
@@ -74,12 +88,7 @@ async function indexFolderInto(notesRoot: string, dbPath: string): Promise<Vecto
   store.init(DIM)
   const state = new IndexStateStore(store.database)
   state.init()
-  await new Indexer({
-    notesRoot,
-    embedder: fakeEmbedder,
-    vectorStore: store,
-    indexState: state
-  }).indexAll()
+  await new Indexer({ notesRoot, vectorStore: store, indexState: state }).indexAll()
   return store
 }
 
@@ -156,18 +165,27 @@ async function main(): Promise<void> {
     const state = new IndexStateStore(store.database)
     state.init()
 
-    const indexer = new Indexer({
-      notesRoot,
-      embedder: fakeEmbedder,
-      vectorStore: store,
-      indexState: state
-    })
+    const indexer = new Indexer({ notesRoot, vectorStore: store, indexState: state })
 
     const first = await indexer.indexAll()
     assert(first.filesIndexed === 2, `expected 2 markdown files indexed, got ${first.filesIndexed}`)
     assert(first.chunksIndexed === 3, `expected 3 chunks indexed, got ${first.chunksIndexed}`)
     assert(store.fileCount() === 2, `expected 2 stored files, got ${store.fileCount()}`)
     assert(store.chunkCount() === 3, `expected 3 stored chunks, got ${store.chunkCount()}`)
+
+    // A local pass alone is searchable by keyword, and every note is waiting for vectors.
+    assert(
+      store
+        .keywordSearch('privacy boundaries', 5)
+        .some((row) => row.sourcePath === 'projects/alpha.md'),
+      'expected keyword search to work before any vector exists'
+    )
+    assert(
+      state.unembeddedCount() === 2,
+      `expected 2 notes waiting for vectors, got ${state.unembeddedCount()}`
+    )
+    await attachFakeVectors(store, state)
+    assert(state.unembeddedCount() === 0, 'expected no notes waiting after attaching vectors')
 
     const keywordResults = store.hybridSearch('privacy boundaries', vectorFor('privacy'), 5, 5)
     assert(

@@ -17,6 +17,17 @@ export interface StoredChunkRow {
   date: string | null
 }
 
+export interface StoredChunkText {
+  id: number
+  text: string
+}
+
+export interface ChunkVectorAttachment extends StoredChunkText {
+  vector: Float32Array
+}
+
+export type AttachResult = 'attached' | 'stale'
+
 const RRF_K = 60
 const DEFAULT_HYBRID_RESULTS = 8
 
@@ -110,6 +121,49 @@ export class VectorStore {
       sourcePath,
       chunks.map((chunk) => ({ chunk }))
     )
+  }
+
+  /** The ids and text of a note's chunks in order: what the embedding step sends and later attaches to. */
+  chunkTextsForFile(sourcePath: string): StoredChunkText[] {
+    return this.database
+      .prepare('SELECT id, text FROM chunks WHERE source_path = ? ORDER BY id')
+      .all(sourcePath) as StoredChunkText[]
+  }
+
+  /**
+   * Gives the chunks a keyword pass already wrote their vectors, in one transaction, and marks the
+   * note embedded. Nothing is attached (and `stale` is returned) unless the note is still exactly
+   * what the vectors were made from: the same file state at `expectedMtimeMs`, not embedded yet, and
+   * the same chunk ids with the same text. `mtime_ms` and `indexed_at_ms` are left alone, so a note
+   * is not reported as freshly indexed because it gained vectors.
+   */
+  attachVectors(
+    sourcePath: string,
+    expectedMtimeMs: number,
+    items: ChunkVectorAttachment[]
+  ): AttachResult {
+    const db = this.database
+    for (const { vector } of items) {
+      if (vector.length !== this.dim) {
+        throw new Error(`Vector dim ${vector.length} does not match store dim ${this.dim}`)
+      }
+    }
+    const txn = db.transaction((path: string, mtimeMs: number, list: ChunkVectorAttachment[]) => {
+      const state = db
+        .prepare('SELECT mtime_ms AS mtime, embedded FROM file_state WHERE source_path = ?')
+        .get(path) as { mtime: number; embedded: number } | undefined
+      if (!state || state.mtime !== mtimeMs || state.embedded !== 0) return 'stale' as const
+      const current = this.chunkTextsForFile(path)
+      if (current.length === 0 || current.length !== list.length) return 'stale' as const
+      for (const [index, row] of current.entries()) {
+        if (row.id !== list[index].id || row.text !== list[index].text) return 'stale' as const
+      }
+      const insertVec = db.prepare('INSERT INTO chunk_vectors (rowid, embedding) VALUES (?, ?)')
+      for (const { id, vector } of list) insertVec.run(BigInt(id), vector)
+      db.prepare('UPDATE file_state SET embedded = 1 WHERE source_path = ?').run(path)
+      return 'attached' as const
+    })
+    return txn(sourcePath, expectedMtimeMs, items)
   }
 
   keywordSearch(queryText: string, maxResults = DEFAULT_HYBRID_RESULTS): StoredChunkRow[] {

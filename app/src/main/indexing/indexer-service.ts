@@ -123,7 +123,6 @@ export class IndexerService extends EventEmitter {
     this.indexState.init()
     this.indexer = new Indexer({
       notesRoot,
-      embedder,
       vectorStore: this.vectorStore,
       indexState: this.indexState
     })
