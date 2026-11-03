@@ -100,7 +100,7 @@ async function updateRender(text: string): Promise<void> {
     documentOutline.value = cached.outline
     return
   }
-  const document = await renderDocument(text, { interactiveTasks: true })
+  const document = await renderDocument(text, { interactiveTasks: true, breaks: true })
   renderCache.set(text, document)
   // Bound cache to avoid unbounded growth on many file edits in one session.
   if (renderCache.size > 50) {
