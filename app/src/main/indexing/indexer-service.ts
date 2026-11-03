@@ -4,6 +4,7 @@ import { mkdirSync, rmSync } from 'node:fs'
 import { Indexer, type IndexerProgress } from './indexer'
 import { IndexStateStore } from './index-state'
 import { OpenAIEmbeddingProvider } from './embedder'
+import { EmbeddingBackfill, fileMtimeReader } from './embedding-backfill'
 import { VectorStore } from './vector-store'
 import { settingsStore } from '../settings/settings-store'
 import { userDataDir } from '../paths'
@@ -13,20 +14,8 @@ import { rebuildNotice, type RebuildNotice } from './rebuild-notice'
 const STATUS_EVENT = 'status'
 const IDLE_EVENT = 'idle'
 const REBUILD_NOTICE_EVENT = 'rebuild-notice'
-// How long the embedding service gets to answer the check made before an index is cleared.
-const EMBEDDING_CHECK_TIMEOUT_MS = 15_000
-
-async function withTimeout<T>(work: Promise<T>, ms: number, message: string): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined
-  const timeout = new Promise<never>((_resolve, reject) => {
-    timer = setTimeout(() => reject(new Error(message)), ms)
-  })
-  try {
-    return await Promise.race([work, timeout])
-  } finally {
-    clearTimeout(timer)
-  }
-}
+// After a note is written by the watcher, how long to wait for more edits before looking for notes to embed.
+const EMBED_AFTER_EDIT_DELAY_MS = 2_000
 
 export function isRecoverableIndexStoreError(error: unknown): boolean {
   if (!(error instanceof Error)) return false
@@ -48,6 +37,8 @@ export class IndexerService extends EventEmitter {
   private indexState: IndexStateStore | null = null
   private indexer: Indexer | null = null
   private embedder: OpenAIEmbeddingProvider | null = null
+  private backfill: EmbeddingBackfill | null = null
+  private backfillKickTimer: ReturnType<typeof setTimeout> | null = null
   private lastStatus: IndexerProgress = {
     phase: 'idle',
     filesTotal: 0,
@@ -75,7 +66,14 @@ export class IndexerService extends EventEmitter {
     if (this.indexer) return true
 
     const settings = settingsStore.load()
-    const openaiKey = settings.semanticIndexEnabled ? settingsStore.getSecret('openai') : null
+    // Main decides, not the screen: nothing is embedded unless the person agreed to this provider and model.
+    const acknowledgement = settings.semanticIndexAcknowledgement
+    const acknowledged =
+      acknowledgement !== null &&
+      acknowledgement.provider === settings.embeddingProvider &&
+      acknowledgement.model === settings.embeddingModel
+    const openaiKey =
+      settings.semanticIndexEnabled && acknowledged ? settingsStore.getSecret('openai') : null
     const embedder = openaiKey
       ? new OpenAIEmbeddingProvider(openaiKey, { model: settings.embeddingModel })
       : null
@@ -89,6 +87,7 @@ export class IndexerService extends EventEmitter {
       mkdirSync(location.directory, { recursive: true })
       this.initializeStores(dbPath, settings.notesRoot, embedder)
       if (legacyRemoved) this.setNotice(rebuildNotice({ cloud: embedder !== null }))
+      this.scheduleBackfillKick()
       return true
     } catch (error) {
       this.close()
@@ -101,6 +100,7 @@ export class IndexerService extends EventEmitter {
       try {
         this.initializeStores(dbPath, settings.notesRoot, embedder)
         if (legacyRemoved) this.setNotice(rebuildNotice({ cloud: embedder !== null }))
+        this.scheduleBackfillKick()
         return true
       } catch (rebuildError) {
         this.close()
@@ -113,12 +113,11 @@ export class IndexerService extends EventEmitter {
   private initializeStores(
     dbPath: string,
     notesRoot: string,
-    embedder: OpenAIEmbeddingProvider | null,
-    dimension = embedder?.dim ?? 1536
+    embedder: OpenAIEmbeddingProvider | null
   ): void {
     this.embedder = embedder
     this.vectorStore = new VectorStore(dbPath)
-    this.vectorStore.init(dimension)
+    this.vectorStore.init(embedder?.dim ?? 1536)
     this.indexState = new IndexStateStore(this.vectorStore.database)
     this.indexState.init()
     this.indexer = new Indexer({
@@ -126,6 +125,15 @@ export class IndexerService extends EventEmitter {
       vectorStore: this.vectorStore,
       indexState: this.indexState
     })
+    this.backfill = embedder
+      ? new EmbeddingBackfill({
+          provider: embedder,
+          vectorStore: this.vectorStore,
+          indexState: this.indexState,
+          fileMtimeMs: fileMtimeReader(notesRoot),
+          log: (message, detail) => console.warn(message, detail)
+        })
+      : null
 
     // Hydrate lastStatus with current totals.
     const totals = this.indexState.totals()
@@ -176,10 +184,12 @@ export class IndexerService extends EventEmitter {
     this.running = true
     try {
       await this.indexAll()
+      this.backfill?.kick()
     } catch (err) {
       if (this.recoverIndexStore(err)) {
         try {
           await this.indexAll()
+          this.backfill?.kick()
         } catch (retryErr) {
           this.broadcastIndexingError(retryErr)
         }
@@ -204,10 +214,10 @@ export class IndexerService extends EventEmitter {
 
   /**
    * Empties the index and rebuilds it from the notes. A run already going is waited for, not
-   * refused. With embeddings on, they are tried before anything is deleted, so a bad key or no
-   * connection leaves the working index in place; `beforeClear` runs once the clear is certain.
-   * If embedding then fails part way, the notes are indexed for keyword search so local search
-   * keeps working.
+   * refused. The notes are indexed for keyword search first, which needs no network, so search
+   * works as soon as that pass is done; with smart search on, vectors are added afterwards in the
+   * background and a failure there never undoes the keyword index. `beforeClear` runs once the
+   * clear is certain.
    */
   async clearAndRebuild(beforeClear?: () => void): Promise<void> {
     this.rebuildsWaiting += 1
@@ -220,22 +230,6 @@ export class IndexerService extends EventEmitter {
     }
     this.running = true
     try {
-      // Before anything changes, not even the status: a failure here leaves the index as it was.
-      if (this.embedder) {
-        const [vector] = await withTimeout(
-          this.embedder.embed(['ryte']),
-          EMBEDDING_CHECK_TIMEOUT_MS,
-          'The embedding service did not respond. The index was left as it was.'
-        )
-        if (!vector) {
-          throw new Error(
-            'The embedding service did not return a vector. The index was left as it was.'
-          )
-        }
-      }
-      // From here the whole index is rebuilt, which covers any reindex asked for until now; one
-      // asked for during the rebuild still runs after it.
-      this.reindexQueued = false
       this.broadcast({
         phase: 'walking',
         filesTotal: 0,
@@ -252,51 +246,18 @@ export class IndexerService extends EventEmitter {
       if (!this.init()) {
         throw new Error(this.lastStatus.error ?? 'Failed to initialize the index store')
       }
-      try {
-        await this.indexAll()
-      } catch (err) {
-        if (!this.embedder) throw err
-        await this.rebuildForKeywordSearch(dbPath, notesRoot, err, beforeClear)
-      }
+      // The whole index is rebuilt from here, which covers any reindex asked for until now; one
+      // asked for during the rebuild still runs after it. A rebuild that fails before this point
+      // leaves the request to run afterwards.
+      this.reindexQueued = false
+      await this.indexAll()
+      this.backfill?.kick()
     } catch (err) {
       this.broadcastIndexingError(err)
       throw err
     } finally {
       this.finishRun()
     }
-  }
-
-  private async rebuildForKeywordSearch(
-    dbPath: string,
-    notesRoot: string,
-    cause: unknown,
-    beforeClear?: () => void
-  ): Promise<void> {
-    const embedder = this.embedder
-    // The store is replaced twice more, so anything holding the current one must let go first.
-    beforeClear?.()
-    this.close()
-    removeIndexDatabaseFiles(dbPath)
-    try {
-      // Same vector table shape as the embedder's, so it can take embeddings again later.
-      this.initializeStores(dbPath, notesRoot, null, embedder?.dim)
-      await this.indexAll()
-      // Back to the configured embedder, on the same database: every note is recorded as lacking
-      // embeddings, so the next indexing run picks them up.
-      beforeClear?.()
-      this.close()
-      this.initializeStores(dbPath, notesRoot, embedder)
-    } catch (err) {
-      this.close()
-      throw err
-    }
-    beforeClear?.()
-    const reason = cause instanceof Error ? cause.message : String(cause)
-    this.broadcastIndexingError(
-      new Error(
-        `Semantic indexing failed (${reason}); notes were indexed for keyword search only and will be embedded the next time indexing runs.`
-      )
-    )
   }
 
   async notifyFileChanged(absPath: string): Promise<void> {
@@ -323,6 +284,10 @@ export class IndexerService extends EventEmitter {
   }
 
   close(): void {
+    // Before the store closes: a request still out must find the step stopped when it answers.
+    this.backfill?.stop()
+    this.backfill = null
+    this.clearBackfillKickTimer()
     this.vectorStore?.close()
     this.vectorStore = null
     this.indexState = null
@@ -382,6 +347,7 @@ export class IndexerService extends EventEmitter {
     if (operation === 'changed') {
       const result = await this.indexer.indexFile(absPath)
       if (result.skipped) return
+      this.scheduleBackfillKick()
     } else {
       await this.indexer.removeFile(absPath)
     }
@@ -394,6 +360,24 @@ export class IndexerService extends EventEmitter {
       chunksTotal: totals.chunks,
       chunksDone: totals.chunks
     })
+  }
+
+  /**
+   * Looks for notes without vectors once edits have stopped for a moment, so a burst of edits makes
+   * one look. Skipped while an index pass runs: that pass looks when it ends.
+   */
+  private scheduleBackfillKick(): void {
+    if (!this.backfill) return
+    this.clearBackfillKickTimer()
+    this.backfillKickTimer = setTimeout(() => {
+      this.backfillKickTimer = null
+      if (!this.running) this.backfill?.kick()
+    }, EMBED_AFTER_EDIT_DELAY_MS)
+  }
+
+  private clearBackfillKickTimer(): void {
+    if (this.backfillKickTimer) clearTimeout(this.backfillKickTimer)
+    this.backfillKickTimer = null
   }
 
   private recoverIndexStore(error: unknown): boolean {

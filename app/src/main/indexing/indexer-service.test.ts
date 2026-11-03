@@ -9,7 +9,17 @@ const mocks = vi.hoisted(() => ({
   vectorStoreInit: vi.fn(),
   vectorStoreClose: vi.fn(),
   indexerIndexAll: vi.fn(),
-  indexerIndexFile: vi.fn()
+  indexerIndexFile: vi.fn(),
+  backfillKick: vi.fn(),
+  backfillStop: vi.fn()
+}))
+
+vi.mock('./embedding-backfill', () => ({
+  EmbeddingBackfill: vi.fn().mockImplementation(() => ({
+    kick: mocks.backfillKick,
+    stop: mocks.backfillStop
+  })),
+  fileMtimeReader: vi.fn().mockReturnValue(vi.fn())
 }))
 
 vi.mock('./vector-store', () => ({
@@ -72,6 +82,13 @@ afterEach(() => {
 
 const mockEmbed = vi.fn().mockResolvedValue([Float32Array.from([1, 0, 0])])
 
+// What the Preferences screen saves when the person agrees to send notes to OpenAI for smart search.
+const AGREED = {
+  acknowledgedAt: '2026-11-02T00:00:00.000Z',
+  provider: 'openai',
+  model: 'text-embedding-3-small'
+} as const
+
 vi.mock('./embedder', () => ({
   OpenAIEmbeddingProvider: vi.fn().mockImplementation(() => ({
     dim: 1536,
@@ -104,7 +121,7 @@ describe('IndexerService.embed()', () => {
       cloudAnswersEnabled: false,
       semanticIndexEnabled: true,
       cloudAnswersAcknowledgement: null,
-      semanticIndexAcknowledgement: null,
+      semanticIndexAcknowledgement: AGREED,
       answerProvider: 'openai',
       answerModel: 'gpt-5.2',
       embeddingProvider: 'openai',
@@ -195,7 +212,8 @@ describe('IndexerService.clearAndRebuild() with embeddings on', () => {
     vi.mocked(settingsStore.getSecret).mockReturnValue('sk-test')
     vi.mocked(settingsStore.load).mockReturnValue({
       ...vi.mocked(settingsStore.load)(),
-      semanticIndexEnabled: true
+      semanticIndexEnabled: true,
+      semanticIndexAcknowledgement: AGREED
     })
     const svc = new IndexerService()
     svc.init()
@@ -209,41 +227,6 @@ describe('IndexerService.clearAndRebuild() with embeddings on', () => {
     mockEmbed.mockResolvedValue([Float32Array.from([1, 0, 0])])
   })
 
-  it('leaves the working index alone when embeddings do not work', async () => {
-    const svc = await semanticService()
-    const seen: Array<{ phase: string }> = []
-    svc.subscribe((status) => seen.push(status))
-    seen.length = 0
-    mockEmbed.mockRejectedValueOnce(new Error('Incorrect API key provided'))
-    const beforeClear = vi.fn()
-
-    await expect(svc.clearAndRebuild(beforeClear)).rejects.toThrow('Incorrect API key provided')
-
-    expect(beforeClear).not.toHaveBeenCalled()
-    expect(mocks.vectorStoreClose).not.toHaveBeenCalled()
-    expect(mocks.indexerIndexAll).not.toHaveBeenCalled()
-    expect(svc.getStatus()).toMatchObject({ phase: 'error' })
-    // The intact index is never reported as empty on the way to the error.
-    expect(seen.map((status) => status.phase)).not.toContain('walking')
-  })
-
-  it('gives up on an embedding service that does not answer, leaving the index alone', async () => {
-    vi.useFakeTimers()
-    try {
-      const svc = await semanticService()
-      mockEmbed.mockImplementationOnce(() => new Promise(() => undefined))
-
-      const rebuild = svc.clearAndRebuild()
-      const outcome = expect(rebuild).rejects.toThrow(/did not respond/i)
-      await vi.advanceTimersByTimeAsync(20_000)
-      await outcome
-
-      expect(mocks.vectorStoreClose).not.toHaveBeenCalled()
-    } finally {
-      vi.useRealTimers()
-    }
-  })
-
   it('tells the caller to stop searches only once the index is really about to be cleared', async () => {
     const svc = await semanticService()
     const order: string[] = []
@@ -253,47 +236,6 @@ describe('IndexerService.clearAndRebuild() with embeddings on', () => {
     await svc.clearAndRebuild(beforeClear)
 
     expect(order.slice(0, 2)).toEqual(['beforeClear', 'clear'])
-  })
-
-  it('still ends with a working keyword index when embedding fails part way through', async () => {
-    const { Indexer } = await import('./indexer')
-    const svc = await semanticService()
-    mocks.indexerIndexAll
-      .mockRejectedValueOnce(new Error('Rate limit reached'))
-      .mockResolvedValueOnce({ filesIndexed: 3, chunksIndexed: 9 })
-
-    await expect(svc.clearAndRebuild()).resolves.toBeUndefined()
-
-    // Notes are indexed for keyword search, then the configured embedder is put back.
-    expect(vi.mocked(Indexer)).toHaveBeenCalled()
-    expect(mocks.indexerIndexAll).toHaveBeenCalledTimes(2)
-    expect(svc.getStatus()).toMatchObject({ phase: 'error' })
-    expect(svc.getStatus().error).toMatch(/keyword search only/i)
-    expect(svc.getStatus().error).toMatch(/Rate limit reached/)
-  })
-
-  it("gives the keyword-only fallback store the embedder's dimensions", async () => {
-    const { OpenAIEmbeddingProvider } = await import('./embedder')
-    vi.mocked(OpenAIEmbeddingProvider).mockImplementation(
-      () => ({ dim: 3072, embed: mockEmbed }) as never
-    )
-    try {
-      const svc = await semanticService()
-      mocks.indexerIndexAll
-        .mockRejectedValueOnce(new Error('Rate limit reached'))
-        .mockResolvedValueOnce({ filesIndexed: 0, chunksIndexed: 0 })
-      mocks.vectorStoreInit.mockClear()
-
-      await svc.clearAndRebuild()
-
-      const dimensions = mocks.vectorStoreInit.mock.calls.map((call) => call[0])
-      expect(dimensions.length).toBeGreaterThanOrEqual(3)
-      expect(new Set(dimensions)).toEqual(new Set([3072]))
-    } finally {
-      vi.mocked(OpenAIEmbeddingProvider).mockImplementation(
-        () => ({ dim: 1536, embed: mockEmbed }) as never
-      )
-    }
   })
 
   it('runs a reindex that was asked for while another run was going, once', async () => {
@@ -354,25 +296,17 @@ describe('IndexerService.clearAndRebuild() with embeddings on', () => {
     )
     const first = svc.triggerReindex()
     await vi.waitFor(() => expect(mocks.indexerIndexAll).toHaveBeenCalledTimes(1))
-    // The rebuild waits, and its key check will fail; the reindex asked for meanwhile must survive.
-    mockEmbed.mockRejectedValueOnce(new Error('Incorrect API key provided'))
-    const rebuild = expect(svc.clearAndRebuild()).rejects.toThrow('Incorrect API key provided')
+    // The rebuild waits, and the store cannot be reopened for it; the reindex asked for meanwhile must survive.
+    mocks.vectorStoreInit.mockImplementationOnce(() => {
+      throw new Error('disk full')
+    })
+    const rebuild = expect(svc.clearAndRebuild()).rejects.toThrow('disk full')
     await svc.triggerReindex()
 
     finishFirst()
     await first
     await rebuild
     await vi.waitFor(() => expect(mocks.indexerIndexAll).toHaveBeenCalledTimes(2))
-  })
-
-  it('refuses to clear the index when the check returns no vector at all', async () => {
-    const svc = await semanticService()
-    mockEmbed.mockResolvedValueOnce(new Array(1))
-
-    await expect(svc.clearAndRebuild()).rejects.toThrow(/did not return a vector/i)
-
-    expect(mocks.vectorStoreClose).not.toHaveBeenCalled()
-    expect(mocks.indexerIndexAll).not.toHaveBeenCalled()
   })
 
   it('does not run again when nothing was asked for during a run', async () => {
@@ -384,44 +318,26 @@ describe('IndexerService.clearAndRebuild() with embeddings on', () => {
     expect(mocks.indexerIndexAll).toHaveBeenCalledTimes(1)
   })
 
-  it('invalidates the callers around each time the fallback replaces the store', async () => {
+  it('tells the callers once, before the one close, and makes no request to the embedding service', async () => {
     const svc = await semanticService()
-    mocks.indexerIndexAll
-      .mockRejectedValueOnce(new Error('Rate limit reached'))
-      .mockResolvedValueOnce({ filesIndexed: 0, chunksIndexed: 0 })
     const events: string[] = []
     mocks.vectorStoreClose.mockImplementation(() => events.push('close'))
 
     await svc.clearAndRebuild(() => events.push('beforeClear'))
 
-    // Callers are told before every close, and once more after the last store is in place.
-    expect(events).toEqual([
-      'beforeClear',
-      'close',
-      'beforeClear',
-      'close',
-      'beforeClear',
-      'close',
-      'beforeClear'
-    ])
+    expect(events).toEqual(['beforeClear', 'close'])
+    // No preflight: nothing local depends on the network, so nothing is sent before the index is cleared.
+    expect(mockEmbed).not.toHaveBeenCalled()
   })
 
-  it('does not leave a half-built store behind when the fallback itself cannot start', async () => {
+  it('ends with a local index and a working status, whatever the embedding service does', async () => {
     const svc = await semanticService()
-    mocks.indexerIndexAll.mockRejectedValueOnce(new Error('Rate limit reached'))
-    // The store set up for the rebuild works; the fallback's own store cannot be set up.
-    mocks.vectorStoreInit
-      .mockImplementationOnce(() => undefined)
-      .mockImplementationOnce(() => {
-        throw new Error('disk full')
-      })
-    mocks.vectorStoreClose.mockClear()
+    mockEmbed.mockRejectedValue(new Error('Incorrect API key provided'))
 
-    await expect(svc.clearAndRebuild()).rejects.toThrow('disk full')
+    await expect(svc.clearAndRebuild()).resolves.toBeUndefined()
 
-    // Closed to clear the index, closed to start the fallback, and closed again when the fallback's
-    // own store could not be set up.
-    expect(mocks.vectorStoreClose).toHaveBeenCalledTimes(3)
+    expect(svc.getStatus().phase).not.toBe('error')
+    expect(mocks.indexerIndexAll).toHaveBeenCalledOnce()
   })
 
   it('waits for an index run already in progress instead of failing', async () => {
@@ -448,6 +364,247 @@ describe('IndexerService.clearAndRebuild() with embeddings on', () => {
   })
 })
 
+describe('IndexerService embedding step', () => {
+  async function configure(
+    overrides: Record<string, unknown>,
+    secret: string | null = 'sk-test'
+  ): Promise<InstanceType<typeof import('./indexer-service').IndexerService>> {
+    const { settingsStore } = await import('../settings/settings-store')
+    const { IndexerService } = await import('./indexer-service')
+    vi.mocked(settingsStore.getSecret).mockReturnValue(secret)
+    vi.mocked(settingsStore.load).mockReturnValue({
+      ...vi.mocked(settingsStore.load)(),
+      semanticIndexEnabled: true,
+      semanticIndexAcknowledgement: AGREED,
+      ...overrides
+    })
+    return new IndexerService()
+  }
+
+  async function providerCount(): Promise<number> {
+    const { OpenAIEmbeddingProvider } = await import('./embedder')
+    return vi.mocked(OpenAIEmbeddingProvider).mock.calls.length
+  }
+
+  async function stepCount(): Promise<number> {
+    const { EmbeddingBackfill } = await import('./embedding-backfill')
+    return vi.mocked(EmbeddingBackfill).mock.calls.length
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.useRealTimers()
+    mocks.vectorStoreInit.mockReturnValue(undefined)
+    mocks.indexerIndexAll.mockReset()
+    mocks.indexerIndexAll.mockResolvedValue({ filesIndexed: 0, chunksIndexed: 0 })
+    mocks.indexerIndexFile.mockReset()
+    mocks.indexerIndexFile.mockResolvedValue({ chunkCount: 1, skipped: false })
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  describe('the agreement gate', () => {
+    it('starts the step when smart search is on, there is a key, and the agreement covers this provider and model', async () => {
+      const svc = await configure({})
+
+      svc.init()
+
+      expect(await providerCount()).toBe(1)
+      expect(await stepCount()).toBe(1)
+    })
+
+    it.each([
+      ['there is no saved agreement', { semanticIndexAcknowledgement: null }, 'sk-test'],
+      [
+        'the agreement is for another model',
+        { semanticIndexAcknowledgement: { ...AGREED, model: 'text-embedding-3-large' } },
+        'sk-test'
+      ],
+      [
+        'the agreement is for another provider',
+        { semanticIndexAcknowledgement: { ...AGREED, provider: 'anthropic' } },
+        'sk-test'
+      ],
+      ['smart search is off', { semanticIndexEnabled: false }, 'sk-test'],
+      ['there is no key', {}, null]
+    ])('does not embed when %s', async (_label, overrides, secret) => {
+      const svc = await configure(overrides, secret)
+
+      svc.init()
+      await svc.triggerReindex()
+      await svc.clearAndRebuild()
+
+      expect(await providerCount()).toBe(0)
+      expect(await stepCount()).toBe(0)
+      expect(mocks.backfillKick).not.toHaveBeenCalled()
+      await expect(svc.embed(['query'])).rejects.toThrow('No embedding provider configured')
+    })
+
+    it('does not embed after the agreement is taken back and the indexer restarts', async () => {
+      const { settingsStore } = await import('../settings/settings-store')
+      const svc = await configure({})
+      svc.init()
+      expect(await stepCount()).toBe(1)
+
+      svc.close()
+      vi.mocked(settingsStore.load).mockReturnValue({
+        ...vi.mocked(settingsStore.load)(),
+        semanticIndexAcknowledgement: null
+      })
+      svc.init()
+
+      expect(mocks.backfillStop).toHaveBeenCalledTimes(1)
+      expect(await stepCount()).toBe(1)
+      await svc.triggerReindex()
+      expect(mocks.backfillKick).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('when it looks for notes without vectors', () => {
+    it('after every index pass, once the pass has finished', async () => {
+      const svc = await configure({})
+      svc.init()
+      const order: string[] = []
+      mocks.indexerIndexAll.mockImplementation(async () => {
+        order.push('pass')
+        return { filesIndexed: 0, chunksIndexed: 0 }
+      })
+      mocks.backfillKick.mockImplementation(() => order.push('kick'))
+
+      await svc.triggerReindex()
+
+      expect(order).toEqual(['pass', 'kick'])
+    })
+
+    it('after a rebuild, once the keyword pass has finished', async () => {
+      const svc = await configure({})
+      svc.init()
+      const order: string[] = []
+      mocks.indexerIndexAll.mockImplementation(async () => {
+        order.push('pass')
+        return { filesIndexed: 0, chunksIndexed: 0 }
+      })
+      mocks.backfillKick.mockImplementation(() => order.push('kick'))
+
+      await svc.clearAndRebuild()
+
+      expect(order).toEqual(['pass', 'kick'])
+      // The rebuild made a new step on the new index; the old one was stopped first.
+      expect(mocks.backfillStop).toHaveBeenCalledTimes(1)
+      expect(await stepCount()).toBe(2)
+    })
+
+    it('not when the pass failed', async () => {
+      const svc = await configure({})
+      svc.init()
+      mocks.indexerIndexAll.mockRejectedValueOnce(new Error('disk full'))
+
+      await svc.triggerReindex()
+
+      expect(mocks.backfillKick).not.toHaveBeenCalled()
+      expect(svc.getStatus().phase).toBe('error')
+    })
+
+    it('shortly after a note is written, once for a burst of edits', async () => {
+      vi.useFakeTimers()
+      const svc = await configure({})
+      svc.init()
+      // The kick that init schedules is for the start; this test is about edits.
+      await vi.advanceTimersByTimeAsync(5_000)
+      mocks.backfillKick.mockClear()
+
+      await svc.notifyFileChanged('/tmp/notes/a.md')
+      await svc.notifyFileChanged('/tmp/notes/b.md')
+      await svc.notifyFileChanged('/tmp/notes/c.md')
+      expect(mocks.backfillKick).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(1_999)
+      expect(mocks.backfillKick).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(1)
+
+      expect(mocks.backfillKick).toHaveBeenCalledTimes(1)
+    })
+
+    it('not for a note that was already indexed or was removed', async () => {
+      vi.useFakeTimers()
+      const svc = await configure({})
+      svc.init()
+      await vi.advanceTimersByTimeAsync(5_000)
+      mocks.backfillKick.mockClear()
+      mocks.indexerIndexFile.mockResolvedValueOnce({ chunkCount: 0, skipped: true })
+
+      await svc.notifyFileChanged('/tmp/notes/a.md')
+      await vi.advanceTimersByTimeAsync(10_000)
+
+      expect(mocks.backfillKick).not.toHaveBeenCalled()
+    })
+
+    it('shortly after the indexer starts, for notes a restart or an earlier session left without vectors', async () => {
+      vi.useFakeTimers()
+      const svc = await configure({})
+
+      svc.init()
+      expect(mocks.backfillKick).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(2_000)
+
+      expect(mocks.backfillKick).toHaveBeenCalledTimes(1)
+    })
+
+    it('not while an index pass runs: the pass looks when it ends', async () => {
+      vi.useFakeTimers()
+      const svc = await configure({})
+      svc.init()
+      let finish!: () => void
+      mocks.indexerIndexAll.mockImplementationOnce(
+        () =>
+          new Promise((resolve) => (finish = () => resolve({ filesIndexed: 0, chunksIndexed: 0 })))
+      )
+      const pass = svc.triggerReindex()
+      await vi.advanceTimersByTimeAsync(5_000)
+      expect(mocks.backfillKick).not.toHaveBeenCalled()
+
+      finish()
+      await pass
+
+      expect(mocks.backfillKick).toHaveBeenCalledTimes(1)
+    })
+
+    it('never, when no step runs', async () => {
+      vi.useFakeTimers()
+      const svc = await configure({ semanticIndexEnabled: false })
+      svc.init()
+
+      await svc.triggerReindex()
+      await svc.notifyFileChanged('/tmp/notes/a.md')
+      await vi.advanceTimersByTimeAsync(10_000)
+
+      expect(mocks.backfillKick).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('closing', () => {
+    it('stops the step before the store closes, and a kick waiting for edits to settle never fires', async () => {
+      vi.useFakeTimers()
+      const svc = await configure({})
+      svc.init()
+      await vi.advanceTimersByTimeAsync(5_000)
+      mocks.backfillKick.mockClear()
+      const order: string[] = []
+      mocks.backfillStop.mockImplementation(() => order.push('stop'))
+      mocks.vectorStoreClose.mockImplementation(() => order.push('close'))
+      await svc.notifyFileChanged('/tmp/notes/a.md')
+
+      svc.close()
+      await vi.advanceTimersByTimeAsync(10_000)
+
+      expect(order).toEqual(['stop', 'close'])
+      expect(mocks.backfillKick).not.toHaveBeenCalled()
+      expect(vi.getTimerCount()).toBe(0)
+    })
+  })
+})
+
 describe('IndexerService index location', () => {
   let notesA: string
   let notesB: string
@@ -461,7 +618,8 @@ describe('IndexerService index location', () => {
     vi.mocked(settingsStore.load).mockReturnValue({
       ...vi.mocked(settingsStore.load)(),
       notesRoot,
-      semanticIndexEnabled: options.semantic ?? false
+      semanticIndexEnabled: options.semantic ?? false,
+      semanticIndexAcknowledgement: options.semantic ? AGREED : null
     })
   }
 
@@ -632,7 +790,7 @@ describe('IndexerService index location', () => {
     expect(existsSync(pathA as string)).toBe(false)
   })
 
-  it('keeps the keyword fallback on the folder the rebuild started with when the folder changes during the pass', async () => {
+  it('keeps a rebuild on the folder it started with when the folder changes during the pass', async () => {
     const { IndexerService } = await import('./indexer-service')
     const { Indexer } = await import('./indexer')
     const { settingsStore } = await import('../settings/settings-store')
@@ -641,20 +799,16 @@ describe('IndexerService index location', () => {
     svc.init()
     const [pathA] = await constructedPaths()
     const settingsOfA = vi.mocked(settingsStore.load)()
-    mocks.indexerIndexAll
-      .mockImplementationOnce(async () => {
-        // The folder is changed while the full pass is running, and then the pass fails.
-        vi.mocked(settingsStore.load).mockReturnValue({ ...settingsOfA, notesRoot: notesB })
-        throw new Error('Rate limit reached')
-      })
-      .mockResolvedValueOnce({ filesIndexed: 0, chunksIndexed: 0 })
+    mocks.indexerIndexAll.mockImplementationOnce(async () => {
+      // The folder is changed while the full pass is running.
+      vi.mocked(settingsStore.load).mockReturnValue({ ...settingsOfA, notesRoot: notesB })
+      return { filesIndexed: 0, chunksIndexed: 0 }
+    })
 
     await svc.clearAndRebuild()
 
-    const { VectorStore } = await import('./vector-store')
-    const opened = vi.mocked(VectorStore).mock.calls.map((call) => String(call[0]))
+    const opened = await constructedPaths()
     const roots = vi.mocked(Indexer).mock.calls.map((call) => call[0].notesRoot)
-    // Every store and indexer made for this rebuild belongs to the folder it started with.
     expect(new Set(opened.slice(1))).toEqual(new Set([pathA]))
     expect(new Set(roots.slice(1))).toEqual(new Set([notesA]))
   })

@@ -1,7 +1,8 @@
 import OpenAI from 'openai'
 
 export const BATCH_SIZE = 64
-const DEFAULT_RETRY_DELAYS_MS = [1000, 2000, 4000]
+// A request that has not answered in this long is given up on; the embedding step decides when to try again.
+export const REQUEST_TIMEOUT_MS = 60_000
 
 export type EmbeddingModel = 'text-embedding-3-small' | 'text-embedding-3-large'
 
@@ -17,27 +18,60 @@ export interface EmbeddingProvider {
 
 export interface OpenAIProviderOptions {
   model?: EmbeddingModel
-  retryDelaysMs?: number[]
+  timeoutMs?: number
+}
+
+/**
+ * Why an embedding request failed, as far as what to do next is concerned. Never carries the error's
+ * message, which can hold a note title or a key.
+ */
+export type EmbeddingFailure = 'auth' | 'rate-limit' | 'offline' | 'service' | 'bad-input'
+
+/** The service answered, but not with one usable vector per text. */
+export class EmbeddingReplyError extends Error {}
+
+export function classifyEmbeddingError(error: unknown): EmbeddingFailure {
+  if (error instanceof EmbeddingReplyError) return 'service'
+  const status = (error as { status?: unknown } | null)?.status
+  // The client gives no status to a connection that failed or timed out.
+  if (typeof status !== 'number') return 'offline'
+  if (status === 401 || status === 403) return 'auth'
+  if (status === 429) return 'rate-limit'
+  if (status >= 500) return 'service'
+  if (status >= 400) return 'bad-input'
+  return 'service'
+}
+
+/** What may be logged about a failure: its class and the status or system code, nothing else. */
+export function describeEmbeddingError(error: unknown): string {
+  const failure = classifyEmbeddingError(error)
+  const detail = error as { status?: unknown; code?: unknown } | null
+  const code = typeof detail?.status === 'number' ? detail.status : detail?.code
+  return typeof code === 'number' || typeof code === 'string' ? `${failure} ${code}` : failure
 }
 
 export class OpenAIEmbeddingProvider implements EmbeddingProvider {
   readonly dim: number
   private readonly client: OpenAI
   private readonly model: EmbeddingModel
-  private readonly retryDelaysMs: number[]
 
   constructor(apiKey: string, opts: OpenAIProviderOptions = {}) {
     this.model = opts.model ?? 'text-embedding-3-small'
     this.dim = MODEL_DIMS[this.model]
-    this.retryDelaysMs = opts.retryDelaysMs ?? DEFAULT_RETRY_DELAYS_MS
-    this.client = new OpenAI({ apiKey, dangerouslyAllowBrowser: false })
+    // No client retries: the embedding step owns every retry, so a failure is seen once, at once.
+    this.client = new OpenAI({
+      apiKey,
+      dangerouslyAllowBrowser: false,
+      timeout: opts.timeoutMs ?? REQUEST_TIMEOUT_MS,
+      maxRetries: 0
+    })
   }
 
   async embed(texts: string[]): Promise<Float32Array[]> {
     const result: Float32Array[] = new Array(texts.length)
     for (let start = 0; start < texts.length; start += BATCH_SIZE) {
       const batch = texts.slice(start, start + BATCH_SIZE)
-      const vectors = await this.embedBatchWithRetry(batch)
+      const vectors = await this.embedBatch(batch)
       for (let i = 0; i < vectors.length; i++) {
         result[start + i] = vectors[i]
       }
@@ -45,34 +79,15 @@ export class OpenAIEmbeddingProvider implements EmbeddingProvider {
     return result
   }
 
-  private async embedBatchWithRetry(batch: string[]): Promise<Float32Array[]> {
-    let lastError: unknown
-    for (let attempt = 0; attempt < this.retryDelaysMs.length; attempt++) {
-      try {
-        const resp = await this.client.embeddings.create({
-          model: this.model,
-          input: batch
-        })
-        const ordered: Float32Array[] = new Array(resp.data.length)
-        for (const item of resp.data) {
-          ordered[item.index] = Float32Array.from(item.embedding)
-        }
-        return ordered
-      } catch (err) {
-        lastError = err
-        if (!isRateLimit(err)) throw err
-        if (attempt === this.retryDelaysMs.length - 1) break
-        await sleep(this.retryDelaysMs[attempt])
-      }
+  private async embedBatch(batch: string[]): Promise<Float32Array[]> {
+    const resp = await this.client.embeddings.create({
+      model: this.model,
+      input: batch
+    })
+    const ordered: Float32Array[] = new Array(resp.data.length)
+    for (const item of resp.data) {
+      ordered[item.index] = Float32Array.from(item.embedding)
     }
-    throw lastError
+    return ordered
   }
-}
-
-function isRateLimit(err: unknown): boolean {
-  return !!err && typeof err === 'object' && (err as { status?: number }).status === 429
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((r) => setTimeout(r, ms))
 }
