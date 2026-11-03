@@ -1,8 +1,139 @@
-import { describe, expect, it } from 'vitest'
+import MarkdownIt from 'markdown-it'
+import { describe, expect, it, vi } from 'vitest'
 
 import { render, renderDocument } from './renderer'
 
 describe('render', () => {
+  it('should render soft breaks only when requested', async () => {
+    const text = 'First line\nSecond line'
+
+    expect((await renderDocument(text, { breaks: true })).html).toBe(
+      '<p>First line<br>\nSecond line</p>\n'
+    )
+    // A soft newline in HTML collapses to a space in the browser.
+    expect((await renderDocument(text, { breaks: false })).html).toBe(
+      '<p>First line\nSecond line</p>\n'
+    )
+    expect((await renderDocument(text)).html).toBe('<p>First line\nSecond line</p>\n')
+    expect(await render(text)).toBe('<p>First line\nSecond line</p>\n')
+  })
+
+  it('should keep concurrent callers soft-break settings independent', async () => {
+    const text = 'First\nSecond'
+    expect(
+      await Promise.all([
+        render(text, { breaks: true }),
+        render(text),
+        render(text, { breaks: false })
+      ])
+    ).toEqual(['<p>First<br>\nSecond</p>\n', '<p>First\nSecond</p>\n', '<p>First\nSecond</p>\n'])
+  })
+
+  it('should restore the shared soft-break setting even when rendering throws', async () => {
+    // Initialize the shared renderer before intercepting its synchronous render call.
+    await render('Ready')
+    let sharedOptions: MarkdownIt['options'] | undefined
+    const renderSpy = vi.spyOn(MarkdownIt.prototype, 'render').mockImplementationOnce(function (
+      this: MarkdownIt
+    ) {
+      sharedOptions = this.options
+      expect(this.options.breaks).toBe(true)
+      throw new Error('Synthetic render failure')
+    })
+
+    try {
+      await expect(renderDocument('First\nSecond', { breaks: true })).rejects.toThrow(
+        'Synthetic render failure'
+      )
+      expect(sharedOptions?.breaks).toBe(false)
+    } finally {
+      renderSpy.mockRestore()
+    }
+    expect(await render('First\nSecond')).toBe('<p>First\nSecond</p>\n')
+  })
+
+  it('should render session metadata on three separate lines', async () => {
+    const document = await renderDocument(
+      '# Session Notes\n\n**Date:** 2026-10-30\n**Source:** Claude Code\n**Project:** demo',
+      { breaks: true }
+    )
+
+    expect(document.html).toContain(
+      '<p><strong>Date:</strong> 2026-10-30<br>\n<strong>Source:</strong> Claude Code<br>\n<strong>Project:</strong> demo</p>'
+    )
+  })
+
+  it('should preserve paragraph boundaries with soft breaks enabled', async () => {
+    expect(await render('First\nSecond\n\nThird\nFourth', { breaks: true })).toBe(
+      '<p>First<br>\nSecond</p>\n<p>Third<br>\nFourth</p>\n'
+    )
+  })
+
+  it.each([
+    ['fenced code', '```ts\nconst first = 1\nconst second = 2\n```'],
+    ['inline code', '`first\nsecond`'],
+    ['tables', '| First | Second |\n| --- | --- |\n| A | B |'],
+    ['lists', '- First\n- Second\n\n1. Third\n2. Fourth'],
+    ['headings and frontmatter', '---\ntitle: Synthetic\n---\n# Title\n\n## Status\n\n## Status'],
+    ['Mermaid', '```mermaid\ngraph TD\n  A --> B\n```']
+  ])('should preserve %s with soft breaks enabled', async (_name, text) => {
+    expect(await renderDocument(text, { breaks: true })).toEqual(await renderDocument(text))
+  })
+
+  it('should break list continuation lines without adding a break before the next item', async () => {
+    expect(await render('- First\n  continuation\n- Second', { breaks: true })).toBe(
+      '<ul>\n<li>First<br>\ncontinuation</li>\n<li>Second</li>\n</ul>\n'
+    )
+  })
+
+  it('should retain task source coordinates after frontmatter and multiline content', async () => {
+    const text = [
+      '---',
+      'title: Synthetic tasks',
+      '---',
+      '# Tasks',
+      '',
+      'First paragraph line',
+      'Second paragraph line',
+      '',
+      '- [ ] First task',
+      '  continuation line',
+      '- [x] Second task',
+      '  another continuation',
+      '',
+      'Another paragraph',
+      'with a second line',
+      '',
+      '- [ ] Third task'
+    ].join('\n')
+    const { html } = await renderDocument(text, { breaks: true, interactiveTasks: true })
+    const controls = [
+      ...html.matchAll(
+        /<button\b[^>]*data-task-line="(\d+)"[^>]*data-task-checkbox-column="(\d+)"[^>]*data-task-checked="(true|false)"[^>]*>/g
+      )
+    ]
+
+    expect(
+      controls.map(([, line, column, checked]) => ({
+        line: Number(line),
+        column: Number(column),
+        checked
+      }))
+    ).toEqual([
+      { line: 9, column: 2, checked: 'false' },
+      { line: 11, column: 2, checked: 'true' },
+      { line: 17, column: 2, checked: 'false' }
+    ])
+    for (const [, line, column, checked] of controls) {
+      expect(text.split('\n')[Number(line) - 1].slice(Number(column), Number(column) + 3)).toBe(
+        checked === 'true' ? '[x]' : '[ ]'
+      )
+    }
+    expect(html).toContain('First paragraph line<br>\nSecond paragraph line')
+    expect(html).toContain('First task<br>\ncontinuation line')
+    expect(html).not.toContain('title: Synthetic tasks')
+  })
+
   it('should render a heading and paragraph', async () => {
     const html = await render('# Hello\n\nWorld')
     expect(html).toContain('<h1 id="hello">Hello</h1>')

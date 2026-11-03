@@ -39,6 +39,7 @@ let mdPromise: Promise<MarkdownIt> | null = null
 
 interface RenderOptions {
   interactiveTasks?: boolean
+  breaks?: boolean
 }
 
 export interface MarkdownOutlineItem {
@@ -373,8 +374,14 @@ export async function renderDocument(
     taskMarkers: options.interactiveTasks ? findTaskMarkers(text) : undefined,
     outline
   }
-  return {
-    html: sanitizeRenderedHtml(md.render(stripped.text, env)),
-    outline
+  const previousBreaks = md.options.breaks
+  md.options.breaks = options.breaks ?? false
+  try {
+    return {
+      html: sanitizeRenderedHtml(md.render(stripped.text, env)),
+      outline
+    }
+  } finally {
+    md.options.breaks = previousBreaks
   }
 }
