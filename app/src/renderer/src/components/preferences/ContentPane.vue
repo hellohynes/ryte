@@ -6,7 +6,9 @@ import StText from '../../stencil/components/StText.vue'
 import StStack from '../../stencil/components/StStack.vue'
 
 import { RETENTION_OPTIONS, indexSummary } from '../../preferences/content-model'
+import { clearAndRebuildConfirm, embeddingLine } from '../../preferences/embedding-model'
 import { usePreferenceSaves } from '../../preferences/use-preference-saves'
+import { useEmbeddingStatusStore } from '../../stores/embedding-status'
 import { useIndexStatusStore } from '../../stores/index-status'
 import { useSearchStore } from '../../stores/search'
 import PrefCheckbox from './PrefCheckbox.vue'
@@ -20,11 +22,15 @@ const props = defineProps<{ state: PublicSettingsState }>()
 
 const { commit } = usePreferenceSaves()
 const indexStatus = useIndexStatusStore()
+const embeddingStatus = useEmbeddingStatusStore()
 const search = useSearchStore()
 const localError = ref<string | null>(null)
 
 const summary = computed(() => indexSummary(indexStatus.status))
 const indexBusy = computed(() => summary.value.state === 'busy')
+const smartSearchLine = computed(() =>
+  embeddingLine(embeddingStatus.status, props.state.semanticIndexEnabled)
+)
 const hasHistory = computed(() => search.history.length > 0)
 
 async function chooseLocation(): Promise<void> {
@@ -50,7 +56,7 @@ async function rebuildIndex(): Promise<void> {
 }
 
 async function clearAndRebuildIndex(): Promise<void> {
-  if (!window.confirm("Clear Ryte's local search index and rebuild it from the notes folder?")) {
+  if (!window.confirm(clearAndRebuildConfirm(props.state.semanticIndexEnabled))) {
     return
   }
   localError.value = null
@@ -98,6 +104,9 @@ async function clearAndRebuildIndex(): Promise<void> {
           role="status"
         >
           {{ summary.text }}
+        </StText>
+        <StText v-if="smartSearchLine" as="p" kind="body" size="sm" tone="muted" role="status">
+          {{ smartSearchLine }}
         </StText>
       </StStack>
     </section>

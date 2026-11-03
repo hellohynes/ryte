@@ -12,6 +12,7 @@ import Sidebar from './components/Sidebar.vue'
 import StatusBar from './components/StatusBar.vue'
 import Viewer from './components/Viewer.vue'
 import WorkspaceTabs from './components/WorkspaceTabs.vue'
+import { useEmbeddingStatusStore } from './stores/embedding-status'
 import { useIndexStatusStore } from './stores/index-status'
 import { useRebuildNoticeStore } from './stores/rebuild-notice'
 import { useSearchStore } from './stores/search'
@@ -30,6 +31,7 @@ import {
 const settings = useSettingsStore()
 const indexStatus = useIndexStatusStore()
 const rebuildNotice = useRebuildNoticeStore()
+const embeddingStatus = useEmbeddingStatusStore()
 const viewer = useViewerStore()
 const search = useSearchStore()
 const workspace = useWorkspaceStore()
@@ -58,6 +60,7 @@ onMounted(async () => {
     settings.hydrate(),
     indexStatus.bind(),
     rebuildNotice.bind(),
+    embeddingStatus.bind(),
     workspace.hydrate()
   ])
   applySearchHistorySettings()
