@@ -1,4 +1,12 @@
-import { mkdirSync, mkdtempSync, rmSync, unlinkSync, utimesSync, writeFileSync } from 'node:fs'
+import {
+  chmodSync,
+  mkdirSync,
+  mkdtempSync,
+  rmSync,
+  unlinkSync,
+  utimesSync,
+  writeFileSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -131,6 +139,48 @@ describe('Indexer', () => {
 
     expect(state.unembeddedSources().map((source) => source.sourcePath)).toEqual(['text-only.md'])
   })
+
+  it('indexes every note when one has front matter that is not valid YAML', async () => {
+    writeFileSync(join(notesRoot, 'a.md'), '# A\n\nbody A\n')
+    writeFileSync(
+      join(notesRoot, 'b-broken.md'),
+      '---\ndescription: Live data from the store: one model, one order\n---\n\n# B\n\nbody about harbours\n'
+    )
+    writeFileSync(join(notesRoot, 'c.md'), '# C\n\nbody C\n')
+
+    const summary = await makeIndexer().indexAll()
+
+    expect(summary.filesIndexed).toBe(3)
+    expect(store.keywordSearch('harbours').map((row) => row.sourcePath)).toEqual(['b-broken.md'])
+    expect(store.fileCount()).toBe(3)
+  })
+
+  it.skipIf(process.getuid?.() === 0)(
+    'carries on past a note that cannot be read, and picks it up on a later pass',
+    async () => {
+      writeFileSync(join(notesRoot, 'a.md'), '# A\n\nbody A\n')
+      const locked = join(notesRoot, 'b-locked.md')
+      writeFileSync(locked, '# B\n\nbody about harbours\n')
+      writeFileSync(join(notesRoot, 'c.md'), '# C\n\nbody C\n')
+      chmodSync(locked, 0o000)
+      try {
+        const events: IndexerProgress[] = []
+        const summary = await makeIndexer().indexAll({ onProgress: (p) => events.push({ ...p }) })
+
+        expect(summary.filesIndexed).toBe(2)
+        expect(store.fileCount()).toBe(2)
+        expect(events.at(-1)).toMatchObject({ phase: 'done', filesTotal: 3, filesDone: 3 })
+        // It has no row, so it is not mistaken for indexed.
+        expect(state.allSourcePaths().sort()).toEqual(['a.md', 'c.md'])
+      } finally {
+        chmodSync(locked, 0o644)
+      }
+
+      const again = await makeIndexer().indexAll()
+      expect(again.filesIndexed).toBe(1)
+      expect(store.fileCount()).toBe(3)
+    }
+  )
 
   it('indexAll skips files unchanged since prior run', async () => {
     writeFileSync(join(notesRoot, 'a.md'), '# A\n\nbody A\n')

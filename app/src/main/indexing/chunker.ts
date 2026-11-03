@@ -20,8 +20,17 @@ const PARA_SPLIT_RE = /\n\s*\n/
 
 export function chunkFile(absPath: string, notesRoot: string): Chunk[] {
   const raw = readFileSync(absPath, 'utf-8')
-  const parsed = matter(raw)
   const sourcePath = relative(notesRoot, absPath)
+  let parsed: matter.GrayMatterFile<string>
+  try {
+    // Passing options skips gray-matter's cache, which keeps the text of every file it has read for the life of the process and
+    // returns a half-parsed result for a text that failed before.
+    parsed = matter(raw, {})
+  } catch {
+    // Front matter that is not valid YAML (an unquoted colon inside a value is the usual cause) must not keep the note, or the
+    // notes after it, out of the index. The note is kept whole, front matter lines included, with no fields.
+    return chunkMarkdown(raw, sourcePath, {})
+  }
   return chunkMarkdown(parsed.content, sourcePath, parsed.data as Record<string, unknown>)
 }
 
