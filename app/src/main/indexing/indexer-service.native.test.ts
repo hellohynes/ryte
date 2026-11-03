@@ -26,7 +26,7 @@ vi.mock('../settings/settings-store', () => ({
 vi.mock('../paths', () => ({ userDataDir: () => h.userData }))
 
 import { IndexerService } from './indexer-service'
-import type { IndexerProgress } from './indexer'
+import { Indexer, type IndexAllSummary, type IndexerProgress } from './indexer'
 
 const settle = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
 
@@ -68,6 +68,23 @@ describe('IndexerService when the folder changes under a running pass', () => {
     await svc.triggerReindex()
   }
 
+  /** What each pass of any indexer returned or threw, in the order the passes began. */
+  function recordPasses(): Array<Promise<{ summary?: IndexAllSummary; error?: unknown }>> {
+    const passes: Array<Promise<{ summary?: IndexAllSummary; error?: unknown }>> = []
+    const original = Indexer.prototype.indexAll
+    vi.spyOn(Indexer.prototype, 'indexAll').mockImplementation(function (this: Indexer, ...args) {
+      const pass = original.apply(this, args)
+      passes.push(
+        pass.then(
+          (summary) => ({ summary }),
+          (error: unknown) => ({ error })
+        )
+      )
+      return pass
+    })
+    return passes
+  }
+
   const rows = (svc: IndexerService, sql: string): number =>
     (svc.getVectorStore()!.database.prepare(sql).get() as { n: number }).n
 
@@ -92,6 +109,7 @@ describe('IndexerService when the folder changes under a running pass', () => {
     makeNotes(notesA, 1500, 'OLD')
     makeNotes(notesB, 20, 'NEW')
     h.notesRoot = notesA
+    const passes = recordPasses()
     const { svc, events } = start()
     svc.init()
     const pass = svc.triggerReindex()
@@ -100,9 +118,14 @@ describe('IndexerService when the folder changes under a running pass', () => {
       'the old pass to be well under way'
     )
     const switchedAt = events.length
+    // Still in the middle of the pass, so what follows exercises the stale path and not a pass that had just finished.
+    expect(svc.getStatus().phase).toBe('indexing')
 
     await switchTo(svc, notesB)
     await pass
+    // The old pass was told to stop and did: it returned, cut short, and did not run on into the closed stores and fail.
+    expect(await passes[0]).toMatchObject({ summary: { stopped: true } })
+    expect((await passes[0]).error).toBeUndefined()
     await until(
       () => svc.getStatus().phase === 'done' && svc.getStatus().filesTotal === 20,
       'the new folder to be indexed'
@@ -133,6 +156,7 @@ describe('IndexerService when the folder changes under a running pass', () => {
       () => events.slice(switchedAt).some((e) => e.phase === 'indexing' && e.filesTotal === 1500),
       'pass B to begin'
     )
+    const beforeLastChange = events.length
     await switchTo(svc, notesC)
     await until(
       () => svc.getStatus().phase === 'done' && svc.getStatus().filesTotal === 15,
@@ -143,12 +167,8 @@ describe('IndexerService when the folder changes under a running pass', () => {
     expect(events.slice(switchedAt).map((e) => e.phase)).not.toContain('error')
     expect(rows(svc, 'SELECT COUNT(*) AS n FROM file_state')).toBe(15)
     expect(rows(svc, "SELECT COUNT(*) AS n FROM chunks WHERE text LIKE '%unique%'")).toBe(15)
-    // One pass for C: its walking phase appears once after the last change.
-    const afterLastChange = events.slice(switchedAt)
-    const cWalks = afterLastChange.filter(
-      (e, i) => e.phase === 'walking' && afterLastChange[i - 1]?.phase !== 'walking'
-    )
-    expect(cWalks.length).toBeLessThanOrEqual(2)
+    // Exactly one pass for C: each pass announces itself with one `walking`.
+    expect(events.slice(beforeLastChange).filter((e) => e.phase === 'walking')).toHaveLength(1)
   })
 
   it('finishes the job when the indexer is restarted for the same folder in the middle of a pass', async () => {
