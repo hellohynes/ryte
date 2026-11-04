@@ -7,6 +7,10 @@
 // recorder was a one-shot script and is not kept. The validators are in `ea721df:app/src/main/ipc-validation.ts`:
 // replaying these inputs through them reproduces the expected file.
 //
+// The `openFile`, `openRecentFile` and `recordRecent` vectors come after those and were recorded the same way from
+// `assertValidWorkspaceOpenFileInput`, `assertValidWorkspaceOpenRecentFileInput` and
+// `assertValidWorkspaceRecordRecentInput` at cdd80d2 (`cdd80d2:app/src/main/ipc-validation.ts`).
+//
 // Vector ids are written `shell: ...`, `library: ...` and so on (a colon and a space) so that none is shaped like an
 // `area:name` channel, which `check:contract` would report. Every path and id here is synthetic.
 
@@ -20,6 +24,9 @@ export type WorkspaceVectorOp =
   | 'viewMode'
   | 'outlineCollapsed'
   | 'outlineWidth'
+  | 'openFile'
+  | 'openRecentFile'
+  | 'recordRecent'
 
 export interface WorkspaceVector {
   id: string
@@ -34,7 +41,10 @@ export const WORKSPACE_VECTOR_OPS: readonly WorkspaceVectorOp[] = [
   'closeTab',
   'viewMode',
   'outlineCollapsed',
-  'outlineWidth'
+  'outlineWidth',
+  'openFile',
+  'openRecentFile',
+  'recordRecent'
 ]
 
 export const SHELL_KEYS = ['sidebarCollapsed', 'sidebarWidth', 'activeSidebar'] as const
@@ -66,6 +76,9 @@ const closeTab = make('closeTab')
 const viewMode = make('viewMode')
 const outlineCollapsed = make('outlineCollapsed')
 const outlineWidth = make('outlineWidth')
+const openFile = make('openFile')
+const openRecentFile = make('openRecentFile')
+const recordRecent = make('recordRecent')
 
 /** The shapes every object input is tried with, so each operation proves it takes an object and nothing else. */
 const shapes = (
@@ -153,6 +166,171 @@ const TAB_ID_CASES: [string, unknown][] = [
   ['object', {}],
   ['NaN', Number.NaN],
   ['String object', new String('a')]
+]
+
+/** Source paths every operation that takes one is tried with. */
+const SOURCE_PATH_CASES: [string, unknown][] = [
+  ['typical', 'docs/a.md'],
+  ['top level', 'a.md'],
+  ['dot-slash is normalized', './a.md'],
+  ['redundant separators are normalized', 'docs//./a.md'],
+  ['trailing slash is normalized', 'docs/'],
+  ['does not need to be markdown', 'docs/a.txt'],
+  ['upper-case extension', 'docs/A.MD'],
+  ['unicode', '日本語/メモ.md'],
+  ['with spaces', 'my notes/a b.md'],
+  ['parent traversal', '../a.md'],
+  ['traversal in the middle', 'a/../b.md'],
+  ['backslash traversal', 'a\\..\\b.md'],
+  ['absolute', '/etc/a.md'],
+  ['windows drive', 'C:\\Notes\\a.md'],
+  ['windows rooted', '\\Notes\\a.md'],
+  ['dot only', '.'],
+  ['dot dot', '..'],
+  ['empty', ''],
+  ['NUL', 'a\0.md'],
+  [`${MAX_PATH_LENGTH} characters`, longPath(MAX_PATH_LENGTH)],
+  [`${MAX_PATH_LENGTH + 1} characters`, longPath(MAX_PATH_LENGTH + 1)],
+  ['number', 5],
+  ['boolean', true],
+  ['null', null],
+  ['array', ['a.md']],
+  ['object', {}],
+  ['String object', new String('a.md')],
+  ['explicit undefined', undefined]
+]
+
+/** External paths: absolute (POSIX or Windows style) and still `.md` once normalized. */
+const EXTERNAL_PATH_CASES: [string, unknown][] = [
+  ['typical', '/tmp/outside/a.md'],
+  ['root level', '/a.md'],
+  ['upper-case extension', '/tmp/A.MD'],
+  ['mixed-case extension', '/tmp/a.Md'],
+  ['normalized away from a directory', '/tmp/x.txt/../a.md'],
+  ['traversal that stays absolute', '/tmp/../a.md'],
+  ['redundant separators are normalized', '/tmp//./a.md'],
+  ['trailing slash', '/tmp/a.md/'],
+  ['normalizes to a non-markdown file', '/tmp/a.md/../b.txt'],
+  ['normalizes to a directory', '/tmp/a.md/..'],
+  ['no extension', '/tmp/notes'],
+  ['other extension', '/tmp/a.txt'],
+  ['md only in the directory name', '/tmp/a.md/b'],
+  ['hidden file named md', '/tmp/.md'],
+  ['double extension', '/tmp/a.md.txt'],
+  ['relative', 'a.md'],
+  ['dot-slash relative', './a.md'],
+  ['home-relative', '~/a.md'],
+  ['windows drive', 'C:\\Notes\\a.md'],
+  ['windows drive with forward slashes', 'C:/Notes/a.md'],
+  ['windows drive other extension', 'C:\\Notes\\a.txt'],
+  ['windows UNC', '\\\\server\\share\\a.md'],
+  ['windows rooted', '\\Notes\\a.md'],
+  ['empty', ''],
+  ['NUL', '/tmp/a\0.md'],
+  [`${MAX_PATH_LENGTH} characters`, `/${'a'.repeat(MAX_PATH_LENGTH - 4)}.md`],
+  [`${MAX_PATH_LENGTH + 1} characters`, `/${'a'.repeat(MAX_PATH_LENGTH - 3)}.md`],
+  ['number', 5],
+  ['boolean', true],
+  ['null', null],
+  ['array', ['/tmp/a.md']],
+  ['object', {}],
+  ['String object', new String('/tmp/a.md')],
+  ['explicit undefined', undefined]
+]
+
+/** The one-key `{ sourcePath }` shape that open-file and record-recent share. */
+const sourcePathInputVectors = (
+  maker: (id: string, input: unknown) => WorkspaceVector
+): WorkspaceVector[] => [
+  ...shapes(maker, 'sourcePath', 'a.md'),
+  maker('missing beside an unknown key', { arbitrary: 1 }),
+  maker('valid sourcePath with an unknown key', { sourcePath: 'a.md', extra: 1 }),
+  maker('externalPath is not a key', { externalPath: '/tmp/a.md' }),
+  maker('valid sourcePath with externalPath', { sourcePath: 'a.md', externalPath: '/tmp/a.md' }),
+  maker('valid sourcePath with externalPath undefined', {
+    sourcePath: 'a.md',
+    externalPath: undefined
+  }),
+  maker(
+    'inherited sourcePath beside an own unknown key',
+    Object.assign(Object.create({ sourcePath: 'a.md' }), { arbitrary: 1 })
+  ),
+  maker(
+    'own sourcePath beside an inherited unknown key',
+    Object.assign(Object.create({ arbitrary: 1 }), { sourcePath: 'a.md' })
+  ),
+  ...SOURCE_PATH_CASES.map(([name, value]) => maker(`sourcePath ${name}`, one('sourcePath', value)))
+]
+
+export const workspaceFileVectors: WorkspaceVector[] = [
+  // ---- open-file
+  ...sourcePathInputVectors(openFile),
+
+  // ---- record-recent: only `sourcePath` is read; the title and time are set by the store
+  ...sourcePathInputVectors(recordRecent),
+  recordRecent('title is not a key', { sourcePath: 'a.md', title: 'A' }),
+  recordRecent('openedAt is not a key', {
+    sourcePath: 'a.md',
+    openedAt: '2026-01-01T00:00:00.000Z'
+  }),
+
+  // ---- open-recent-file: a file reference, exactly one of sourcePath or externalPath
+  ...shapes(openRecentFile, 'sourcePath', 'a.md'),
+  openRecentFile('valid externalPath only', { externalPath: '/tmp/outside/a.md' }),
+  openRecentFile('neither key', {}),
+  openRecentFile('neither key beside an unknown key', { arbitrary: 1 }),
+  openRecentFile('both keys valid', { sourcePath: 'a.md', externalPath: '/tmp/a.md' }),
+  openRecentFile('both keys with an invalid sourcePath', {
+    sourcePath: '../a.md',
+    externalPath: '/tmp/a.md'
+  }),
+  openRecentFile('both keys with an invalid externalPath', {
+    sourcePath: 'a.md',
+    externalPath: 'a.md'
+  }),
+  openRecentFile('sourcePath with externalPath undefined', {
+    sourcePath: 'a.md',
+    externalPath: undefined
+  }),
+  openRecentFile('externalPath with sourcePath undefined', {
+    externalPath: '/tmp/a.md',
+    sourcePath: undefined
+  }),
+  openRecentFile('both keys undefined', { sourcePath: undefined, externalPath: undefined }),
+  openRecentFile('sourcePath null with externalPath undefined', {
+    sourcePath: null,
+    externalPath: undefined
+  }),
+  openRecentFile('externalPath null with sourcePath undefined', {
+    sourcePath: undefined,
+    externalPath: null
+  }),
+  openRecentFile('sourcePath with externalPath null', { sourcePath: 'a.md', externalPath: null }),
+  openRecentFile('valid sourcePath with an unknown key', { sourcePath: 'a.md', extra: 1 }),
+  openRecentFile('valid externalPath with an unknown key', {
+    externalPath: '/tmp/a.md',
+    extra: 1
+  }),
+  openRecentFile('tab fields are not keys', { sourcePath: 'a.md', title: 'A', openedAt: 'x' }),
+  openRecentFile(
+    'inherited sourcePath beside an own unknown key',
+    Object.assign(Object.create({ sourcePath: 'a.md' }), { arbitrary: 1 })
+  ),
+  openRecentFile('inherited externalPath only', Object.create({ externalPath: '/tmp/a.md' })),
+  openRecentFile(
+    'own sourcePath beside an inherited externalPath',
+    Object.assign(Object.create({ externalPath: '/tmp/a.md' }), { sourcePath: 'a.md' })
+  ),
+  openRecentFile(
+    'own externalPath beside an inherited sourcePath',
+    Object.assign(Object.create({ sourcePath: 'a.md' }), { externalPath: '/tmp/a.md' })
+  ),
+  ...SOURCE_PATH_CASES.map(([name, value]) =>
+    openRecentFile(`sourcePath ${name}`, one('sourcePath', value))
+  ),
+  ...EXTERNAL_PATH_CASES.map(([name, value]) =>
+    openRecentFile(`externalPath ${name}`, one('externalPath', value))
+  )
 ]
 
 export const workspaceVectors: WorkspaceVector[] = [
@@ -487,5 +665,8 @@ export const workspaceVectors: WorkspaceVector[] = [
   outlineWidth(
     'inherited width beside an own unknown key',
     Object.assign(Object.create({ width: 216 }), { arbitrary: 1 })
-  )
+  ),
+
+  // ---- the file operations: open-file, record-recent, open-recent-file
+  ...workspaceFileVectors
 ]

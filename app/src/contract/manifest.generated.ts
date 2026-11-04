@@ -58,7 +58,12 @@ export const manifest = {
       closeTab: 'workspace:close-tab',
       updateTabViewMode: 'workspace:update-tab-view-mode',
       setOutlineCollapsed: 'workspace:set-outline-collapsed',
-      setOutlineWidth: 'workspace:set-outline-width'
+      setOutlineWidth: 'workspace:set-outline-width',
+      openFile: 'workspace:open-file',
+      openRecentFile: 'workspace:open-recent-file',
+      openNativeFile: 'workspace:open-native-file',
+      recordRecent: 'workspace:record-recent',
+      pruneMissingFileRefs: 'workspace:prune-missing-file-refs'
     },
     events: {}
   }

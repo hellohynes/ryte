@@ -22,12 +22,7 @@
       "files:watch-workspace-tab",
       "search:cancel",
       "search:check-snapshot-freshness",
-      "search:query",
-      "workspace:open-file",
-      "workspace:open-native-file",
-      "workspace:open-recent-file",
-      "workspace:prune-missing-file-refs",
-      "workspace:record-recent"
+      "search:query"
     ],
     "event": [
       "files:catalog-changed",

@@ -3,7 +3,19 @@
     "recordedFrom": "ea721dfd91b2ffbe97516ebdb7b3145016216071",
     "baseSha": "ea721dfd91b2ffbe97516ebdb7b3145016216071",
     "command": "node --import tsx src/contract/record/record-workspace-vectors.ts",
-    "note": "Recorded from the pre-change validators (assertValidWorkspaceShellPatch, ...LibraryPatch, ...FocusTabInput, ...CloseTabInput, ...UpdateTabViewModeInput, ...SetOutlineCollapsedInput, ...SetOutlineWidthInput). The validators and shared/ are unchanged from baseSha. Expectations are the oracle; do not regenerate from new code."
+    "note": "Recorded from the pre-change validators (assertValidWorkspaceShellPatch, ...LibraryPatch, ...FocusTabInput, ...CloseTabInput, ...UpdateTabViewModeInput, ...SetOutlineCollapsedInput, ...SetOutlineWidthInput). The validators and shared/ are unchanged from baseSha. Expectations are the oracle; do not regenerate from new code.",
+    "extensions": [
+      {
+        "baseSha": "cdd80d2a3eac7bdba5aaf6bc7e2d600e8f8b1246",
+        "ops": [
+          "openFile",
+          "openRecentFile",
+          "recordRecent"
+        ],
+        "command": "node --import tsx record-workspace-file-vectors.ts",
+        "note": "Recorded from the pre-change validators (assertValidWorkspaceOpenFileInput, ...OpenRecentFileInput, ...RecordRecentInput) at baseSha, before they were deleted. The vectors above this extension are unchanged."
+      }
+    ]
   },
   "vectors": [
     {
@@ -3997,6 +4009,1418 @@
       "op": "outlineWidth",
       "accepted": false,
       "legacyMessage": "Invalid workspace outline width input key: arbitrary"
+    },
+    {
+      "id": "openFile: empty object",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openFile: undefined",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace open file input"
+    },
+    {
+      "id": "openFile: null",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace open file input"
+    },
+    {
+      "id": "openFile: string",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace open file input"
+    },
+    {
+      "id": "openFile: number",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace open file input"
+    },
+    {
+      "id": "openFile: boolean",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace open file input"
+    },
+    {
+      "id": "openFile: empty array",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace open file input"
+    },
+    {
+      "id": "openFile: array holding an object",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace open file input"
+    },
+    {
+      "id": "openFile: Date instance",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openFile: Map instance",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openFile: class instance with a valid own field",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace open file input key: tabId"
+    },
+    {
+      "id": "openFile: null-prototype object with a valid key",
+      "op": "openFile",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "openFile: symbol key is ignored",
+      "op": "openFile",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "openFile: only an unknown key",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace open file input key: arbitrary"
+    },
+    {
+      "id": "openFile: valid key with an unknown key",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace open file input key: arbitrary"
+    },
+    {
+      "id": "openFile: constructor as a key",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace open file input key: constructor"
+    },
+    {
+      "id": "openFile: toString as a key",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace open file input key: toString"
+    },
+    {
+      "id": "openFile: own __proto__ key",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace open file input key: __proto__"
+    },
+    {
+      "id": "openFile: own __proto__ key with a valid key",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace open file input key: __proto__"
+    },
+    {
+      "id": "openFile: inherited valid key only",
+      "op": "openFile",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "openFile: inherited unknown key only",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openFile: missing beside an unknown key",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace open file input key: arbitrary"
+    },
+    {
+      "id": "openFile: valid sourcePath with an unknown key",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace open file input key: extra"
+    },
+    {
+      "id": "openFile: externalPath is not a key",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace open file input key: externalPath"
+    },
+    {
+      "id": "openFile: valid sourcePath with externalPath",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace open file input key: externalPath"
+    },
+    {
+      "id": "openFile: valid sourcePath with externalPath undefined",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace open file input key: externalPath"
+    },
+    {
+      "id": "openFile: inherited sourcePath beside an own unknown key",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace open file input key: arbitrary"
+    },
+    {
+      "id": "openFile: own sourcePath beside an inherited unknown key",
+      "op": "openFile",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "openFile: sourcePath typical",
+      "op": "openFile",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md"
+      }
+    },
+    {
+      "id": "openFile: sourcePath top level",
+      "op": "openFile",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "openFile: sourcePath dot-slash is normalized",
+      "op": "openFile",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "openFile: sourcePath redundant separators are normalized",
+      "op": "openFile",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md"
+      }
+    },
+    {
+      "id": "openFile: sourcePath trailing slash is normalized",
+      "op": "openFile",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/"
+      }
+    },
+    {
+      "id": "openFile: sourcePath does not need to be markdown",
+      "op": "openFile",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.txt"
+      }
+    },
+    {
+      "id": "openFile: sourcePath upper-case extension",
+      "op": "openFile",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/A.MD"
+      }
+    },
+    {
+      "id": "openFile: sourcePath unicode",
+      "op": "openFile",
+      "accepted": true,
+      "output": {
+        "sourcePath": "日本語/メモ.md"
+      }
+    },
+    {
+      "id": "openFile: sourcePath with spaces",
+      "op": "openFile",
+      "accepted": true,
+      "output": {
+        "sourcePath": "my notes/a b.md"
+      }
+    },
+    {
+      "id": "openFile: sourcePath parent traversal",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openFile: sourcePath traversal in the middle",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openFile: sourcePath backslash traversal",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openFile: sourcePath absolute",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openFile: sourcePath windows drive",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openFile: sourcePath windows rooted",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openFile: sourcePath dot only",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openFile: sourcePath dot dot",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openFile: sourcePath empty",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openFile: sourcePath NUL",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openFile: sourcePath 4096 characters",
+      "op": "openFile",
+      "accepted": true,
+      "output": {
+        "sourcePath": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.md"
+      }
+    },
+    {
+      "id": "openFile: sourcePath 4097 characters",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openFile: sourcePath number",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openFile: sourcePath boolean",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openFile: sourcePath null",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openFile: sourcePath array",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openFile: sourcePath object",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openFile: sourcePath String object",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openFile: sourcePath explicit undefined",
+      "op": "openFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "recordRecent: empty object",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "recordRecent: undefined",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace recent input"
+    },
+    {
+      "id": "recordRecent: null",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace recent input"
+    },
+    {
+      "id": "recordRecent: string",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace recent input"
+    },
+    {
+      "id": "recordRecent: number",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace recent input"
+    },
+    {
+      "id": "recordRecent: boolean",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace recent input"
+    },
+    {
+      "id": "recordRecent: empty array",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace recent input"
+    },
+    {
+      "id": "recordRecent: array holding an object",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace recent input"
+    },
+    {
+      "id": "recordRecent: Date instance",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "recordRecent: Map instance",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "recordRecent: class instance with a valid own field",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace recent input key: tabId"
+    },
+    {
+      "id": "recordRecent: null-prototype object with a valid key",
+      "op": "recordRecent",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "recordRecent: symbol key is ignored",
+      "op": "recordRecent",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "recordRecent: only an unknown key",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace recent input key: arbitrary"
+    },
+    {
+      "id": "recordRecent: valid key with an unknown key",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace recent input key: arbitrary"
+    },
+    {
+      "id": "recordRecent: constructor as a key",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace recent input key: constructor"
+    },
+    {
+      "id": "recordRecent: toString as a key",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace recent input key: toString"
+    },
+    {
+      "id": "recordRecent: own __proto__ key",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace recent input key: __proto__"
+    },
+    {
+      "id": "recordRecent: own __proto__ key with a valid key",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace recent input key: __proto__"
+    },
+    {
+      "id": "recordRecent: inherited valid key only",
+      "op": "recordRecent",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "recordRecent: inherited unknown key only",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "recordRecent: missing beside an unknown key",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace recent input key: arbitrary"
+    },
+    {
+      "id": "recordRecent: valid sourcePath with an unknown key",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace recent input key: extra"
+    },
+    {
+      "id": "recordRecent: externalPath is not a key",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace recent input key: externalPath"
+    },
+    {
+      "id": "recordRecent: valid sourcePath with externalPath",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace recent input key: externalPath"
+    },
+    {
+      "id": "recordRecent: valid sourcePath with externalPath undefined",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace recent input key: externalPath"
+    },
+    {
+      "id": "recordRecent: inherited sourcePath beside an own unknown key",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace recent input key: arbitrary"
+    },
+    {
+      "id": "recordRecent: own sourcePath beside an inherited unknown key",
+      "op": "recordRecent",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "recordRecent: sourcePath typical",
+      "op": "recordRecent",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md"
+      }
+    },
+    {
+      "id": "recordRecent: sourcePath top level",
+      "op": "recordRecent",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "recordRecent: sourcePath dot-slash is normalized",
+      "op": "recordRecent",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "recordRecent: sourcePath redundant separators are normalized",
+      "op": "recordRecent",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md"
+      }
+    },
+    {
+      "id": "recordRecent: sourcePath trailing slash is normalized",
+      "op": "recordRecent",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/"
+      }
+    },
+    {
+      "id": "recordRecent: sourcePath does not need to be markdown",
+      "op": "recordRecent",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.txt"
+      }
+    },
+    {
+      "id": "recordRecent: sourcePath upper-case extension",
+      "op": "recordRecent",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/A.MD"
+      }
+    },
+    {
+      "id": "recordRecent: sourcePath unicode",
+      "op": "recordRecent",
+      "accepted": true,
+      "output": {
+        "sourcePath": "日本語/メモ.md"
+      }
+    },
+    {
+      "id": "recordRecent: sourcePath with spaces",
+      "op": "recordRecent",
+      "accepted": true,
+      "output": {
+        "sourcePath": "my notes/a b.md"
+      }
+    },
+    {
+      "id": "recordRecent: sourcePath parent traversal",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "recordRecent: sourcePath traversal in the middle",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "recordRecent: sourcePath backslash traversal",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "recordRecent: sourcePath absolute",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "recordRecent: sourcePath windows drive",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "recordRecent: sourcePath windows rooted",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "recordRecent: sourcePath dot only",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "recordRecent: sourcePath dot dot",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "recordRecent: sourcePath empty",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "recordRecent: sourcePath NUL",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "recordRecent: sourcePath 4096 characters",
+      "op": "recordRecent",
+      "accepted": true,
+      "output": {
+        "sourcePath": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.md"
+      }
+    },
+    {
+      "id": "recordRecent: sourcePath 4097 characters",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "recordRecent: sourcePath number",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "recordRecent: sourcePath boolean",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "recordRecent: sourcePath null",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "recordRecent: sourcePath array",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "recordRecent: sourcePath object",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "recordRecent: sourcePath String object",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "recordRecent: sourcePath explicit undefined",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "recordRecent: title is not a key",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace recent input key: title"
+    },
+    {
+      "id": "recordRecent: openedAt is not a key",
+      "op": "recordRecent",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace recent input key: openedAt"
+    },
+    {
+      "id": "openRecentFile: empty object",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "openRecentFile: undefined",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "openRecentFile: null",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "openRecentFile: string",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "openRecentFile: number",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "openRecentFile: boolean",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "openRecentFile: empty array",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "openRecentFile: array holding an object",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "openRecentFile: Date instance",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "openRecentFile: Map instance",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "openRecentFile: class instance with a valid own field",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference key: tabId"
+    },
+    {
+      "id": "openRecentFile: null-prototype object with a valid key",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "openRecentFile: symbol key is ignored",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "openRecentFile: only an unknown key",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference key: arbitrary"
+    },
+    {
+      "id": "openRecentFile: valid key with an unknown key",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference key: arbitrary"
+    },
+    {
+      "id": "openRecentFile: constructor as a key",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference key: constructor"
+    },
+    {
+      "id": "openRecentFile: toString as a key",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference key: toString"
+    },
+    {
+      "id": "openRecentFile: own __proto__ key",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference key: __proto__"
+    },
+    {
+      "id": "openRecentFile: own __proto__ key with a valid key",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference key: __proto__"
+    },
+    {
+      "id": "openRecentFile: inherited valid key only",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "openRecentFile: inherited unknown key only",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "openRecentFile: valid externalPath only",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/outside/a.md"
+      }
+    },
+    {
+      "id": "openRecentFile: neither key",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "openRecentFile: neither key beside an unknown key",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference key: arbitrary"
+    },
+    {
+      "id": "openRecentFile: both keys valid",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "openRecentFile: both keys with an invalid sourcePath",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "openRecentFile: both keys with an invalid externalPath",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "openRecentFile: sourcePath with externalPath undefined",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "openRecentFile: externalPath with sourcePath undefined",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.md"
+      }
+    },
+    {
+      "id": "openRecentFile: both keys undefined",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "openRecentFile: sourcePath null with externalPath undefined",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openRecentFile: externalPath null with sourcePath undefined",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "openRecentFile: sourcePath with externalPath null",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "openRecentFile: valid sourcePath with an unknown key",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference key: extra"
+    },
+    {
+      "id": "openRecentFile: valid externalPath with an unknown key",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference key: extra"
+    },
+    {
+      "id": "openRecentFile: tab fields are not keys",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference key: title"
+    },
+    {
+      "id": "openRecentFile: inherited sourcePath beside an own unknown key",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference key: arbitrary"
+    },
+    {
+      "id": "openRecentFile: inherited externalPath only",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.md"
+      }
+    },
+    {
+      "id": "openRecentFile: own sourcePath beside an inherited externalPath",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "openRecentFile: own externalPath beside an inherited sourcePath",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "openRecentFile: sourcePath typical",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md"
+      }
+    },
+    {
+      "id": "openRecentFile: sourcePath top level",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "openRecentFile: sourcePath dot-slash is normalized",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "openRecentFile: sourcePath redundant separators are normalized",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md"
+      }
+    },
+    {
+      "id": "openRecentFile: sourcePath trailing slash is normalized",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/"
+      }
+    },
+    {
+      "id": "openRecentFile: sourcePath does not need to be markdown",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.txt"
+      }
+    },
+    {
+      "id": "openRecentFile: sourcePath upper-case extension",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/A.MD"
+      }
+    },
+    {
+      "id": "openRecentFile: sourcePath unicode",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "sourcePath": "日本語/メモ.md"
+      }
+    },
+    {
+      "id": "openRecentFile: sourcePath with spaces",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "sourcePath": "my notes/a b.md"
+      }
+    },
+    {
+      "id": "openRecentFile: sourcePath parent traversal",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openRecentFile: sourcePath traversal in the middle",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openRecentFile: sourcePath backslash traversal",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openRecentFile: sourcePath absolute",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openRecentFile: sourcePath windows drive",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openRecentFile: sourcePath windows rooted",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openRecentFile: sourcePath dot only",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openRecentFile: sourcePath dot dot",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openRecentFile: sourcePath empty",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openRecentFile: sourcePath NUL",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openRecentFile: sourcePath 4096 characters",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "sourcePath": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.md"
+      }
+    },
+    {
+      "id": "openRecentFile: sourcePath 4097 characters",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openRecentFile: sourcePath number",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openRecentFile: sourcePath boolean",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openRecentFile: sourcePath null",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openRecentFile: sourcePath array",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openRecentFile: sourcePath object",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openRecentFile: sourcePath String object",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "openRecentFile: sourcePath explicit undefined",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "openRecentFile: externalPath typical",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/outside/a.md"
+      }
+    },
+    {
+      "id": "openRecentFile: externalPath root level",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "externalPath": "/a.md"
+      }
+    },
+    {
+      "id": "openRecentFile: externalPath upper-case extension",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/A.MD"
+      }
+    },
+    {
+      "id": "openRecentFile: externalPath mixed-case extension",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.Md"
+      }
+    },
+    {
+      "id": "openRecentFile: externalPath normalized away from a directory",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.md"
+      }
+    },
+    {
+      "id": "openRecentFile: externalPath traversal that stays absolute",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "externalPath": "/a.md"
+      }
+    },
+    {
+      "id": "openRecentFile: externalPath redundant separators are normalized",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.md"
+      }
+    },
+    {
+      "id": "openRecentFile: externalPath trailing slash",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.md/"
+      }
+    },
+    {
+      "id": "openRecentFile: externalPath normalizes to a non-markdown file",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "openRecentFile: externalPath normalizes to a directory",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "openRecentFile: externalPath no extension",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "openRecentFile: externalPath other extension",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "openRecentFile: externalPath md only in the directory name",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "openRecentFile: externalPath hidden file named md",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "openRecentFile: externalPath double extension",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "openRecentFile: externalPath relative",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "openRecentFile: externalPath dot-slash relative",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "openRecentFile: externalPath home-relative",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "openRecentFile: externalPath windows drive",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "externalPath": "C:\\Notes\\a.md"
+      }
+    },
+    {
+      "id": "openRecentFile: externalPath windows drive with forward slashes",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "externalPath": "C:/Notes/a.md"
+      }
+    },
+    {
+      "id": "openRecentFile: externalPath windows drive other extension",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "openRecentFile: externalPath windows UNC",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "externalPath": "\\\\server\\share\\a.md"
+      }
+    },
+    {
+      "id": "openRecentFile: externalPath windows rooted",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "externalPath": "\\Notes\\a.md"
+      }
+    },
+    {
+      "id": "openRecentFile: externalPath empty",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "openRecentFile: externalPath NUL",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "openRecentFile: externalPath 4096 characters",
+      "op": "openRecentFile",
+      "accepted": true,
+      "output": {
+        "externalPath": "/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.md"
+      }
+    },
+    {
+      "id": "openRecentFile: externalPath 4097 characters",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "openRecentFile: externalPath number",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "openRecentFile: externalPath boolean",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "openRecentFile: externalPath null",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "openRecentFile: externalPath array",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "openRecentFile: externalPath object",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "openRecentFile: externalPath String object",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "openRecentFile: externalPath explicit undefined",
+      "op": "openRecentFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
     }
   ]
 }

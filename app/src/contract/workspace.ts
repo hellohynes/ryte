@@ -5,7 +5,7 @@ import { z } from 'zod'
 import { normalizeWorkspaceSourcePath } from '../shared/source-path'
 import { WORKSPACE_SCHEMA_VERSION } from '../shared/workspace'
 import { defineArea, defineOperation } from './define'
-import { hasNoExplicitUndefined, sourcePath, workspaceTabId } from './primitives'
+import { hasNoExplicitUndefined, sourcePath, workspaceFileRef, workspaceTabId } from './primitives'
 
 const MAX_SIDEBAR_WIDTH = 4000
 const MAX_DOCUMENT_OUTLINE_WIDTH = 1000
@@ -142,6 +142,28 @@ const libraryPatch = z
 
 const tabInput = z.strictObject({ tabId: workspaceTabId })
 
+/**
+ * A note inside the notes root. The other file-reference key is declared (as `undefined`) so the type equals the
+ * file-reference type this replaced, and an own `externalPath` key is rejected even when it is `undefined`.
+ */
+const sourceFileInput = z
+  .strictObject({ sourcePath, externalPath: z.undefined().optional() })
+  .refine(hasNoExplicitUndefined, 'Expected defined values')
+
+const recordRecentInput = z.strictObject({ sourcePath })
+
+type RecentFileInput =
+  | { sourcePath: string; externalPath?: undefined }
+  | { externalPath: string; sourcePath?: undefined }
+
+/** Keeps only the key that was set, as the validator this replaced did, so no `undefined` key reaches the store. */
+const recentFileInput = workspaceFileRef.transform(
+  (file): RecentFileInput =>
+    file.sourcePath !== undefined
+      ? { sourcePath: file.sourcePath }
+      : { externalPath: file.externalPath }
+)
+
 export const getState = defineOperation({
   channel: 'workspace:get-state',
   description:
@@ -232,6 +254,51 @@ export const setOutlineWidth = defineOperation({
   example: { input: { width: 240 }, output: { ...exampleState, outlineWidth: 240 } }
 })
 
+export const openFile = defineOperation({
+  channel: 'workspace:open-file',
+  description:
+    'Open a note from the notes folder in a new tab and add it to the recent files. Takes a `sourcePath` only. Fails when the file does not exist. Refreshes the app menu.',
+  input: sourceFileInput,
+  output: workspaceState,
+  example: { input: { sourcePath: 'ideas/plan.md' }, output: exampleState }
+})
+
+export const openRecentFile = defineOperation({
+  channel: 'workspace:open-recent-file',
+  description:
+    'Open a file from the recent files, inside the notes folder (`sourcePath`) or outside it (`externalPath`, never both), focusing its tab when it is open. Fails when the file is not a recent one or no longer exists. Refreshes the app menu.',
+  input: recentFileInput,
+  output: workspaceState,
+  example: { input: { externalPath: '/tmp/outside/plan.md' }, output: exampleState }
+})
+
+export const openNativeFile = defineOperation({
+  channel: 'workspace:open-native-file',
+  description:
+    'Ask the person to pick a Markdown file and open it in a tab, focusing its tab when it is open. Returns the workspace unchanged when the picker is cancelled; fails when the file is not a Markdown file. Refreshes the app menu unless cancelled.',
+  input: z.undefined(),
+  output: workspaceState,
+  example: { input: undefined, output: exampleState }
+})
+
+export const recordRecent = defineOperation({
+  channel: 'workspace:record-recent',
+  description:
+    'Put an existing note at the top of the recent files. Fails when the file does not exist. Refreshes the app menu.',
+  input: recordRecentInput,
+  output: workspaceState,
+  example: { input: { sourcePath: 'ideas/plan.md' }, output: exampleState }
+})
+
+export const pruneMissingFileRefs = defineOperation({
+  channel: 'workspace:prune-missing-file-refs',
+  description:
+    'Drop open tabs, recent files and outline settings of files that no longer exist. Refreshes the app menu.',
+  input: z.undefined(),
+  output: workspaceState,
+  example: { input: undefined, output: exampleState }
+})
+
 export const workspace = defineArea('workspace', {
   operations: {
     getState,
@@ -241,7 +308,12 @@ export const workspace = defineArea('workspace', {
     closeTab,
     updateTabViewMode,
     setOutlineCollapsed,
-    setOutlineWidth
+    setOutlineWidth,
+    openFile,
+    openRecentFile,
+    openNativeFile,
+    recordRecent,
+    pruneMissingFileRefs
   },
   events: {}
 })
@@ -252,6 +324,9 @@ export type WorkspaceFolderSortMode = z.output<typeof folderSortMode>
 export type WorkspaceState = z.output<typeof workspaceState>
 export type WorkspaceShellUpdate = z.output<typeof shellPatch>
 export type WorkspaceLibraryUpdate = z.output<typeof libraryPatch>
+export type WorkspaceOpenFileInput = z.output<typeof sourceFileInput>
+export type WorkspaceOpenRecentFileInput = z.output<typeof recentFileInput>
+export type WorkspaceRecordRecentInput = z.output<typeof recordRecentInput>
 export type WorkspaceFocusTabInput = z.output<typeof tabInput>
 export type WorkspaceCloseTabInput = z.output<typeof tabInput>
 export type WorkspaceUpdateTabViewModeInput = z.output<typeof updateTabViewMode.input>

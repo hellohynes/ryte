@@ -10,8 +10,6 @@ import {
 import type {
   WorkspaceFileRef,
   WorkspaceOpenFileInput,
-  WorkspaceOpenRecentFileInput,
-  WorkspaceRecordRecentInput,
   WorkspaceTabFileInput
 } from '../shared/workspace'
 
@@ -180,13 +178,6 @@ function assertFiniteNumber(value: unknown, key: string): number {
   return value
 }
 
-export function assertValidWorkspaceOpenFileInput(value: unknown): WorkspaceOpenFileInput {
-  const input = assertObjectWithKeys(value, ['sourcePath'], 'workspace open file input')
-  return {
-    sourcePath: assertValidWorkspaceSourcePath(input.sourcePath)
-  }
-}
-
 export function assertValidWorkspaceFileRefInput(value: unknown): WorkspaceFileRef {
   const input = assertObjectWithKeys(
     value,
@@ -221,12 +212,6 @@ export function assertValidFileRenameInput(value: unknown): FileRenameInput {
   }
 }
 
-export function assertValidWorkspaceOpenRecentFileInput(
-  value: unknown
-): WorkspaceOpenRecentFileInput {
-  return assertValidWorkspaceFileRefInput(value)
-}
-
 export function assertValidWorkspaceTabFileInput(value: unknown): WorkspaceTabFileInput {
   const input = assertObjectWithKeys(value, ['tabId'], 'workspace tab file input')
   return {
@@ -236,13 +221,6 @@ export function assertValidWorkspaceTabFileInput(value: unknown): WorkspaceTabFi
 
 export function assertValidSourceFileInput(value: unknown): WorkspaceOpenFileInput {
   const input = assertObjectWithKeys(value, ['sourcePath'], 'source file input')
-  return {
-    sourcePath: assertValidWorkspaceSourcePath(input.sourcePath)
-  }
-}
-
-export function assertValidWorkspaceRecordRecentInput(value: unknown): WorkspaceRecordRecentInput {
-  const input = assertObjectWithKeys(value, ['sourcePath'], 'workspace recent input')
   return {
     sourcePath: assertValidWorkspaceSourcePath(input.sourcePath)
   }

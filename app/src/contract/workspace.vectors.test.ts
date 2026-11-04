@@ -17,6 +17,9 @@ import {
 import {
   closeTab,
   focusTab,
+  openFile,
+  openRecentFile,
+  recordRecent,
   setOutlineCollapsed,
   setOutlineWidth,
   updateLibrary,
@@ -34,7 +37,14 @@ interface RecordedVector {
 
 const file = JSON.parse(
   readFileSync(fileURLToPath(new URL('./workspace.vectors.expected.json', import.meta.url)), 'utf8')
-) as { header: { recordedFrom: string; baseSha: string }; vectors: RecordedVector[] }
+) as {
+  header: {
+    recordedFrom: string
+    baseSha: string
+    extensions: { baseSha: string; ops: WorkspaceVectorOp[] }[]
+  }
+  vectors: RecordedVector[]
+}
 
 const recorded = file.vectors
 const byId = new Map(recorded.map((vector) => [vector.id, vector]))
@@ -50,7 +60,10 @@ const schemas: Record<
   closeTab: closeTab.input,
   viewMode: updateTabViewMode.input,
   outlineCollapsed: setOutlineCollapsed.input,
-  outlineWidth: setOutlineWidth.input
+  outlineWidth: setOutlineWidth.input,
+  openFile: openFile.input,
+  openRecentFile: openRecentFile.input,
+  recordRecent: recordRecent.input
 }
 
 describe('the workspace oracle recorded from the pre-change validators', () => {
@@ -63,12 +76,16 @@ describe('the workspace oracle recorded from the pre-change validators', () => {
   it('names the commits it was recorded from', () => {
     expect(file.header.recordedFrom).toMatch(/^[0-9a-f]{40}$/)
     expect(file.header.baseSha).toMatch(/^[0-9a-f]{40}$/)
+    // The file operations were added later, recorded from the validators at the commit before they moved.
+    expect(file.header.extensions).toHaveLength(1)
+    expect(file.header.extensions[0]!.baseSha).toMatch(/^[0-9a-f]{40}$/)
+    expect(file.header.extensions[0]!.ops).toEqual(['openFile', 'openRecentFile', 'recordRecent'])
   })
 
   it('keeps ids that cannot be mistaken for a channel name', () => {
     for (const vector of workspaceVectors) {
       expect(vector.id, vector.id).toMatch(
-        /^(shell|library|focusTab|closeTab|viewMode|outlineCollapsed|outlineWidth): /
+        /^(shell|library|focusTab|closeTab|viewMode|outlineCollapsed|outlineWidth|openFile|openRecentFile|recordRecent): /
       )
     }
   })
@@ -180,7 +197,42 @@ describe('the workspace oracle recorded from the pre-change validators', () => {
       'viewMode: tabId trailing newline',
       'viewMode: unknown viewMode',
       'viewMode: viewMode different case',
-      'viewMode: viewMode explicit undefined'
+      'viewMode: viewMode explicit undefined',
+      // open-file and record-recent
+      ...(['openFile', 'recordRecent'] as const).flatMap((op) => [
+        `${op}: undefined`,
+        `${op}: inherited valid key only`,
+        `${op}: inherited unknown key only`,
+        `${op}: own __proto__ key`,
+        `${op}: externalPath is not a key`,
+        `${op}: valid sourcePath with externalPath undefined`,
+        `${op}: sourcePath explicit undefined`,
+        `${op}: sourcePath dot-slash is normalized`,
+        `${op}: sourcePath parent traversal`,
+        `${op}: sourcePath absolute`,
+        `${op}: sourcePath NUL`,
+        `${op}: sourcePath ${MAX_PATH_LENGTH} characters`,
+        `${op}: sourcePath ${MAX_PATH_LENGTH + 1} characters`
+      ]),
+      // open-recent-file: the exactly-one-of rule and the external path rules
+      'openRecentFile: neither key',
+      'openRecentFile: both keys valid',
+      'openRecentFile: sourcePath with externalPath undefined',
+      'openRecentFile: externalPath with sourcePath undefined',
+      'openRecentFile: both keys undefined',
+      'openRecentFile: sourcePath explicit undefined',
+      'openRecentFile: externalPath explicit undefined',
+      'openRecentFile: sourcePath with externalPath null',
+      'openRecentFile: externalPath typical',
+      'openRecentFile: externalPath other extension',
+      'openRecentFile: externalPath normalized away from a directory',
+      'openRecentFile: externalPath normalizes to a non-markdown file',
+      'openRecentFile: externalPath relative',
+      'openRecentFile: externalPath windows drive',
+      'openRecentFile: externalPath windows UNC',
+      'openRecentFile: externalPath NUL',
+      `openRecentFile: externalPath ${MAX_PATH_LENGTH} characters`,
+      `openRecentFile: externalPath ${MAX_PATH_LENGTH + 1} characters`
     ]
     for (const id of required) expect(ids.has(id), id).toBe(true)
 
@@ -229,6 +281,25 @@ describe('the workspace oracle recorded from the pre-change validators', () => {
     })
     expect(accepted('library: scrollTop negative zero')).toStrictEqual({ scrollTop: -0 })
     expect(accepted('outlineWidth: width 1000')).toStrictEqual({ width: 1000 })
+    expect(accepted('openFile: sourcePath dot-slash is normalized')).toStrictEqual({
+      sourcePath: 'a.md'
+    })
+    expect(accepted('openFile: inherited valid key only')).toStrictEqual({ sourcePath: 'a.md' })
+    expect(accepted('recordRecent: sourcePath redundant separators are normalized')).toStrictEqual({
+      sourcePath: 'docs/a.md'
+    })
+    expect(accepted('openRecentFile: sourcePath with externalPath undefined')).toStrictEqual({
+      sourcePath: 'a.md'
+    })
+    expect(accepted('openRecentFile: externalPath with sourcePath undefined')).toStrictEqual({
+      externalPath: '/tmp/a.md'
+    })
+    expect(accepted('openRecentFile: externalPath normalized away from a directory')).toStrictEqual(
+      { externalPath: '/tmp/a.md' }
+    )
+    expect(accepted('openRecentFile: externalPath windows drive')).toStrictEqual({
+      externalPath: 'C:\\Notes\\a.md'
+    })
 
     for (const id of [
       'shell: sidebarCollapsed explicit undefined',
@@ -239,7 +310,18 @@ describe('the workspace oracle recorded from the pre-change validators', () => {
       'focusTab: tabId trailing newline',
       'viewMode: viewMode explicit undefined',
       'outlineWidth: width 1000.5',
-      'outlineWidth: width 0'
+      'outlineWidth: width 0',
+      'openFile: valid sourcePath with externalPath undefined',
+      'openFile: externalPath is not a key',
+      'openFile: sourcePath explicit undefined',
+      'recordRecent: sourcePath explicit undefined',
+      'recordRecent: title is not a key',
+      'openRecentFile: neither key',
+      'openRecentFile: both keys valid',
+      'openRecentFile: both keys undefined',
+      'openRecentFile: externalPath other extension',
+      'openRecentFile: externalPath normalizes to a non-markdown file',
+      'openRecentFile: externalPath relative'
     ]) {
       expect(byId.get(id)?.accepted, id).toBe(false)
     }

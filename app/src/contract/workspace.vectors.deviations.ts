@@ -8,6 +8,14 @@ const INHERITED_UNKNOWN_KEY =
 export const ACCEPTED_DEVIATIONS: Record<string, { accepted: false; reason: string }> = {
   'shell: inherited unknown key only': { accepted: false, reason: INHERITED_UNKNOWN_KEY },
   'library: inherited unknown key only': { accepted: false, reason: INHERITED_UNKNOWN_KEY },
+  'openFile: own sourcePath beside an inherited unknown key': {
+    accepted: false,
+    reason: INHERITED_UNKNOWN_KEY
+  },
+  'recordRecent: own sourcePath beside an inherited unknown key': {
+    accepted: false,
+    reason: INHERITED_UNKNOWN_KEY
+  },
   'library: expandedFolders sparse': {
     accepted: false,
     reason:

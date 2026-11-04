@@ -1,7 +1,8 @@
-// FROZEN SNAPSHOT of the hand-written declarations of the state-only `workspace` operations, copied from
+// FROZEN SNAPSHOT of the hand-written declarations of the `workspace` operations, copied from
 // `src/shared/workspace.ts` and `LegacyRyteApi.workspace` in `src/preload/index.ts` at ea721df, before the contract
-// replaced them. It is the oracle for the type-equality check in `workspace.wire-types.check.ts`: the types inferred
-// from the contract must equal it. Do not edit.
+// replaced them. The open-file, open-recent-file, open-native-file, record-recent and prune-missing-file-refs
+// members were copied the same way at cdd80d2, before they moved. It is the oracle for the type-equality check in
+// `workspace.wire-types.check.ts`: the types inferred from the contract must equal it. Do not edit.
 
 type WorkspaceViewMode = 'preview' | 'source'
 type WorkspaceSidebarMode = 'files'
@@ -79,6 +80,14 @@ export interface WorkspaceLibraryUpdate {
   folderSortModes?: Record<string, WorkspaceFolderSortMode>
 }
 
+export type WorkspaceOpenFileInput = WorkspaceSourceFileRef
+
+export type WorkspaceOpenRecentFileInput = WorkspaceFileRef
+
+export interface WorkspaceRecordRecentInput {
+  sourcePath: string
+}
+
 export interface WorkspaceFocusTabInput {
   tabId: string
 }
@@ -101,7 +110,7 @@ export interface WorkspaceSetOutlineWidthInput {
   width: number
 }
 
-/** The eight members of `window.ryte.workspace` that moved onto the contract; the other five stay hand-written. */
+/** Every member of `window.ryte.workspace`. `updateWindow` is not here: nothing called it, and it was deleted. */
 export interface WorkspaceApi {
   getState(): Promise<WorkspaceState>
   updateShell(patch: WorkspaceShellUpdate): Promise<WorkspaceState>
@@ -111,4 +120,9 @@ export interface WorkspaceApi {
   updateTabViewMode(input: WorkspaceUpdateTabViewModeInput): Promise<WorkspaceState>
   setOutlineCollapsed(input: WorkspaceSetOutlineCollapsedInput): Promise<WorkspaceState>
   setOutlineWidth(input: WorkspaceSetOutlineWidthInput): Promise<WorkspaceState>
+  openFile(input: WorkspaceOpenFileInput): Promise<WorkspaceState>
+  openRecentFile(input: WorkspaceOpenRecentFileInput): Promise<WorkspaceState>
+  openNativeFile(): Promise<WorkspaceState>
+  recordRecent(input: WorkspaceRecordRecentInput): Promise<WorkspaceState>
+  pruneMissingFileRefs(): Promise<WorkspaceState>
 }

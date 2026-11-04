@@ -9,9 +9,6 @@ import {
   assertValidSearchQuery,
   assertValidSourceFileInput,
   assertValidWorkspaceFileRefInput,
-  assertValidWorkspaceOpenFileInput,
-  assertValidWorkspaceOpenRecentFileInput,
-  assertValidWorkspaceRecordRecentInput,
   assertValidWorkspaceTabFileInput
 } from './ipc-validation'
 
@@ -48,22 +45,13 @@ describe('ipc validation', () => {
     expect(
       assertValidFileRenameInput({ externalPath: '/tmp/outside.md', name: 'renamed.md' })
     ).toEqual({ externalPath: '/tmp/outside.md', name: 'renamed.md' })
-    expect(assertValidWorkspaceOpenFileInput({ sourcePath: 'folder/a.md' })).toEqual({
-      sourcePath: 'folder/a.md'
-    })
     expect(assertValidWorkspaceFileRefInput({ sourcePath: 'folder/a.md' })).toEqual({
       sourcePath: 'folder/a.md'
     })
     expect(assertValidWorkspaceFileRefInput({ externalPath: '/tmp/outside.md' })).toEqual({
       externalPath: '/tmp/outside.md'
     })
-    expect(assertValidWorkspaceOpenRecentFileInput({ externalPath: '/tmp/outside.md' })).toEqual({
-      externalPath: '/tmp/outside.md'
-    })
     expect(assertValidWorkspaceTabFileInput({ tabId: 'tab-1' })).toEqual({ tabId: 'tab-1' })
-    expect(assertValidWorkspaceRecordRecentInput({ sourcePath: './folder/a.md' })).toEqual({
-      sourcePath: 'folder/a.md'
-    })
     expect(assertValidSourceFileInput({ sourcePath: './folder/a.md' })).toEqual({
       sourcePath: 'folder/a.md'
     })
@@ -79,15 +67,6 @@ describe('ipc validation', () => {
     expect(() =>
       assertValidFileRenameInput({ sourcePath: 'a.md', name: 'renamed.md', extra: true })
     ).toThrow('Invalid file rename input key')
-    expect(() => assertValidWorkspaceOpenFileInput({ sourcePath: '/tmp/a.md' })).toThrow(
-      'Invalid workspace source path'
-    )
-    expect(() => assertValidWorkspaceOpenFileInput({ sourcePath: '../a.md' })).toThrow(
-      'Invalid workspace source path'
-    )
-    expect(() =>
-      assertValidWorkspaceOpenFileInput({ sourcePath: 'a.md', arbitrary: true })
-    ).toThrow('Invalid workspace open file input key')
     expect(() =>
       assertValidWorkspaceFileRefInput({
         sourcePath: 'a.md',
@@ -103,9 +82,6 @@ describe('ipc validation', () => {
     expect(() =>
       assertValidWorkspaceFileRefInput({ externalPath: '/tmp/a.md', arbitrary: true })
     ).toThrow('Invalid workspace file reference key')
-    expect(() => assertValidWorkspaceRecordRecentInput({ sourcePath: 'a\0.md' })).toThrow(
-      'Invalid workspace source path'
-    )
     expect(() => assertValidSourceFileInput({ sourcePath: '/tmp/a.md' })).toThrow(
       'Invalid workspace source path'
     )

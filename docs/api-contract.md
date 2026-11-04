@@ -143,12 +143,12 @@ types change, and so does every caller. Rules:
 - An area migrated from hand-written validators is covered by recorded vectors of the behavior it had before the
   contract: `tasks` (`app/src/contract/tasks.vectors.*`, recorded from the pre-contract code at `c4c7b3c`) and
   `settings` (`app/src/contract/settings.vectors.*`, recorded at `322bfd7`) and `workspace` (`app/src/contract/workspace.vectors.*`,
-  recorded at `ea721df`). `<area>.vectors.inputs.ts` holds the authored
+  recorded at `ea721df`, and for the open-file, open-recent-file and record-recent operations at `cdd80d2`). `<area>.vectors.inputs.ts` holds the authored
   inputs, `<area>.vectors.expected.json` is the oracle recorded from the old validators, and a test checks every vector
   against the new schemas. The one-shot recorders were deleted with the old validators and are in git history
   (`a9ce30b:app/src/contract/record/record-vectors.ts` and
   `88ee7dc:app/src/contract/record/record-settings-vectors.ts`); the workspace validators it was recorded from are in
-  `ea721df:app/src/main/ipc-validation.ts`. If you intentionally change what an operation accepts,
+  `ea721df:app/src/main/ipc-validation.ts` and `cdd80d2:app/src/main/ipc-validation.ts`. If you intentionally change what an operation accepts,
   add an entry with a reason to `ACCEPTED_DEVIATIONS` in `<area>.vectors.deviations.ts`; only a change that is stricter than
   the recording is a deviation, and anything that accepts more than the old validator did is a defect. Do not edit
   `<area>.vectors.expected.json`: it is the oracle.

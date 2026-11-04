@@ -10,6 +10,11 @@ import {
   closeTab,
   focusTab,
   getState,
+  openFile,
+  openNativeFile,
+  openRecentFile,
+  pruneMissingFileRefs,
+  recordRecent,
   setOutlineCollapsed,
   setOutlineWidth,
   updateLibrary,
@@ -26,7 +31,12 @@ const operations = {
   closeTab,
   updateTabViewMode,
   setOutlineCollapsed,
-  setOutlineWidth
+  setOutlineWidth,
+  openFile,
+  openRecentFile,
+  openNativeFile,
+  recordRecent,
+  pruneMissingFileRefs
 }
 
 const legacyChannels = (
@@ -46,7 +56,12 @@ describe('workspace operations', () => {
       'workspace:close-tab',
       'workspace:update-tab-view-mode',
       'workspace:set-outline-collapsed',
-      'workspace:set-outline-width'
+      'workspace:set-outline-width',
+      'workspace:open-file',
+      'workspace:open-recent-file',
+      'workspace:open-native-file',
+      'workspace:record-recent',
+      'workspace:prune-missing-file-refs'
     ])
   })
 
@@ -71,17 +86,11 @@ describe('workspace operations', () => {
     expect(Object.keys(manifest.workspace.operations)).not.toContain('updateWindow')
   })
 
-  it('leaves the five operations that refresh the menu on the legacy list, and only those', () => {
-    expect(legacyChannels.filter((channel) => channel.startsWith('workspace:')).sort()).toEqual([
-      'workspace:open-file',
-      'workspace:open-native-file',
-      'workspace:open-recent-file',
-      'workspace:prune-missing-file-refs',
-      'workspace:record-recent'
-    ])
+  it('leaves no workspace channel on the legacy list', () => {
+    expect(legacyChannels.filter((channel) => channel.startsWith('workspace:'))).toEqual([])
   })
 
-  it('builds the contract half of window.ryte.workspace and merges it with the legacy half', () => {
+  it('builds all of window.ryte.workspace from the contract, with the renderer-facing names', () => {
     const invoked: unknown[][] = []
     const built = createContractApi<Record<string, Record<string, unknown>>>(
       {
@@ -91,17 +100,7 @@ describe('workspace operations', () => {
       },
       manifest
     )
-    const legacy = {
-      workspace: {
-        openFile: () => 'legacy',
-        openRecentFile: () => 'legacy',
-        openNativeFile: () => 'legacy',
-        recordRecent: () => 'legacy',
-        pruneMissingFileRefs: () => 'legacy'
-      }
-    }
-
-    const merged = mergeContractApi(legacy, built) as { workspace: Record<string, unknown> }
+    const merged = mergeContractApi({}, built) as { workspace: Record<string, unknown> }
 
     expect(Object.keys(merged.workspace).sort()).toEqual(
       [
@@ -122,16 +121,62 @@ describe('workspace operations', () => {
     )
     ;(merged.workspace.focusTab as (...args: unknown[]) => unknown)({ tabId: 'a' }, 'ignored')
     expect(invoked).toEqual([['workspace:focus-tab', { tabId: 'a' }]])
-    expect((merged.workspace.openFile as () => string)()).toBe('legacy')
+    ;(merged.workspace.openNativeFile as () => unknown)()
+    ;(merged.workspace.openFile as (...args: unknown[]) => unknown)(
+      { sourcePath: 'a.md' },
+      'ignored'
+    )
+    expect(invoked.slice(1)).toEqual([
+      ['workspace:open-native-file'],
+      ['workspace:open-file', { sourcePath: 'a.md' }]
+    ])
   })
 })
 
 describe('workspace input', () => {
-  it('takes no input for get-state, and rejects a stray argument', () => {
-    expect(getState.input.safeParse(undefined).success).toBe(true)
+  it.each([
+    ['getState', getState],
+    ['openNativeFile', openNativeFile],
+    ['pruneMissingFileRefs', pruneMissingFileRefs]
+  ])('takes no input for %s, and rejects a stray argument', (_name, operation) => {
+    expect(operation.input.safeParse(undefined).success).toBe(true)
     // Accepted deviation: the legacy handler ignored any argument; the contract rejects one.
     for (const stray of [{}, null, 'x', 0, false]) {
-      expect(getState.input.safeParse(stray).success, String(stray)).toBe(false)
+      expect(operation.input.safeParse(stray).success, String(stray)).toBe(false)
+    }
+  })
+
+  it('takes a source path for open-file and record-recent, and a file reference for open-recent-file', () => {
+    for (const operation of [openFile, recordRecent]) {
+      expect(operation.input.safeParse({ sourcePath: 'docs/a.md' }).success).toBe(true)
+      expect(operation.input.safeParse({ externalPath: '/tmp/a.md' }).success).toBe(false)
+    }
+    expect(openRecentFile.input.safeParse({ sourcePath: 'docs/a.md' }).success).toBe(true)
+    expect(openRecentFile.input.safeParse({ externalPath: '/tmp/a.md' }).success).toBe(true)
+    expect(
+      openRecentFile.input.safeParse({ sourcePath: 'docs/a.md', externalPath: '/tmp/a.md' }).success
+    ).toBe(false)
+  })
+
+  it('names the operation and the fields, never a value, for the file operations', () => {
+    const secret = 'secret-folder'
+    for (const [operation, schema, input] of [
+      ['workspace.openFile', openFile.input, { sourcePath: `../${secret}/a.md` }],
+      ['workspace.openFile', openFile.input, { [secret]: 1 }],
+      ['workspace.recordRecent', recordRecent.input, { sourcePath: `../${secret}` }],
+      ['workspace.openRecentFile', openRecentFile.input, { externalPath: `/tmp/${secret}.txt` }]
+    ] as const) {
+      let thrown: unknown
+      try {
+        parseOperationInput(operation, schema, input)
+      } catch (error) {
+        thrown = error
+      }
+      expect(thrown, operation).toBeInstanceOf(ContractInputError)
+      expect((thrown as Error).message.startsWith(`Invalid ${operation} input`), operation).toBe(
+        true
+      )
+      expect((thrown as Error).message, operation).not.toMatch(/secret/)
     }
   })
 
@@ -183,6 +228,12 @@ describe('workspace input', () => {
 })
 
 describe('workspace output', () => {
+  it('gives every operation the same workspace state schema', () => {
+    for (const operation of Object.values(operations)) {
+      expect(operation.output, operation.channel).toBe(getState.output)
+    }
+  })
+
   const state = {
     schemaVersion: 6,
     shell: { sidebarCollapsed: true, sidebarWidth: 164, activeSidebar: 'files' },

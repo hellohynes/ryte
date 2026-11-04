@@ -10,10 +10,7 @@ import type {
 } from '../shared/files'
 import type {
   WorkspaceFileRef,
-  WorkspaceOpenRecentFileInput,
   WorkspaceOpenFileInput,
-  WorkspaceRecordRecentInput,
-  WorkspaceState,
   WorkspaceTabFileInput
 } from '../shared/workspace'
 import type {
@@ -67,13 +64,6 @@ export interface SearchQueryOptions {
 }
 
 interface LegacyRyteApi {
-  workspace: {
-    openFile(input: WorkspaceOpenFileInput): Promise<WorkspaceState>
-    openRecentFile(input: WorkspaceOpenRecentFileInput): Promise<WorkspaceState>
-    openNativeFile(): Promise<WorkspaceState>
-    recordRecent(input: WorkspaceRecordRecentInput): Promise<WorkspaceState>
-    pruneMissingFileRefs(): Promise<WorkspaceState>
-  }
   files: {
     listTree(): Promise<FileTreeResponse>
     listCatalog(): Promise<FileCatalogResponse>
@@ -114,13 +104,6 @@ interface LegacyRyteApi {
 export type RyteApi = MergeApi<LegacyRyteApi, ContractApi>
 
 const legacyApi: LegacyRyteApi = {
-  workspace: {
-    openFile: (input) => ipcRenderer.invoke('workspace:open-file', input),
-    openRecentFile: (input) => ipcRenderer.invoke('workspace:open-recent-file', input),
-    openNativeFile: () => ipcRenderer.invoke('workspace:open-native-file'),
-    recordRecent: (input) => ipcRenderer.invoke('workspace:record-recent', input),
-    pruneMissingFileRefs: () => ipcRenderer.invoke('workspace:prune-missing-file-refs')
-  },
   files: {
     listTree: () => ipcRenderer.invoke('files:list-tree'),
     listCatalog: () => ipcRenderer.invoke('files:list-catalog'),
