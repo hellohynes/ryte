@@ -4,6 +4,32 @@ Ryte publishes an Apple Silicon (`arm64`) DMG through GitHub Releases. The app i
 
 The release workflow reads the signing credentials from the `release` environment of this repository. The sections below cover the one-time setup, a local trial, and the publishing steps.
 
+## When to release
+
+A release is a decision, not a schedule. Release when something a person using Ryte would notice has merged, and the checks below pass.
+
+**Trigger** (any one):
+
+- A `feat`, or a `fix` for something that goes wrong in real use.
+- A privacy or data-safety fix: release it as soon as it merges.
+
+Changes that only touch internals (refactors, dependencies, tests, docs, CI, the site) never trigger a release on their own. They ride along with the next one.
+
+**Checks before tagging**
+
+- [ ] The last pull request's CI run passed on its final commit, and `pnpm validate` and `pnpm smoke:indexer` pass on the commit being tagged.
+- [ ] No open bug that can lose a note or leak note text or a key.
+- [ ] The version in `app/package.json` follows the Conventional Commits since the last tag (see the Versioning Policy in `CHANGELOG.md`): a `fix` is a patch, a `feat` is a minor.
+- [ ] `CHANGELOG.md` has the entry, written in plain language for a person using Ryte, with its Validation list.
+- [ ] A release-candidate tag (for example `v0.2.0-rc.1`) built, signed, notarized and verified with `scripts/verify-mac-release.mjs`. It publishes nothing.
+- [ ] A short manual pass on the DMG that candidate produced, on a fresh profile: it launches, indexes a folder of synthetic notes, search works with and without an OpenAI key, and Preferences open. When the release touches smart search, repeat a rebuild with a real key on made-up notes, online and offline.
+- [ ] The download links and version on the site point at the new release.
+
+**After tagging**
+
+- [ ] Download the published DMG and check its checksum.
+- [ ] A published tag is never moved or reused; a bad release is fixed by the next patch version.
+
 ## One-time setup
 
 ### Apple
