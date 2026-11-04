@@ -12,6 +12,8 @@ Ryte uses a lightweight PR workflow even for personal development. The goal is t
 6. Use the PR template to record validation, privacy impact, and manual smoke.
 7. Merge only after CI and any required manual checks are recorded.
 
+CI (`.github/workflows/ci.yml`, job `App validation`) runs once per pull request, and a newer push to the same PR replaces the run still going. It does not run on a branch that has no PR: validate locally, or run the workflow by hand from the Actions tab (`workflow_dispatch`).
+
 ## Required Local Checks
 
 ```bash

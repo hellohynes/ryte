@@ -1,11 +1,16 @@
 name: CI
 
+# One run per pull request. A push trigger as well gave every commit two macOS jobs that competed for runners: one waited and passed,
+# the other was never assigned a runner and was cancelled after 15 minutes, showing as a failed check. A branch without a pull request
+# is validated locally (`pnpm validate`) or by running this workflow by hand.
 on:
   pull_request:
-  push:
-    branches-ignore:
-      - main
-      - master
+  workflow_dispatch:
+
+# A newer push to the same pull request replaces the run still going for the older commit.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   app:
