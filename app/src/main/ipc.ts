@@ -1,11 +1,13 @@
 import { randomUUID } from 'node:crypto'
-import { readFile, realpath, stat } from 'node:fs/promises'
-import { basename, extname, relative, resolve, sep } from 'node:path'
+import { readFile } from 'node:fs/promises'
+import { basename, relative, sep } from 'node:path'
 
 import { app, BrowserWindow, clipboard, dialog, ipcMain, shell, type WebContents } from 'electron'
 
 import { refreshAppMenu } from './app-menu'
 import { applyColorMode } from './appearance'
+import { createAppHandlers } from './contract/app-handlers'
+import { createDialogHandlers } from './contract/dialog-handlers'
 import {
   createIndexerHandlers,
   forwardEmbeddingStatus,
@@ -43,6 +45,7 @@ import {
   assertValidWorkspaceUpdateTabViewModeInput,
   assertValidWorkspaceWindowPatch
 } from './ipc-validation'
+import { fileRefForPickedMarkdownFile, resolveExternalMarkdownFile } from './picked-file'
 import { SearchService } from './search/search-service'
 import { settingsStore } from './settings/settings-store'
 import { listAuthorizedOpenAIModels, validateProviderKey } from './settings/key-validation'
@@ -115,29 +118,6 @@ function sendSearchEvent(
   activeRequest.owner.send(channel, payload)
 }
 
-async function resolveExternalMarkdownFile(absPath: string): Promise<string> {
-  const safePath = await realpath(resolve(absPath))
-  if (extname(safePath).toLowerCase() !== '.md') {
-    throw new Error('Selected file must be a Markdown file')
-  }
-
-  const fileStat = await stat(safePath)
-  if (!fileStat.isFile()) throw new Error(`Workspace file not found: ${absPath}`)
-  return safePath
-}
-
-async function fileRefForPickedMarkdownFile(
-  absPath: string,
-  notesRoot: string
-): Promise<WorkspaceFileRef> {
-  const safePath = await resolveExternalMarkdownFile(absPath)
-  const resolvedRoot = await realpath(resolve(notesRoot))
-  if (safePath === resolvedRoot || safePath.startsWith(resolvedRoot + sep)) {
-    return { sourcePath: relative(resolvedRoot, safePath).split(sep).join('/') }
-  }
-  return { externalPath: safePath }
-}
-
 async function fileRefForWorkspaceTab(tabId: string): Promise<WorkspaceFileRef> {
   const fileRef = workspaceStore.fileRefForTab(tabId)
   if (!fileRef) throw new Error('Workspace tab not found')
@@ -170,8 +150,6 @@ const emit = createEmitter(() => BrowserWindow.getAllWindows())
  * after the first window is visible.
  */
 export function registerIpc(): void {
-  ipcMain.handle('app:get-version', () => app.getVersion())
-
   ipcMain.handle('workspace:get-state', () => workspaceStore.publicState())
 
   ipcMain.handle('workspace:update-shell', (_event, patch: unknown) => {
@@ -250,34 +228,6 @@ export function registerIpc(): void {
     const next = await workspaceStore.pruneMissingFileRefs()
     refreshAppMenu()
     return next
-  })
-
-  ipcMain.handle('dialog:open-folder', async (event) => {
-    const win = BrowserWindow.fromWebContents(event.sender)
-    const result = win
-      ? await dialog.showOpenDialog(win, { properties: ['openDirectory'] })
-      : await dialog.showOpenDialog({ properties: ['openDirectory'] })
-    if (result.canceled || result.filePaths.length === 0) return null
-    return result.filePaths[0]
-  })
-
-  ipcMain.handle('dialog:open-file', async (event) => {
-    const notesRoot = settingsStore.load().notesRoot
-    const win = BrowserWindow.fromWebContents(event.sender)
-    const result = win
-      ? await dialog.showOpenDialog(win, {
-          defaultPath: notesRoot,
-          filters: [{ name: 'Markdown', extensions: ['md'] }],
-          properties: ['openFile']
-        })
-      : await dialog.showOpenDialog({
-          defaultPath: notesRoot,
-          filters: [{ name: 'Markdown', extensions: ['md'] }],
-          properties: ['openFile']
-        })
-    if (result.canceled || result.filePaths.length === 0) return null
-
-    return fileRefForPickedMarkdownFile(result.filePaths[0]!, notesRoot)
   })
 
   // A search still running would read from the store while it is emptied. The indexer calls this only once
@@ -363,6 +313,12 @@ export function registerIpc(): void {
   })
 
   registerOperations(ipcMain, contract, {
+    app: createAppHandlers({ getVersion: () => app.getVersion() }),
+    dialog: createDialogHandlers({
+      windowFor: (sender) => BrowserWindow.fromWebContents(sender),
+      showOpenDialog: (win, options) =>
+        win ? dialog.showOpenDialog(win, options) : dialog.showOpenDialog(options)
+    }),
     indexer: createIndexerHandlers({
       service: indexerService,
       beforeClear: stopSearchesBeforeClear

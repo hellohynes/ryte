@@ -1,8 +1,12 @@
-import { extname, isAbsolute, normalize, sep, win32 } from 'node:path'
+import { extname, isAbsolute, sep } from 'node:path'
 
 import type { SearchOptions, SearchSnapshotFreshnessInput } from './search/search-service'
 import type { FileRenameInput } from '../shared/files'
-import { MAX_PATH_LENGTH, normalizeWorkspaceSourcePath } from '../shared/source-path'
+import {
+  MAX_PATH_LENGTH,
+  normalizeWorkspaceExternalPath,
+  normalizeWorkspaceSourcePath
+} from '../shared/source-path'
 import type {
   WorkspaceCloseTabInput,
   WorkspaceFileRef,
@@ -115,26 +119,7 @@ function assertValidWorkspaceFolderSortModes(
 }
 
 function assertValidWorkspaceExternalPath(value: unknown): string {
-  if (
-    typeof value !== 'string' ||
-    value.length === 0 ||
-    value.length > MAX_PATH_LENGTH ||
-    value.includes('\0') ||
-    (!isAbsolute(value) && !win32.isAbsolute(value))
-  ) {
-    throw new Error('Invalid workspace external path')
-  }
-
-  const externalPath = normalize(value)
-  if (
-    externalPath.includes('\0') ||
-    (!isAbsolute(externalPath) && !win32.isAbsolute(externalPath)) ||
-    extname(externalPath).toLowerCase() !== '.md'
-  ) {
-    throw new Error('Invalid workspace external path')
-  }
-
-  return externalPath
+  return normalizeWorkspaceExternalPath(value)
 }
 
 function assertValidWorkspaceTabId(value: unknown): string {

@@ -36,7 +36,8 @@ handler       createTaskHandlers(...).toggle(parsedInput, { sender })
 ```
 
 An event goes the other way: the handler calls `emit(contract.tasks.events.changed)`, the emitter sends it to every
-live window, and the renderer subscribes with `window.ryte.tasks.onChanged(callback)`.
+live window, and the renderer subscribes with `window.ryte.tasks.onChanged(callback)`. To reach one window only, use
+`emit.to(webContents, event, payload)` (see [Add an event](#add-an-event)).
 
 ## Add an operation
 
@@ -77,7 +78,7 @@ live window, and the renderer subscribes with `window.ryte.tasks.onChanged(callb
 3. **Write the handler** in `app/src/main/contract/<area>-handlers.ts`: add `ping: async (input, ctx) => ...` to the
    object returned by `create<Area>Handlers`. The type makes a missing or extra handler a compile error, so run
    `pnpm typecheck` now: `pnpm check:contract` does not report a missing handler. `input` is
-   already validated and typed; `ctx.sender` is the window that called. Take dependencies as parameters (the way
+   already validated and typed; `ctx.sender` is the `WebContents` of the page that called. Take dependencies as parameters (the way
    `createTaskHandlers` takes `service`, `settings` and `emit`) so the handler can be tested without Electron.
    - **New area:** create `<area>-handlers.ts` exporting `create<Area>Handlers(...)` that returns
      `Handlers<Contract>['<area>']`, and add `<area>: create<Area>Handlers(...)` to the `registerOperations(ipcMain,
@@ -115,6 +116,21 @@ validates it at runtime (main is trusted), so keep it plain data. The UI subscri
 `window.ryte.<area>.on<Name>(callback)`, which returns an unsubscribe function. Never call `webContents.send` yourself.
 `app/src/contract/indexer.ts` (the `status` event) and `forwardIndexerStatus` in
 `app/src/main/contract/indexer-handlers.ts` are a worked example of an event with a payload.
+
+**Broadcast or one window.** `emit(event, payload)` sends to every live window: use it for state every window shows
+(tasks, indexer status). `emit.to(webContents, event, payload)` sends to that one `WebContents` and nobody else: use it
+when the event belongs to one window (a search's results, a menu command), because a broadcast would show it in every
+other window. Both skip a destroyed window, and a failed send is logged (channel and reason, never the payload)
+without throwing. A handler gets the asking page's `WebContents` as `ctx.sender`, which is what `emit.to` takes. For any other target, take the emitter and the
+window lookup as parameters so a test can use fake windows:
+
+```ts
+// app/src/main/menu-command.ts: the focused window, else the first, gets the command
+emitTo(target.webContents, contract.app.events.menuCommand, command)
+```
+
+Name the key so the renderer-facing subscriber keeps the name you want: key `menuCommand` becomes
+`window.ryte.app.onMenuCommand`.
 
 ## Change an operation
 

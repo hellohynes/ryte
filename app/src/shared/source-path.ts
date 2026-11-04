@@ -1,4 +1,4 @@
-import { isAbsolute, normalize, sep, win32 } from 'node:path'
+import { extname, isAbsolute, normalize, sep, win32 } from 'node:path'
 
 export const MAX_PATH_LENGTH = 4096
 
@@ -36,4 +36,31 @@ export function normalizeWorkspaceSourcePath(value: unknown): string {
   }
 
   return sourcePath
+}
+
+/**
+ * Validates and normalizes an absolute Markdown file path outside the notes root (POSIX or Windows
+ * style). Shared by the legacy IPC validators and the contract's `externalPath` primitive.
+ */
+export function normalizeWorkspaceExternalPath(value: unknown): string {
+  if (
+    typeof value !== 'string' ||
+    value.length === 0 ||
+    value.length > MAX_PATH_LENGTH ||
+    value.includes('\0') ||
+    (!isAbsolute(value) && !win32.isAbsolute(value))
+  ) {
+    throw new Error('Invalid workspace external path')
+  }
+
+  const externalPath = normalize(value)
+  if (
+    externalPath.includes('\0') ||
+    (!isAbsolute(externalPath) && !win32.isAbsolute(externalPath)) ||
+    extname(externalPath).toLowerCase() !== '.md'
+  ) {
+    throw new Error('Invalid workspace external path')
+  }
+
+  return externalPath
 }
