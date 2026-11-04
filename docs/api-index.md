@@ -6,6 +6,18 @@ Every operation and event that crosses between the main process and the UI is li
 definitions in `app/src/contract/` are the source; see [api-contract.md](api-contract.md) for how to add,
 change or remove one.
 
+## app
+
+| Operation | Channel | What it does | Input |
+| --- | --- | --- | --- |
+| `app.getVersion` | `app:get-version` | The version of the running app, as shown in Preferences. | `none` |
+
+## dialog
+
+| Operation | Channel | What it does | Input |
+| --- | --- | --- | --- |
+| `dialog.openFolder` | `dialog:open-folder` | Show the system folder picker over the window that asked: the chosen folder path, or null when it was cancelled or nothing was chosen. | `none` |
+
 ## indexer
 
 | Operation | Channel | What it does | Input |

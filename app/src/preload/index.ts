@@ -77,7 +77,6 @@ export interface SearchQueryOptions {
 
 interface LegacyRyteApi {
   app: {
-    getVersion(): Promise<string>
     onMenuCommand(cb: (command: AppMenuCommand) => void): () => void
   }
   workspace: {
@@ -95,10 +94,6 @@ interface LegacyRyteApi {
     setOutlineCollapsed(input: WorkspaceSetOutlineCollapsedInput): Promise<WorkspaceState>
     setOutlineWidth(input: WorkspaceSetOutlineWidthInput): Promise<WorkspaceState>
     pruneMissingFileRefs(): Promise<WorkspaceState>
-  }
-  dialog: {
-    openFolder(): Promise<string | null>
-    openFile(): Promise<WorkspaceOpenRecentFileInput | null>
   }
   files: {
     listTree(): Promise<FileTreeResponse>
@@ -141,7 +136,6 @@ export type RyteApi = MergeApi<LegacyRyteApi, ContractApi>
 
 const legacyApi: LegacyRyteApi = {
   app: {
-    getVersion: () => ipcRenderer.invoke('app:get-version'),
     onMenuCommand: (cb) => {
       const listener = (_: unknown, command: AppMenuCommand): void => cb(command)
       ipcRenderer.on(APP_MENU_COMMAND_CHANNEL, listener)
@@ -163,10 +157,6 @@ const legacyApi: LegacyRyteApi = {
     setOutlineCollapsed: (input) => ipcRenderer.invoke('workspace:set-outline-collapsed', input),
     setOutlineWidth: (input) => ipcRenderer.invoke('workspace:set-outline-width', input),
     pruneMissingFileRefs: () => ipcRenderer.invoke('workspace:prune-missing-file-refs')
-  },
-  dialog: {
-    openFolder: () => ipcRenderer.invoke('dialog:open-folder'),
-    openFile: () => ipcRenderer.invoke('dialog:open-file')
   },
   files: {
     listTree: () => ipcRenderer.invoke('files:list-tree'),
