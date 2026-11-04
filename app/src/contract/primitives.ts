@@ -44,7 +44,8 @@ export const workspaceFileRef = z.union([
   z.strictObject({ externalPath, sourcePath: z.undefined().optional() })
 ])
 
-const WORKSPACE_TAB_ID_RE = /^[A-Za-z0-9][A-Za-z0-9:_.-]{0,199}$/
+/** The one definition of a tab id's shape; the legacy tab validator imports it too. */
+export const WORKSPACE_TAB_ID_RE = /^[A-Za-z0-9][A-Za-z0-9:_.-]{0,199}$/
 
 /**
  * The id of an open tab: 1 to 200 characters of letters, digits and `: _ . -`, starting with a letter or digit.
@@ -53,6 +54,30 @@ const WORKSPACE_TAB_ID_RE = /^[A-Za-z0-9][A-Za-z0-9:_.-]{0,199}$/
 export const workspaceTabId = z
   .string()
   .refine((value) => WORKSPACE_TAB_ID_RE.test(value), 'Expected a tab id')
+
+/**
+ * A note inside the notes root, as a `sourcePath` only. The other file-reference key is declared (as `undefined`) so
+ * the type equals the file-reference type this replaced, and an own `externalPath` key is rejected even when it is
+ * `undefined`.
+ */
+export const sourceFileInput = z
+  .strictObject({ sourcePath, externalPath: z.undefined().optional() })
+  .refine(hasNoExplicitUndefined, 'Expected defined values')
+
+type FileRefInput =
+  | { sourcePath: string; externalPath?: undefined }
+  | { externalPath: string; sourcePath?: undefined }
+
+/**
+ * A file reference that keeps only the key that was set, as the validator this replaced did, so no `undefined` key
+ * reaches the store. Same acceptance rules as `workspaceFileRef`.
+ */
+export const workspaceFileRefInput = workspaceFileRef.transform(
+  (file): FileRefInput =>
+    file.sourcePath !== undefined
+      ? { sourcePath: file.sourcePath }
+      : { externalPath: file.externalPath }
+)
 
 /**
  * An integer by `Number.isInteger`, matching the legacy validators. `z.int()` is narrower: it rejects

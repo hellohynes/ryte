@@ -5,7 +5,13 @@ import { z } from 'zod'
 import { normalizeWorkspaceSourcePath } from '../shared/source-path'
 import { WORKSPACE_SCHEMA_VERSION } from '../shared/workspace'
 import { defineArea, defineOperation } from './define'
-import { hasNoExplicitUndefined, sourcePath, workspaceFileRef, workspaceTabId } from './primitives'
+import {
+  hasNoExplicitUndefined,
+  sourceFileInput,
+  sourcePath,
+  workspaceFileRefInput,
+  workspaceTabId
+} from './primitives'
 
 const MAX_SIDEBAR_WIDTH = 4000
 const MAX_DOCUMENT_OUTLINE_WIDTH = 1000
@@ -62,7 +68,7 @@ const windowBounds = z.object({
 })
 
 /** One note file: exactly one of `sourcePath` or `externalPath`. */
-const storedFileRef = z.union([
+export const storedFileRef = z.union([
   z.object({ sourcePath: z.string(), externalPath: z.undefined().optional() }),
   z.object({ externalPath: z.string(), sourcePath: z.undefined().optional() })
 ])
@@ -78,7 +84,7 @@ const recentFile = z.intersection(
 )
 
 /** Everything the app remembers about the window, tabs and sidebar between launches. */
-const workspaceState = z.object({
+export const workspaceState = z.object({
   schemaVersion: z.literal(WORKSPACE_SCHEMA_VERSION),
   shell: z.object({
     sidebarCollapsed: z.boolean(),
@@ -103,7 +109,7 @@ const workspaceState = z.object({
   outlineCollapsedByPath: z.record(z.string(), z.boolean())
 })
 
-const exampleState = {
+export const exampleState = {
   schemaVersion: WORKSPACE_SCHEMA_VERSION as typeof WORKSPACE_SCHEMA_VERSION,
   shell: { sidebarCollapsed: false, sidebarWidth: 360, activeSidebar: 'files' as const },
   library: { expandedFolders: null, scrollTop: 0, folderSortModes: {} },
@@ -142,27 +148,9 @@ const libraryPatch = z
 
 const tabInput = z.strictObject({ tabId: workspaceTabId })
 
-/**
- * A note inside the notes root. The other file-reference key is declared (as `undefined`) so the type equals the
- * file-reference type this replaced, and an own `externalPath` key is rejected even when it is `undefined`.
- */
-const sourceFileInput = z
-  .strictObject({ sourcePath, externalPath: z.undefined().optional() })
-  .refine(hasNoExplicitUndefined, 'Expected defined values')
-
 const recordRecentInput = z.strictObject({ sourcePath })
 
-type RecentFileInput =
-  | { sourcePath: string; externalPath?: undefined }
-  | { externalPath: string; sourcePath?: undefined }
-
-/** Keeps only the key that was set, as the validator this replaced did, so no `undefined` key reaches the store. */
-const recentFileInput = workspaceFileRef.transform(
-  (file): RecentFileInput =>
-    file.sourcePath !== undefined
-      ? { sourcePath: file.sourcePath }
-      : { externalPath: file.externalPath }
-)
+const recentFileInput = workspaceFileRefInput
 
 export const getState = defineOperation({
   channel: 'workspace:get-state',

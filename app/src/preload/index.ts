@@ -1,18 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
-import type {
-  FileCatalogResponse,
-  FileCatalogChangeEvent,
-  FileRenameInput,
-  FileRenameResult,
-  FileTrashResult,
-  FileTreeResponse
-} from '../shared/files'
-import type {
-  WorkspaceFileRef,
-  WorkspaceOpenFileInput,
-  WorkspaceTabFileInput
-} from '../shared/workspace'
+import type { FileCatalogChangeEvent } from '../shared/files'
+import type { WorkspaceOpenFileInput, WorkspaceTabFileInput } from '../shared/workspace'
 import type {
   SearchAnswerMode as MainSearchAnswerMode,
   SearchRetrievalMode as MainSearchRetrievalMode,
@@ -65,17 +54,6 @@ export interface SearchQueryOptions {
 
 interface LegacyRyteApi {
   files: {
-    listTree(): Promise<FileTreeResponse>
-    listCatalog(): Promise<FileCatalogResponse>
-    copyContent(input: WorkspaceFileRef): Promise<void>
-    copyPath(input: WorkspaceFileRef): Promise<void>
-    showInFinder(input: WorkspaceFileRef): Promise<void>
-    rename(input: FileRenameInput): Promise<FileRenameResult>
-    moveToTrash(input: WorkspaceFileRef): Promise<FileTrashResult>
-    read(absPath: string): Promise<string>
-    readSource(input: WorkspaceOpenFileInput): Promise<string>
-    readSourceTitle(input: WorkspaceOpenFileInput): Promise<string | null>
-    readWorkspaceTab(input: WorkspaceTabFileInput): Promise<string>
     watch(absPath: string): Promise<void>
     watchSource(input: WorkspaceOpenFileInput): Promise<void>
     watchWorkspaceTab(input: WorkspaceTabFileInput): Promise<void>
@@ -105,17 +83,6 @@ export type RyteApi = MergeApi<LegacyRyteApi, ContractApi>
 
 const legacyApi: LegacyRyteApi = {
   files: {
-    listTree: () => ipcRenderer.invoke('files:list-tree'),
-    listCatalog: () => ipcRenderer.invoke('files:list-catalog'),
-    copyContent: (input) => ipcRenderer.invoke('files:copy-content', input),
-    copyPath: (input) => ipcRenderer.invoke('files:copy-path', input),
-    showInFinder: (input) => ipcRenderer.invoke('files:show-in-finder', input),
-    rename: (input) => ipcRenderer.invoke('files:rename', input),
-    moveToTrash: (input) => ipcRenderer.invoke('files:move-to-trash', input),
-    read: (absPath) => ipcRenderer.invoke('files:read', absPath),
-    readSource: (input) => ipcRenderer.invoke('files:read-source', input),
-    readSourceTitle: (input) => ipcRenderer.invoke('files:read-source-title', input),
-    readWorkspaceTab: (input) => ipcRenderer.invoke('files:read-workspace-tab', input),
     watch: (absPath) => ipcRenderer.invoke('files:watch', absPath),
     watchSource: (input) => ipcRenderer.invoke('files:watch-source', input),
     watchWorkspaceTab: (input) => ipcRenderer.invoke('files:watch-workspace-tab', input),

@@ -81,11 +81,11 @@ const openRecentFile = make('openRecentFile')
 const recordRecent = make('recordRecent')
 
 /** The shapes every object input is tried with, so each operation proves it takes an object and nothing else. */
-const shapes = (
-  maker: (id: string, input: unknown) => WorkspaceVector,
+export const shapes = <TVector>(
+  maker: (id: string, input: unknown) => TVector,
   validOwnKey: string,
   validOwnValue: unknown
-): WorkspaceVector[] => [
+): TVector[] => [
   maker('empty object', {}),
   maker('undefined', undefined),
   maker('null', null),
@@ -132,7 +132,7 @@ const LIBRARY_VALID_VALUES: Record<(typeof LIBRARY_KEYS)[number], unknown> = {
 const longPath = (length: number): string => `${'a'.repeat(length - 3)}.md`
 const tabId = (length: number): string => `a${'b'.repeat(length - 1)}`
 
-const TAB_ID_CASES: [string, unknown][] = [
+export const TAB_ID_CASES: [string, unknown][] = [
   ['typical uuid', '3f2b8c1e-5d4a-4b9e-8f10-1234567890ab'],
   ['one character', 'a'],
   ['digit first', '1'],
@@ -169,7 +169,7 @@ const TAB_ID_CASES: [string, unknown][] = [
 ]
 
 /** Source paths every operation that takes one is tried with. */
-const SOURCE_PATH_CASES: [string, unknown][] = [
+export const SOURCE_PATH_CASES: [string, unknown][] = [
   ['typical', 'docs/a.md'],
   ['top level', 'a.md'],
   ['dot-slash is normalized', './a.md'],
@@ -201,7 +201,7 @@ const SOURCE_PATH_CASES: [string, unknown][] = [
 ]
 
 /** External paths: absolute (POSIX or Windows style) and still `.md` once normalized. */
-const EXTERNAL_PATH_CASES: [string, unknown][] = [
+export const EXTERNAL_PATH_CASES: [string, unknown][] = [
   ['typical', '/tmp/outside/a.md'],
   ['root level', '/a.md'],
   ['upper-case extension', '/tmp/A.MD'],

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
-import { basename, relative, sep } from 'node:path'
+import { relative, sep } from 'node:path'
 
 import { app, BrowserWindow, clipboard, dialog, ipcMain, shell, type WebContents } from 'electron'
 
@@ -8,6 +8,7 @@ import { refreshAppMenu } from './app-menu'
 import { applyColorMode } from './appearance'
 import { createAppHandlers } from './contract/app-handlers'
 import { createDialogHandlers } from './contract/dialog-handlers'
+import { createFilesHandlers } from './contract/files-handlers'
 import {
   createIndexerHandlers,
   forwardEmbeddingStatus,
@@ -26,13 +27,11 @@ import { walkNotes } from './indexing/walker'
 import { watcher } from './indexing/watcher'
 import {
   assertValidAbsolutePath,
-  assertValidFileRenameInput,
   assertValidRequestId,
   assertValidSearchSnapshotFreshnessInput,
   assertValidSearchOptions,
   assertValidSearchQuery,
   assertValidSourceFileInput,
-  assertValidWorkspaceFileRefInput,
   assertValidWorkspaceTabFileInput
 } from './ipc-validation'
 import { fileRefForPickedMarkdownFile, resolveExternalMarkdownFile } from './picked-file'
@@ -40,7 +39,6 @@ import { SearchService } from './search/search-service'
 import { settingsStore } from './settings/settings-store'
 import { listAuthorizedOpenAIModels, validateProviderKey } from './settings/key-validation'
 import {
-  readFileSafe,
   readSourceFileSafe,
   readSourceTitleSafe,
   resolveSourcePathUnderRoot
@@ -48,9 +46,10 @@ import {
 import { fileCatalogEntryFor, listFileCatalog } from './viewer/file-catalog'
 import { sourcePathForViewerChange } from './viewer/source-change-path'
 import { viewerWatcher } from './viewer/viewer-watcher'
+import { fileRefForWorkspaceTab as tabFileRef } from './workspace-tab-file'
 import { workspaceStore } from './workspace/workspace-store'
 import { type FileCatalogChangeEvent } from '../shared/files'
-import { isWorkspaceSourceFileRef, type WorkspaceFileRef } from '../shared/workspace'
+import { isWorkspaceSourceFileRef } from '../shared/workspace'
 
 let searchService: SearchService | null = null
 let watchedViewerSourcePath: string | null = null
@@ -108,20 +107,8 @@ function sendSearchEvent(
   activeRequest.owner.send(channel, payload)
 }
 
-async function fileRefForWorkspaceTab(tabId: string): Promise<WorkspaceFileRef> {
-  const fileRef = workspaceStore.fileRefForTab(tabId)
-  if (!fileRef) throw new Error('Workspace tab not found')
-  if (isWorkspaceSourceFileRef(fileRef)) return fileRef
-  return { externalPath: await resolveExternalMarkdownFile(fileRef.externalPath) }
-}
-
-async function readWorkspaceTabFile(tabId: string, notesRoot: string): Promise<string> {
-  const fileRef = await fileRefForWorkspaceTab(tabId)
-  if (isWorkspaceSourceFileRef(fileRef)) {
-    return readSourceFileSafe(fileRef.sourcePath, notesRoot)
-  }
-  return readFile(fileRef.externalPath, 'utf8')
-}
+const fileRefForWorkspaceTab = (tabId: string): ReturnType<typeof tabFileRef> =>
+  tabFileRef(tabId, { store: workspaceStore, resolveExternalMarkdownFile })
 
 function getOrCreateSearchService(): SearchService | null {
   const vs = indexerService.getVectorStore()
@@ -151,66 +138,6 @@ export function registerIpc(): void {
   forwardRebuildNotice(indexerService, emit)
   forwardEmbeddingStatus(indexerService, emit)
 
-  ipcMain.handle('files:list-tree', async () => {
-    const notesRoot = settingsStore.load().notesRoot
-    const absolutePaths = await walkNotes(notesRoot)
-    const paths = absolutePaths.map((p) => relative(notesRoot, p)).sort()
-    return { notesRoot, paths }
-  })
-
-  ipcMain.handle('files:list-catalog', async () => {
-    const notesRoot = settingsStore.load().notesRoot
-    return listFileCatalog(notesRoot)
-  })
-
-  ipcMain.handle('files:copy-content', async (_event, input: unknown) => {
-    const file = assertValidWorkspaceFileRefInput(input)
-    const path = await workspaceStore.resolveFilePath(file)
-    clipboard.writeText(await readFile(path, 'utf8'))
-  })
-
-  ipcMain.handle('files:copy-path', async (_event, input: unknown) => {
-    const file = assertValidWorkspaceFileRefInput(input)
-    clipboard.writeText(await workspaceStore.resolveFilePath(file))
-  })
-
-  ipcMain.handle('files:show-in-finder', async (_event, input: unknown) => {
-    const file = assertValidWorkspaceFileRefInput(input)
-    shell.showItemInFolder(await workspaceStore.resolveFilePath(file))
-  })
-
-  ipcMain.handle('files:rename', async (_event, input: unknown) => {
-    const result = await workspaceStore.renameFile(assertValidFileRenameInput(input))
-    refreshAppMenu()
-    return result
-  })
-
-  ipcMain.handle('files:move-to-trash', async (event, input: unknown) => {
-    const file = assertValidWorkspaceFileRefInput(input)
-    const path = await workspaceStore.resolveFilePath(file)
-    const options = {
-      type: 'warning' as const,
-      buttons: ['Move to Trash', 'Cancel'],
-      defaultId: 1,
-      cancelId: 1,
-      noLink: true,
-      message: `Move "${basename(path)}" to Trash?`,
-      detail: 'The file can be recovered from the Trash.'
-    }
-    const win = BrowserWindow.fromWebContents(event.sender)
-    const confirmation = win
-      ? await dialog.showMessageBox(win, options)
-      : await dialog.showMessageBox(options)
-    if (confirmation.response !== 0) {
-      return { trashed: false, workspace: workspaceStore.publicState() }
-    }
-
-    await shell.trashItem(path)
-    const workspace = workspaceStore.removeFileRef(file)
-    refreshAppMenu()
-    return { trashed: true, workspace }
-  })
-
   const restartIndexer = createIndexerRestarter({
     watcher,
     indexer: indexerService,
@@ -228,6 +155,22 @@ export function registerIpc(): void {
       windowFor: (sender) => BrowserWindow.fromWebContents(sender),
       showOpenDialog: (win, options) =>
         win ? dialog.showOpenDialog(win, options) : dialog.showOpenDialog(options)
+    }),
+    files: createFilesHandlers({
+      store: workspaceStore,
+      getNotesRoot: () => settingsStore.load().notesRoot,
+      walkNotes,
+      listFileCatalog,
+      readTextFile: (path) => readFile(path, 'utf8'),
+      readSourceFile: readSourceFileSafe,
+      readSourceTitle: readSourceTitleSafe,
+      resolveExternalMarkdownFile,
+      clipboard,
+      shell,
+      windowFor: (sender) => BrowserWindow.fromWebContents(sender),
+      showMessageBox: (win, options) =>
+        win ? dialog.showMessageBox(win, options) : dialog.showMessageBox(options),
+      refreshAppMenu
     }),
     indexer: createIndexerHandlers({
       service: indexerService,
@@ -250,29 +193,6 @@ export function registerIpc(): void {
         win ? dialog.showOpenDialog(win, options) : dialog.showOpenDialog(options),
       fileRefForPickedMarkdownFile
     })
-  })
-
-  ipcMain.handle('files:read', async (_event, absPath: unknown) => {
-    const notesRoot = settingsStore.load().notesRoot
-    return readFileSafe(assertValidAbsolutePath(absPath), notesRoot)
-  })
-
-  ipcMain.handle('files:read-source', async (_event, input: unknown) => {
-    const notesRoot = settingsStore.load().notesRoot
-    const { sourcePath } = assertValidSourceFileInput(input)
-    return readSourceFileSafe(sourcePath, notesRoot)
-  })
-
-  ipcMain.handle('files:read-workspace-tab', async (_event, input: unknown) => {
-    const notesRoot = settingsStore.load().notesRoot
-    const { tabId } = assertValidWorkspaceTabFileInput(input)
-    return readWorkspaceTabFile(tabId, notesRoot)
-  })
-
-  ipcMain.handle('files:read-source-title', async (_event, input: unknown) => {
-    const notesRoot = settingsStore.load().notesRoot
-    const { sourcePath } = assertValidSourceFileInput(input)
-    return readSourceTitleSafe(sourcePath, notesRoot)
   })
 
   ipcMain.handle('files:watch', async (_event, absPath: unknown) => {

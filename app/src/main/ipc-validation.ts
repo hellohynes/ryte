@@ -1,23 +1,13 @@
-import { extname, isAbsolute } from 'node:path'
+import { isAbsolute } from 'node:path'
 
 import type { SearchOptions, SearchSnapshotFreshnessInput } from './search/search-service'
-import type { FileRenameInput } from '../shared/files'
-import {
-  MAX_PATH_LENGTH,
-  normalizeWorkspaceExternalPath,
-  normalizeWorkspaceSourcePath
-} from '../shared/source-path'
-import type {
-  WorkspaceFileRef,
-  WorkspaceOpenFileInput,
-  WorkspaceTabFileInput
-} from '../shared/workspace'
+import { WORKSPACE_TAB_ID_RE } from '../contract/primitives'
+import { MAX_PATH_LENGTH, normalizeWorkspaceSourcePath } from '../shared/source-path'
+import type { WorkspaceOpenFileInput, WorkspaceTabFileInput } from '../shared/workspace'
 
-const MAX_FILE_NAME_LENGTH = 255
 const MAX_QUERY_LENGTH = 2000
 const MAX_TAB_ID_LENGTH = 200
 const REQUEST_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-const WORKSPACE_TAB_ID_RE = /^[A-Za-z0-9][A-Za-z0-9:_.-]{0,199}$/
 
 export function assertValidRequestId(value: unknown): string {
   if (typeof value !== 'string' || !REQUEST_ID_RE.test(value)) {
@@ -55,27 +45,6 @@ function assertObjectWithKeys(
 
 function assertValidWorkspaceSourcePath(value: unknown): string {
   return normalizeWorkspaceSourcePath(value)
-}
-
-function assertValidFileName(value: unknown): string {
-  if (
-    typeof value !== 'string' ||
-    value.length === 0 ||
-    value.length > MAX_FILE_NAME_LENGTH ||
-    value === '.' ||
-    value === '..' ||
-    value.includes('/') ||
-    value.includes('\\') ||
-    value.includes('\0') ||
-    extname(value).toLowerCase() !== '.md'
-  ) {
-    throw new Error('Invalid file name')
-  }
-  return value
-}
-
-function assertValidWorkspaceExternalPath(value: unknown): string {
-  return normalizeWorkspaceExternalPath(value)
 }
 
 function assertValidWorkspaceTabId(value: unknown): string {
@@ -176,40 +145,6 @@ function assertFiniteNumber(value: unknown, key: string): number {
     throw new Error(`Invalid ${key}`)
   }
   return value
-}
-
-export function assertValidWorkspaceFileRefInput(value: unknown): WorkspaceFileRef {
-  const input = assertObjectWithKeys(
-    value,
-    ['sourcePath', 'externalPath'],
-    'workspace file reference'
-  )
-  const hasSourcePath = input.sourcePath !== undefined
-  const hasExternalPath = input.externalPath !== undefined
-
-  if (hasSourcePath === hasExternalPath) {
-    throw new Error('Invalid workspace file reference')
-  }
-
-  return hasSourcePath
-    ? { sourcePath: assertValidWorkspaceSourcePath(input.sourcePath) }
-    : { externalPath: assertValidWorkspaceExternalPath(input.externalPath) }
-}
-
-export function assertValidFileRenameInput(value: unknown): FileRenameInput {
-  const input = assertObjectWithKeys(
-    value,
-    ['sourcePath', 'externalPath', 'name'],
-    'file rename input'
-  )
-  const file = assertValidWorkspaceFileRefInput({
-    ...(input.sourcePath !== undefined ? { sourcePath: input.sourcePath } : {}),
-    ...(input.externalPath !== undefined ? { externalPath: input.externalPath } : {})
-  })
-  return {
-    ...file,
-    name: assertValidFileName(input.name)
-  }
 }
 
 export function assertValidWorkspaceTabFileInput(value: unknown): WorkspaceTabFileInput {

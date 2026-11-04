@@ -1,14 +1,13 @@
 import { describe, expect, it } from 'vitest'
 
+import { workspaceTabId } from '../contract/primitives'
 import {
   assertValidAbsolutePath,
-  assertValidFileRenameInput,
   assertValidRequestId,
   assertValidSearchSnapshotFreshnessInput,
   assertValidSearchOptions,
   assertValidSearchQuery,
   assertValidSourceFileInput,
-  assertValidWorkspaceFileRefInput,
   assertValidWorkspaceTabFileInput
 } from './ipc-validation'
 
@@ -38,19 +37,6 @@ describe('ipc validation', () => {
   })
 
   it('accepts narrow workspace operation payloads', () => {
-    expect(assertValidFileRenameInput({ sourcePath: 'folder/a.md', name: 'renamed.md' })).toEqual({
-      sourcePath: 'folder/a.md',
-      name: 'renamed.md'
-    })
-    expect(
-      assertValidFileRenameInput({ externalPath: '/tmp/outside.md', name: 'renamed.md' })
-    ).toEqual({ externalPath: '/tmp/outside.md', name: 'renamed.md' })
-    expect(assertValidWorkspaceFileRefInput({ sourcePath: 'folder/a.md' })).toEqual({
-      sourcePath: 'folder/a.md'
-    })
-    expect(assertValidWorkspaceFileRefInput({ externalPath: '/tmp/outside.md' })).toEqual({
-      externalPath: '/tmp/outside.md'
-    })
     expect(assertValidWorkspaceTabFileInput({ tabId: 'tab-1' })).toEqual({ tabId: 'tab-1' })
     expect(assertValidSourceFileInput({ sourcePath: './folder/a.md' })).toEqual({
       sourcePath: 'folder/a.md'
@@ -58,30 +44,6 @@ describe('ipc validation', () => {
   })
 
   it('rejects invalid workspace operation source paths and unknown keys', () => {
-    expect(() => assertValidFileRenameInput({ sourcePath: 'a.md', name: '../renamed.md' })).toThrow(
-      'Invalid file name'
-    )
-    expect(() => assertValidFileRenameInput({ sourcePath: 'a.md', name: 'renamed.txt' })).toThrow(
-      'Invalid file name'
-    )
-    expect(() =>
-      assertValidFileRenameInput({ sourcePath: 'a.md', name: 'renamed.md', extra: true })
-    ).toThrow('Invalid file rename input key')
-    expect(() =>
-      assertValidWorkspaceFileRefInput({
-        sourcePath: 'a.md',
-        externalPath: '/tmp/a.md'
-      })
-    ).toThrow('Invalid workspace file reference')
-    expect(() => assertValidWorkspaceFileRefInput({ externalPath: '/tmp/a.txt' })).toThrow(
-      'Invalid workspace external path'
-    )
-    expect(() => assertValidWorkspaceFileRefInput({ externalPath: 'relative.md' })).toThrow(
-      'Invalid workspace external path'
-    )
-    expect(() =>
-      assertValidWorkspaceFileRefInput({ externalPath: '/tmp/a.md', arbitrary: true })
-    ).toThrow('Invalid workspace file reference key')
     expect(() => assertValidSourceFileInput({ sourcePath: '/tmp/a.md' })).toThrow(
       'Invalid workspace source path'
     )
@@ -97,6 +59,27 @@ describe('ipc validation', () => {
     expect(() => assertValidWorkspaceTabFileInput({ tabId: '../tab' })).toThrow(
       'Invalid workspace tab id'
     )
+  })
+
+  it('judges a tab id as the contract does, since both read one pattern', () => {
+    for (const tabId of [
+      'a',
+      '1',
+      'a:b_c.d-e',
+      'a'.repeat(200),
+      'a'.repeat(201),
+      '.a',
+      'a\n',
+      'a\0'
+    ]) {
+      let legacy = true
+      try {
+        assertValidWorkspaceTabFileInput({ tabId })
+      } catch {
+        legacy = false
+      }
+      expect(legacy, JSON.stringify(tabId)).toBe(workspaceTabId.safeParse(tabId).success)
+    }
   })
 })
 
