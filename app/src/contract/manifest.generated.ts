@@ -48,5 +48,18 @@ export const manifest = {
     events: {
       changed: 'tasks:changed'
     }
+  },
+  workspace: {
+    operations: {
+      getState: 'workspace:get-state',
+      updateShell: 'workspace:update-shell',
+      updateLibrary: 'workspace:update-library',
+      focusTab: 'workspace:focus-tab',
+      closeTab: 'workspace:close-tab',
+      updateTabViewMode: 'workspace:update-tab-view-mode',
+      setOutlineCollapsed: 'workspace:set-outline-collapsed',
+      setOutlineWidth: 'workspace:set-outline-width'
+    },
+    events: {}
   }
 } as const

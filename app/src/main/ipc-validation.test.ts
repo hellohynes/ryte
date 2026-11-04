@@ -8,19 +8,11 @@ import {
   assertValidSearchOptions,
   assertValidSearchQuery,
   assertValidSourceFileInput,
-  assertValidWorkspaceCloseTabInput,
   assertValidWorkspaceFileRefInput,
-  assertValidWorkspaceFocusTabInput,
-  assertValidWorkspaceLibraryPatch,
   assertValidWorkspaceOpenFileInput,
   assertValidWorkspaceOpenRecentFileInput,
   assertValidWorkspaceRecordRecentInput,
-  assertValidWorkspaceSetOutlineCollapsedInput,
-  assertValidWorkspaceSetOutlineWidthInput,
-  assertValidWorkspaceShellPatch,
-  assertValidWorkspaceTabFileInput,
-  assertValidWorkspaceUpdateTabViewModeInput,
-  assertValidWorkspaceWindowPatch
+  assertValidWorkspaceTabFileInput
 } from './ipc-validation'
 
 describe('ipc validation', () => {
@@ -48,85 +40,6 @@ describe('ipc validation', () => {
     expect(() => assertValidSearchOptions({ arbitrary: true })).toThrow('Invalid search option')
   })
 
-  it('accepts narrow workspace shell and window patches', () => {
-    expect(
-      assertValidWorkspaceShellPatch({
-        sidebarCollapsed: true,
-        sidebarWidth: 360,
-        activeSidebar: 'files'
-      })
-    ).toEqual({
-      sidebarCollapsed: true,
-      sidebarWidth: 360,
-      activeSidebar: 'files'
-    })
-    expect(
-      assertValidWorkspaceWindowPatch({
-        bounds: { x: 10, y: 20, width: 1460, height: 980 },
-        maximized: false,
-        fullscreen: false
-      })
-    ).toEqual({
-      bounds: { x: 10, y: 20, width: 1460, height: 980 },
-      maximized: false,
-      fullscreen: false
-    })
-  })
-
-  it('accepts narrow workspace library patches', () => {
-    expect(
-      assertValidWorkspaceLibraryPatch({
-        expandedFolders: ['./docs', 'sessions/2026-07-02/plans'],
-        scrollTop: 420,
-        folderSortModes: {
-          docs: 'za',
-          sessions: 'recency'
-        }
-      })
-    ).toEqual({
-      expandedFolders: ['docs', 'sessions/2026-07-02/plans'],
-      scrollTop: 420,
-      folderSortModes: {
-        docs: 'za',
-        sessions: 'recency'
-      }
-    })
-  })
-
-  it('rejects unexpected workspace keys and invalid dimensions', () => {
-    expect(() => assertValidWorkspaceShellPatch({ arbitrary: true })).toThrow(
-      'Invalid workspace shell key'
-    )
-    expect(() => assertValidWorkspaceShellPatch({ sidebarWidth: -1 })).toThrow(
-      'Invalid sidebarWidth'
-    )
-    expect(() => assertValidWorkspaceShellPatch({ activeSidebar: 'settings' })).toThrow(
-      'Invalid activeSidebar'
-    )
-    expect(() => assertValidWorkspaceShellPatch({ activeSidebar: 'home' })).toThrow(
-      'Invalid activeSidebar'
-    )
-    expect(() => assertValidWorkspaceWindowPatch({ arbitrary: true })).toThrow(
-      'Invalid workspace window key'
-    )
-    expect(() =>
-      assertValidWorkspaceWindowPatch({ bounds: { x: 0, y: 0, width: 0, height: 100 } })
-    ).toThrow('Invalid window bounds')
-    expect(() => assertValidWorkspaceLibraryPatch({ arbitrary: true })).toThrow(
-      'Invalid workspace library key'
-    )
-    expect(() => assertValidWorkspaceLibraryPatch({ expandedFolders: ['../escape'] })).toThrow(
-      'Invalid workspace source path'
-    )
-    expect(() => assertValidWorkspaceLibraryPatch({ scrollTop: -1 })).toThrow('Invalid scrollTop')
-    expect(() =>
-      assertValidWorkspaceLibraryPatch({ folderSortModes: { 'sessions/2026-07-02': 'za' } })
-    ).toThrow('Invalid workspace top-level folder path')
-    expect(() =>
-      assertValidWorkspaceLibraryPatch({ folderSortModes: { sessions: 'newest' } })
-    ).toThrow('Invalid workspace folder sort mode')
-  })
-
   it('accepts narrow workspace operation payloads', () => {
     expect(assertValidFileRenameInput({ sourcePath: 'folder/a.md', name: 'renamed.md' })).toEqual({
       sourcePath: 'folder/a.md',
@@ -148,30 +61,12 @@ describe('ipc validation', () => {
       externalPath: '/tmp/outside.md'
     })
     expect(assertValidWorkspaceTabFileInput({ tabId: 'tab-1' })).toEqual({ tabId: 'tab-1' })
-    expect(assertValidWorkspaceFocusTabInput({ tabId: 'tab-1' })).toEqual({ tabId: 'tab-1' })
-    expect(assertValidWorkspaceCloseTabInput({ tabId: 'tab-1' })).toEqual({ tabId: 'tab-1' })
-    expect(
-      assertValidWorkspaceUpdateTabViewModeInput({ tabId: 'tab-1', viewMode: 'source' })
-    ).toEqual({
-      tabId: 'tab-1',
-      viewMode: 'source'
-    })
     expect(assertValidWorkspaceRecordRecentInput({ sourcePath: './folder/a.md' })).toEqual({
       sourcePath: 'folder/a.md'
     })
     expect(assertValidSourceFileInput({ sourcePath: './folder/a.md' })).toEqual({
       sourcePath: 'folder/a.md'
     })
-    expect(
-      assertValidWorkspaceSetOutlineCollapsedInput({
-        sourcePath: 'folder/a.md',
-        collapsed: false
-      })
-    ).toEqual({
-      sourcePath: 'folder/a.md',
-      collapsed: false
-    })
-    expect(assertValidWorkspaceSetOutlineWidthInput({ width: 240 })).toEqual({ width: 240 })
   })
 
   it('rejects invalid workspace operation source paths and unknown keys', () => {
@@ -222,30 +117,9 @@ describe('ipc validation', () => {
     )
   })
 
-  it('rejects invalid workspace operation tab ids and view modes', () => {
-    expect(() => assertValidWorkspaceFocusTabInput({ tabId: '' })).toThrow(
-      'Invalid workspace tab id'
-    )
-    expect(() => assertValidWorkspaceCloseTabInput({ tabId: '../tab' })).toThrow(
-      'Invalid workspace tab id'
-    )
+  it('rejects invalid workspace operation tab ids', () => {
     expect(() => assertValidWorkspaceTabFileInput({ tabId: '../tab' })).toThrow(
       'Invalid workspace tab id'
-    )
-    expect(() =>
-      assertValidWorkspaceUpdateTabViewModeInput({ tabId: 'tab-1', viewMode: 'diff' })
-    ).toThrow('Invalid workspace tab view mode')
-    expect(() =>
-      assertValidWorkspaceSetOutlineCollapsedInput({ sourcePath: 'a.md', collapsed: 'yes' })
-    ).toThrow('Invalid workspace outline state')
-    expect(() => assertValidWorkspaceSetOutlineWidthInput({ width: -1 })).toThrow(
-      'Invalid workspace outline width'
-    )
-    expect(() =>
-      assertValidWorkspaceSetOutlineWidthInput({ width: Number.POSITIVE_INFINITY })
-    ).toThrow('Invalid workspace outline width')
-    expect(() => assertValidWorkspaceSetOutlineWidthInput({ width: 240, extra: true })).toThrow(
-      'Invalid workspace outline width input key: extra'
     )
   })
 })

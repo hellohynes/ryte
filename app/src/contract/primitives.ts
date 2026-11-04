@@ -44,6 +44,16 @@ export const workspaceFileRef = z.union([
   z.strictObject({ externalPath, sourcePath: z.undefined().optional() })
 ])
 
+const WORKSPACE_TAB_ID_RE = /^[A-Za-z0-9][A-Za-z0-9:_.-]{0,199}$/
+
+/**
+ * The id of an open tab: 1 to 200 characters of letters, digits and `: _ . -`, starting with a letter or digit.
+ * The expression is anchored at both ends, so a trailing newline is not allowed.
+ */
+export const workspaceTabId = z
+  .string()
+  .refine((value) => WORKSPACE_TAB_ID_RE.test(value), 'Expected a tab id')
+
 /**
  * An integer by `Number.isInteger`, matching the legacy validators. `z.int()` is narrower: it rejects
  * integers outside the safe range that `Number.isInteger` accepts.
