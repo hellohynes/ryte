@@ -48,5 +48,23 @@ export const manifest = {
     events: {
       changed: 'tasks:changed'
     }
+  },
+  workspace: {
+    operations: {
+      getState: 'workspace:get-state',
+      updateShell: 'workspace:update-shell',
+      updateLibrary: 'workspace:update-library',
+      focusTab: 'workspace:focus-tab',
+      closeTab: 'workspace:close-tab',
+      updateTabViewMode: 'workspace:update-tab-view-mode',
+      setOutlineCollapsed: 'workspace:set-outline-collapsed',
+      setOutlineWidth: 'workspace:set-outline-width',
+      openFile: 'workspace:open-file',
+      openRecentFile: 'workspace:open-recent-file',
+      openNativeFile: 'workspace:open-native-file',
+      recordRecent: 'workspace:record-recent',
+      pruneMissingFileRefs: 'workspace:prune-missing-file-refs'
+    },
+    events: {}
   }
 } as const

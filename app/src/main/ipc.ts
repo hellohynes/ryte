@@ -17,6 +17,7 @@ import {
 import { createEmitter, registerOperations } from './contract/register'
 import { createSettingsHandlers } from './contract/settings-handlers'
 import { createTaskHandlers } from './contract/tasks-handlers'
+import { createWorkspaceHandlers } from './contract/workspace-handlers'
 import { contract } from '../contract'
 import { taskFactsService } from './facts/task-facts-service'
 import { createIndexerRestarter } from './indexer-restart'
@@ -31,19 +32,8 @@ import {
   assertValidSearchOptions,
   assertValidSearchQuery,
   assertValidSourceFileInput,
-  assertValidWorkspaceCloseTabInput,
   assertValidWorkspaceFileRefInput,
-  assertValidWorkspaceFocusTabInput,
-  assertValidWorkspaceLibraryPatch,
-  assertValidWorkspaceOpenFileInput,
-  assertValidWorkspaceOpenRecentFileInput,
-  assertValidWorkspaceRecordRecentInput,
-  assertValidWorkspaceSetOutlineCollapsedInput,
-  assertValidWorkspaceSetOutlineWidthInput,
-  assertValidWorkspaceShellPatch,
-  assertValidWorkspaceTabFileInput,
-  assertValidWorkspaceUpdateTabViewModeInput,
-  assertValidWorkspaceWindowPatch
+  assertValidWorkspaceTabFileInput
 } from './ipc-validation'
 import { fileRefForPickedMarkdownFile, resolveExternalMarkdownFile } from './picked-file'
 import { SearchService } from './search/search-service'
@@ -150,86 +140,6 @@ const emit = createEmitter(() => BrowserWindow.getAllWindows())
  * after the first window is visible.
  */
 export function registerIpc(): void {
-  ipcMain.handle('workspace:get-state', () => workspaceStore.publicState())
-
-  ipcMain.handle('workspace:update-shell', (_event, patch: unknown) => {
-    return workspaceStore.updateShell(assertValidWorkspaceShellPatch(patch))
-  })
-
-  ipcMain.handle('workspace:update-window', (_event, patch: unknown) => {
-    return workspaceStore.updateWindow(assertValidWorkspaceWindowPatch(patch))
-  })
-
-  ipcMain.handle('workspace:update-library', (_event, patch: unknown) => {
-    return workspaceStore.updateLibrary(assertValidWorkspaceLibraryPatch(patch))
-  })
-
-  ipcMain.handle('workspace:open-file', async (_event, input: unknown) => {
-    const next = await workspaceStore.openFile(assertValidWorkspaceOpenFileInput(input))
-    refreshAppMenu()
-    return next
-  })
-
-  ipcMain.handle('workspace:open-recent-file', async (_event, input: unknown) => {
-    const next = await workspaceStore.openRecentFile(assertValidWorkspaceOpenRecentFileInput(input))
-    refreshAppMenu()
-    return next
-  })
-
-  ipcMain.handle('workspace:open-native-file', async (event) => {
-    const notesRoot = settingsStore.load().notesRoot
-    const win = BrowserWindow.fromWebContents(event.sender)
-    const result = win
-      ? await dialog.showOpenDialog(win, {
-          defaultPath: notesRoot,
-          filters: [{ name: 'Markdown', extensions: ['md'] }],
-          properties: ['openFile']
-        })
-      : await dialog.showOpenDialog({
-          defaultPath: notesRoot,
-          filters: [{ name: 'Markdown', extensions: ['md'] }],
-          properties: ['openFile']
-        })
-    if (result.canceled || result.filePaths.length === 0) return workspaceStore.publicState()
-
-    const fileRef = await fileRefForPickedMarkdownFile(result.filePaths[0]!, notesRoot)
-    const next = await workspaceStore.openPickedFile(fileRef)
-    refreshAppMenu()
-    return next
-  })
-
-  ipcMain.handle('workspace:focus-tab', (_event, input: unknown) => {
-    return workspaceStore.focusTab(assertValidWorkspaceFocusTabInput(input))
-  })
-
-  ipcMain.handle('workspace:close-tab', (_event, input: unknown) => {
-    return workspaceStore.closeTab(assertValidWorkspaceCloseTabInput(input))
-  })
-
-  ipcMain.handle('workspace:update-tab-view-mode', (_event, input: unknown) => {
-    return workspaceStore.updateTabViewMode(assertValidWorkspaceUpdateTabViewModeInput(input))
-  })
-
-  ipcMain.handle('workspace:record-recent', async (_event, input: unknown) => {
-    const next = await workspaceStore.recordRecent(assertValidWorkspaceRecordRecentInput(input))
-    refreshAppMenu()
-    return next
-  })
-
-  ipcMain.handle('workspace:set-outline-collapsed', (_event, input: unknown) => {
-    return workspaceStore.setOutlineCollapsed(assertValidWorkspaceSetOutlineCollapsedInput(input))
-  })
-
-  ipcMain.handle('workspace:set-outline-width', (_event, input: unknown) => {
-    return workspaceStore.setOutlineWidth(assertValidWorkspaceSetOutlineWidthInput(input))
-  })
-
-  ipcMain.handle('workspace:prune-missing-file-refs', async () => {
-    const next = await workspaceStore.pruneMissingFileRefs()
-    refreshAppMenu()
-    return next
-  })
-
   // A search still running would read from the store while it is emptied. The indexer calls this only once
   // the rebuild is certain, so a refused or failed rebuild never kills the user's search.
   const stopSearchesBeforeClear = (): void => {
@@ -330,7 +240,16 @@ export function registerIpc(): void {
       validateProviderKey,
       listAuthorizedOpenAIModels
     }),
-    tasks: createTaskHandlers({ service: taskFactsService, settings: settingsStore, emit })
+    tasks: createTaskHandlers({ service: taskFactsService, settings: settingsStore, emit }),
+    workspace: createWorkspaceHandlers({
+      store: workspaceStore,
+      refreshAppMenu,
+      getNotesRoot: () => settingsStore.load().notesRoot,
+      windowFor: (sender) => BrowserWindow.fromWebContents(sender),
+      showOpenDialog: (win, options) =>
+        win ? dialog.showOpenDialog(win, options) : dialog.showOpenDialog(options),
+      fileRefForPickedMarkdownFile
+    })
   })
 
   ipcMain.handle('files:read', async (_event, absPath: unknown) => {

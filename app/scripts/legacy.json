@@ -22,21 +22,7 @@
       "files:watch-workspace-tab",
       "search:cancel",
       "search:check-snapshot-freshness",
-      "search:query",
-      "workspace:close-tab",
-      "workspace:focus-tab",
-      "workspace:get-state",
-      "workspace:open-file",
-      "workspace:open-native-file",
-      "workspace:open-recent-file",
-      "workspace:prune-missing-file-refs",
-      "workspace:record-recent",
-      "workspace:set-outline-collapsed",
-      "workspace:set-outline-width",
-      "workspace:update-library",
-      "workspace:update-shell",
-      "workspace:update-tab-view-mode",
-      "workspace:update-window"
+      "search:query"
     ],
     "event": [
       "files:catalog-changed",

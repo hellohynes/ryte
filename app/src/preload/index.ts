@@ -9,20 +9,9 @@ import type {
   FileTreeResponse
 } from '../shared/files'
 import type {
-  WorkspaceCloseTabInput,
   WorkspaceFileRef,
-  WorkspaceFocusTabInput,
-  WorkspaceLibraryUpdate,
-  WorkspaceOpenRecentFileInput,
   WorkspaceOpenFileInput,
-  WorkspaceRecordRecentInput,
-  WorkspaceSetOutlineCollapsedInput,
-  WorkspaceSetOutlineWidthInput,
-  WorkspaceShellUpdate,
-  WorkspaceState,
-  WorkspaceTabFileInput,
-  WorkspaceUpdateTabViewModeInput,
-  WorkspaceWindowUpdate
+  WorkspaceTabFileInput
 } from '../shared/workspace'
 import type {
   SearchAnswerMode as MainSearchAnswerMode,
@@ -75,22 +64,6 @@ export interface SearchQueryOptions {
 }
 
 interface LegacyRyteApi {
-  workspace: {
-    getState(): Promise<WorkspaceState>
-    updateShell(patch: WorkspaceShellUpdate): Promise<WorkspaceState>
-    updateWindow(patch: WorkspaceWindowUpdate): Promise<WorkspaceState>
-    updateLibrary(patch: WorkspaceLibraryUpdate): Promise<WorkspaceState>
-    openFile(input: WorkspaceOpenFileInput): Promise<WorkspaceState>
-    openRecentFile(input: WorkspaceOpenRecentFileInput): Promise<WorkspaceState>
-    openNativeFile(): Promise<WorkspaceState>
-    focusTab(input: WorkspaceFocusTabInput): Promise<WorkspaceState>
-    closeTab(input: WorkspaceCloseTabInput): Promise<WorkspaceState>
-    updateTabViewMode(input: WorkspaceUpdateTabViewModeInput): Promise<WorkspaceState>
-    recordRecent(input: WorkspaceRecordRecentInput): Promise<WorkspaceState>
-    setOutlineCollapsed(input: WorkspaceSetOutlineCollapsedInput): Promise<WorkspaceState>
-    setOutlineWidth(input: WorkspaceSetOutlineWidthInput): Promise<WorkspaceState>
-    pruneMissingFileRefs(): Promise<WorkspaceState>
-  }
   files: {
     listTree(): Promise<FileTreeResponse>
     listCatalog(): Promise<FileCatalogResponse>
@@ -131,22 +104,6 @@ interface LegacyRyteApi {
 export type RyteApi = MergeApi<LegacyRyteApi, ContractApi>
 
 const legacyApi: LegacyRyteApi = {
-  workspace: {
-    getState: () => ipcRenderer.invoke('workspace:get-state'),
-    updateShell: (patch) => ipcRenderer.invoke('workspace:update-shell', patch),
-    updateWindow: (patch) => ipcRenderer.invoke('workspace:update-window', patch),
-    updateLibrary: (patch) => ipcRenderer.invoke('workspace:update-library', patch),
-    openFile: (input) => ipcRenderer.invoke('workspace:open-file', input),
-    openRecentFile: (input) => ipcRenderer.invoke('workspace:open-recent-file', input),
-    openNativeFile: () => ipcRenderer.invoke('workspace:open-native-file'),
-    focusTab: (input) => ipcRenderer.invoke('workspace:focus-tab', input),
-    closeTab: (input) => ipcRenderer.invoke('workspace:close-tab', input),
-    updateTabViewMode: (input) => ipcRenderer.invoke('workspace:update-tab-view-mode', input),
-    recordRecent: (input) => ipcRenderer.invoke('workspace:record-recent', input),
-    setOutlineCollapsed: (input) => ipcRenderer.invoke('workspace:set-outline-collapsed', input),
-    setOutlineWidth: (input) => ipcRenderer.invoke('workspace:set-outline-width', input),
-    pruneMissingFileRefs: () => ipcRenderer.invoke('workspace:prune-missing-file-refs')
-  },
   files: {
     listTree: () => ipcRenderer.invoke('files:list-tree'),
     listCatalog: () => ipcRenderer.invoke('files:list-catalog'),

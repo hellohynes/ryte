@@ -59,3 +59,21 @@ change or remove one.
 | Event | Channel | What it means | Payload |
 | --- | --- | --- | --- |
 | `tasks.changed` | `tasks:changed` | Tasks may have changed on disk or through a toggle; callers should reload. | `none` |
+
+## workspace
+
+| Operation | Channel | What it does | Input |
+| --- | --- | --- | --- |
+| `workspace.getState` | `workspace:get-state` | The stored workspace: open tabs, recent files, sidebar, library and outline settings. | `none` |
+| `workspace.updateShell` | `workspace:update-shell` | Change the sidebar: collapsed, width (above 0, up to 4000) or which panel is active. | `{ sidebarCollapsed?: boolean, sidebarWidth?: number, activeSidebar?: 'files' }` |
+| `workspace.updateLibrary` | `workspace:update-library` | Change the file library: expanded folders, scroll position or per-folder sort mode. | `{ expandedFolders?: string[], scrollTop?: number, folderSortModes?: object }` |
+| `workspace.focusTab` | `workspace:focus-tab` | Make an open tab the active one. Fails when no tab has that id. | `{ tabId: string }` |
+| `workspace.closeTab` | `workspace:close-tab` | Close an open tab and activate its neighbour. Fails when no tab has that id. | `{ tabId: string }` |
+| `workspace.updateTabViewMode` | `workspace:update-tab-view-mode` | Show an open tab as the rendered preview or as source. Fails when no tab has that id. | `{ tabId: string, viewMode: 'preview' \| 'source' }` |
+| `workspace.setOutlineCollapsed` | `workspace:set-outline-collapsed` | Remember whether the outline of one note is collapsed. | `{ sourcePath: string, collapsed: boolean }` |
+| `workspace.setOutlineWidth` | `workspace:set-outline-width` | Set the width of the document outline (above 0, up to 1000); the store clamps it to its limits. | `{ width: number }` |
+| `workspace.openFile` | `workspace:open-file` | Open a note from the notes folder in a new tab and add it to the recent files. Takes a `sourcePath` only. Fails when the file does not exist. Refreshes the app menu. | `{ sourcePath: string, externalPath?: unknown }` |
+| `workspace.openRecentFile` | `workspace:open-recent-file` | Open a file from the recent files, inside the notes folder (`sourcePath`) or outside it (`externalPath`, never both), focusing its tab when it is open. Fails when the file is not a recent one or no longer exists. Refreshes the app menu. | `see schema` |
+| `workspace.openNativeFile` | `workspace:open-native-file` | Ask the person to pick a Markdown file and open it in a tab, focusing its tab when it is open. Returns the workspace unchanged when the picker is cancelled; fails when the file is not a Markdown file. Refreshes the app menu unless cancelled. | `none` |
+| `workspace.recordRecent` | `workspace:record-recent` | Put an existing note at the top of the recent files. Fails when the file does not exist. Refreshes the app menu. | `{ sourcePath: string }` |
+| `workspace.pruneMissingFileRefs` | `workspace:prune-missing-file-refs` | Drop open tabs, recent files and outline settings of files that no longer exist. Refreshes the app menu. | `none` |
