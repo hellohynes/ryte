@@ -3,9 +3,10 @@ import { fileURLToPath } from 'node:url'
 
 import { describe, expect, it } from 'vitest'
 
-import { createContractApi, mergeContractApi } from '../preload/contract-api'
+import { createContractApi } from '../preload/contract-api'
 import { ContractInputError, parseOperationInput } from './define'
 import {
+  catalogChanged,
   copyContent,
   copyPath,
   files,
@@ -15,7 +16,12 @@ import {
   readSourceTitle,
   readWorkspaceTab,
   rename,
-  showInFinder
+  showInFinder,
+  sourceChange,
+  treeChanged,
+  unwatch,
+  watchWorkspaceTab,
+  workspaceTabChange
 } from './files'
 import { manifest } from './manifest.generated'
 
@@ -28,8 +34,12 @@ const operations = {
   copyPath,
   showInFinder,
   rename,
-  moveToTrash
+  moveToTrash,
+  watchWorkspaceTab,
+  unwatch
 }
+
+const events = { treeChanged, catalogChanged, sourceChange, workspaceTabChange }
 
 const legacyChannels = (
   JSON.parse(
@@ -49,9 +59,53 @@ describe('files operations', () => {
       'files:copy-path',
       'files:show-in-finder',
       'files:rename',
-      'files:move-to-trash'
+      'files:move-to-trash',
+      'files:watch-workspace-tab',
+      'files:unwatch'
     ])
-    expect(files.events).toEqual({})
+  })
+
+  it('keeps the wire channel names and the renderer-facing subscriber names of the events', () => {
+    expect(Object.keys(files.events)).toEqual(Object.keys(events))
+    expect(Object.values(events).map((event) => event.channel)).toEqual([
+      'files:tree-changed',
+      'files:catalog-changed',
+      'viewer:source-changed',
+      'viewer:workspace-tab-changed'
+    ])
+    expect(manifest.files.events).toEqual({
+      treeChanged: 'files:tree-changed',
+      catalogChanged: 'files:catalog-changed',
+      sourceChange: 'viewer:source-changed',
+      workspaceTabChange: 'viewer:workspace-tab-changed'
+    })
+
+    const subscribed: string[] = []
+    const api = createContractApi<Record<string, Record<string, unknown>>>(
+      {
+        invoke: async () => undefined,
+        on: (channel) => void subscribed.push(channel),
+        removeListener: () => undefined
+      },
+      manifest
+    )
+    // The renderer calls window.ryte.files.onSourceChange, not a `viewer` area: these names are the old ones.
+    for (const name of [
+      'onTreeChanged',
+      'onCatalogChanged',
+      'onSourceChange',
+      'onWorkspaceTabChange'
+    ]) {
+      expect(typeof api.files[name], name).toBe('function')
+      ;(api.files[name] as (cb: () => void) => void)(() => undefined)
+    }
+    expect(subscribed).toEqual([
+      'files:tree-changed',
+      'files:catalog-changed',
+      'viewer:source-changed',
+      'viewer:workspace-tab-changed'
+    ])
+    expect(Object.keys(api)).not.toContain('viewer')
   })
 
   it('validates each operation example against its own schemas', () => {
@@ -77,27 +131,37 @@ describe('files operations', () => {
     expect(Object.keys(manifest.files.operations)).not.toContain('readSource')
   })
 
-  it('leaves exactly the watch operations and the change events on the legacy list', () => {
-    expect(legacyChannels.request.filter((channel) => channel.startsWith('files:')).sort()).toEqual(
-      ['files:unwatch', 'files:watch', 'files:watch-source', 'files:watch-workspace-tab'].sort()
-    )
-    expect(
-      legacyChannels.event.filter(
-        (channel) => channel.startsWith('files:') || channel.startsWith('viewer:')
-      )
-    ).toEqual([
-      'files:catalog-changed',
-      'files:tree-changed',
-      'viewer:file-changed',
-      'viewer:source-changed',
-      'viewer:workspace-tab-changed'
-    ])
-    for (const operation of Object.values(operations)) {
-      expect(legacyChannels.request, operation.channel).not.toContain(operation.channel)
+  it('has no channel for the three that nothing called, in the contract, the manifest or the legacy list', () => {
+    const deleted = ['files:watch', 'files:watch-source', 'viewer:file-changed']
+    const channels = [
+      ...Object.values(operations).map((operation) => operation.channel),
+      ...Object.values(events).map((event) => event.channel),
+      ...Object.values(manifest.files.operations),
+      ...Object.values(manifest.files.events),
+      ...legacyChannels.request,
+      ...legacyChannels.event
+    ]
+    for (const channel of deleted) expect(channels, channel).not.toContain(channel)
+    for (const name of ['watch', 'watchSource', 'onChange']) {
+      expect(Object.keys(manifest.files.operations)).not.toContain(name)
+      expect(Object.keys(manifest.files.events)).not.toContain(name)
     }
   })
 
-  it('builds the moved members of window.ryte.files from the contract, beside the hand-written ones', () => {
+  it('leaves only the search channels on the legacy list', () => {
+    for (const list of [legacyChannels.request, legacyChannels.event]) {
+      expect(list.filter((channel) => !channel.startsWith('search:'))).toEqual([])
+    }
+    for (const channel of [
+      ...Object.values(operations).map((operation) => operation.channel),
+      ...Object.values(events).map((event) => event.channel)
+    ]) {
+      expect(legacyChannels.request, channel).not.toContain(channel)
+      expect(legacyChannels.event, channel).not.toContain(channel)
+    }
+  })
+
+  it('builds all of window.ryte.files from the contract', () => {
     const invoked: unknown[][] = []
     const built = createContractApi<Record<string, Record<string, unknown>>>(
       {
@@ -107,39 +171,39 @@ describe('files operations', () => {
       },
       manifest
     )
-    const legacyWatch = (): void => undefined
-    const merged = mergeContractApi(
-      { files: { watch: legacyWatch, unwatch: legacyWatch } },
-      built
-    ) as {
-      files: Record<string, unknown>
-    }
 
-    expect(Object.keys(merged.files).sort()).toEqual(
+    expect(Object.keys(built.files).sort()).toEqual(
       [
         'copyContent',
         'copyPath',
         'listCatalog',
         'listTree',
         'moveToTrash',
+        'onCatalogChanged',
+        'onSourceChange',
+        'onTreeChanged',
+        'onWorkspaceTabChange',
         'readSourceTitle',
         'readWorkspaceTab',
         'rename',
         'showInFinder',
         'unwatch',
-        'watch'
+        'watchWorkspaceTab'
       ].sort()
     )
-    expect(merged.files.watch).toBe(legacyWatch)
-    ;(merged.files.listTree as () => unknown)()
-    ;(merged.files.readWorkspaceTab as (...args: unknown[]) => unknown)({ tabId: 'a' }, 'ignored')
-    ;(merged.files.rename as (...args: unknown[]) => unknown)(
+    ;(built.files.listTree as () => unknown)()
+    ;(built.files.readWorkspaceTab as (...args: unknown[]) => unknown)({ tabId: 'a' }, 'ignored')
+    ;(built.files.watchWorkspaceTab as (...args: unknown[]) => unknown)({ tabId: 'a' }, 'ignored')
+    ;(built.files.unwatch as () => unknown)()
+    ;(built.files.rename as (...args: unknown[]) => unknown)(
       { sourcePath: 'a.md', name: 'b.md' },
       'ignored'
     )
     expect(invoked).toEqual([
       ['files:list-tree'],
       ['files:read-workspace-tab', { tabId: 'a' }],
+      ['files:watch-workspace-tab', { tabId: 'a' }],
+      ['files:unwatch'],
       ['files:rename', { sourcePath: 'a.md', name: 'b.md' }]
     ])
   })
@@ -148,7 +212,8 @@ describe('files operations', () => {
 describe('files input', () => {
   it.each([
     ['listTree', listTree],
-    ['listCatalog', listCatalog]
+    ['listCatalog', listCatalog],
+    ['unwatch', unwatch]
   ])('takes no input for %s, and rejects a stray argument', (_name, operation) => {
     expect(operation.input.safeParse(undefined).success).toBe(true)
     // Accepted deviation: the legacy handler ignored any argument; the contract rejects one.
@@ -169,6 +234,28 @@ describe('files input', () => {
     expect(readSourceTitle.input.safeParse({ externalPath: '/tmp/a.md' }).success).toBe(false)
     expect(readWorkspaceTab.input.safeParse({ tabId: 'tab-1' }).success).toBe(true)
     expect(readWorkspaceTab.input.safeParse({ tabId: '../tab' }).success).toBe(false)
+    expect(watchWorkspaceTab.input.safeParse({ tabId: 'tab-1' }).success).toBe(true)
+    expect(watchWorkspaceTab.input.safeParse({ tabId: '../tab' }).success).toBe(false)
+    expect(watchWorkspaceTab.input.safeParse({ tabId: 'tab-1', extra: 1 }).success).toBe(false)
+    expect(watchWorkspaceTab.input.safeParse(undefined).success).toBe(false)
+  })
+
+  it('judges the tab id of a watch as it judges the tab id of a read', () => {
+    for (const tabId of [
+      'a',
+      '1',
+      'a:b_c.d-e',
+      'a'.repeat(200),
+      'a'.repeat(201),
+      '.a',
+      'a\n',
+      'a\0',
+      ''
+    ]) {
+      expect(watchWorkspaceTab.input.safeParse({ tabId }).success, JSON.stringify(tabId)).toBe(
+        readWorkspaceTab.input.safeParse({ tabId }).success
+      )
+    }
   })
 
   it('hands the store only the key that was set, as the old validators did', () => {
@@ -195,7 +282,8 @@ describe('files input', () => {
       ['files.rename', rename.input, { sourcePath: 'a.md', name: `${secret}/b.md` }],
       ['files.rename', rename.input, { externalPath: `/tmp/${secret}.txt`, name: 'b.md' }],
       ['files.readSourceTitle', readSourceTitle.input, { sourcePath: `../${secret}` }],
-      ['files.readWorkspaceTab', readWorkspaceTab.input, { tabId: `${secret}/..` }]
+      ['files.readWorkspaceTab', readWorkspaceTab.input, { tabId: `${secret}/..` }],
+      ['files.watchWorkspaceTab', watchWorkspaceTab.input, { tabId: `${secret}/..` }]
     ] as const) {
       let thrown: unknown
       try {
@@ -277,5 +365,49 @@ describe('files output', () => {
     expect(
       moveToTrash.output.safeParse({ workspace: rename.example.output.workspace }).success
     ).toBe(false)
+  })
+})
+
+describe('files events', () => {
+  const entry = {
+    sourcePath: 'docs/a.md',
+    title: 'a',
+    directory: 'docs',
+    searchableText: 'a docs docs/a.md',
+    pathDate: null,
+    modifiedAt: '2026-01-02T00:00:00.000Z',
+    modifiedAtMs: 1767312000000,
+    createdAt: null,
+    createdAtMs: null,
+    sizeBytes: 5
+  }
+  const catalogPayload = catalogChanged.payload!
+  const accepts = (value: unknown): boolean => catalogPayload.safeParse(value).success
+
+  it('has no payload for a tree change and a string for each viewer change', () => {
+    expect(treeChanged.payload).toBeUndefined()
+    expect(sourceChange.payload!.safeParse('docs/a.md').success).toBe(true)
+    expect(sourceChange.payload!.safeParse(1).success).toBe(false)
+    expect(workspaceTabChange.payload!.safeParse('tab-1').success).toBe(true)
+    expect(workspaceTabChange.payload!.safeParse(1).success).toBe(false)
+  })
+
+  it('takes an upsert, a remove, or no change at all, which means refresh everything', () => {
+    expect(accepts({ type: 'upsert', file: entry })).toBe(true)
+    expect(accepts({ type: 'remove', sourcePath: 'docs/a.md' })).toBe(true)
+    expect(accepts(undefined)).toBe(true)
+  })
+
+  it.each([
+    ['null', null],
+    ['an empty object', {}],
+    ['an unknown type', { type: 'rename', sourcePath: 'a.md' }],
+    ['an upsert without its file', { type: 'upsert' }],
+    ['an upsert with a file missing a field', { type: 'upsert', file: { sourcePath: 'a.md' } }],
+    ['a remove without its path', { type: 'remove' }],
+    ['a remove with a numeric path', { type: 'remove', sourcePath: 1 }],
+    ['a bare string', 'docs/a.md']
+  ])('rejects %s', (_label, value) => {
+    expect(accepts(value)).toBe(false)
   })
 })

@@ -4,28 +4,15 @@
   "sendAllowed": [],
   "ignore": [],
   "channels": {
-    "request": [
-      "files:unwatch",
-      "files:watch",
-      "files:watch-source",
-      "files:watch-workspace-tab",
-      "search:cancel",
-      "search:check-snapshot-freshness",
-      "search:query"
-    ],
+    "request": ["search:cancel", "search:check-snapshot-freshness", "search:query"],
     "event": [
-      "files:catalog-changed",
-      "files:tree-changed",
       "search:citation",
       "search:done",
       "search:error",
       "search:notice",
       "search:sources",
       "search:stage",
-      "search:stream-token",
-      "viewer:file-changed",
-      "viewer:source-changed",
-      "viewer:workspace-tab-changed"
+      "search:stream-token"
     ]
   }
 }

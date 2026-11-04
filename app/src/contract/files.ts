@@ -2,7 +2,7 @@ import { extname } from 'node:path'
 
 import { z } from 'zod'
 
-import { defineArea, defineOperation } from './define'
+import { defineArea, defineEvent, defineOperation } from './define'
 import {
   externalPath,
   sourceFileInput,
@@ -81,6 +81,13 @@ const fileCatalogResponse = z.object({
   notesRoot: z.string(),
   files: z.array(fileCatalogEntry)
 })
+
+// One change to the catalog. An absent payload means "refresh everything" (a rapid rename or delete made the
+// file unreadable before it could be described), so the event's payload is optional on purpose.
+const fileCatalogChange = z.discriminatedUnion('type', [
+  z.object({ type: z.literal('upsert'), file: fileCatalogEntry }),
+  z.object({ type: z.literal('remove'), sourcePath: z.string() })
+])
 
 const fileRenameResult = z.object({ file: storedFileRef, workspace: workspaceState })
 
@@ -195,6 +202,52 @@ export const moveToTrash = defineOperation({
   }
 })
 
+export const watchWorkspaceTab = defineOperation({
+  channel: 'files:watch-workspace-tab',
+  description:
+    'Watch the file an open tab shows, in place of whatever was watched before (one file at a time, for the whole app). A note must be inside the notes folder. Changes arrive as `sourceChange` and `workspaceTabChange` events. Fails when no tab has that id.',
+  input: tabFileInput,
+  output: z.void(),
+  example: { input: { tabId: 'c0a8b6de-1f2e-4c3d-9a4b-5e6f7a8b9c0d' }, output: undefined }
+})
+
+export const unwatch = defineOperation({
+  channel: 'files:unwatch',
+  description: 'Stop watching the file that was being watched, if any.',
+  input: z.undefined(),
+  output: z.void(),
+  example: { input: undefined, output: undefined }
+})
+
+export const treeChanged = defineEvent({
+  channel: 'files:tree-changed',
+  description:
+    'A Markdown file was added, removed or renamed under the notes folder. Sent to every window.'
+})
+
+export const catalogChanged = defineEvent({
+  channel: 'files:catalog-changed',
+  description:
+    'One file under the notes folder changed: its new catalog entry (`upsert`) or its path (`remove`). The payload is absent when the change could not be described, which means refresh the whole catalog. Sent to every window.',
+  payload: fileCatalogChange.optional()
+})
+
+// The keys are `sourceChange` and `workspaceTabChange` so the renderer-facing subscribers keep the names they had on
+// `window.ryte.files` (`onSourceChange`, `onWorkspaceTabChange`), although the wire channels start with `viewer:`.
+export const sourceChange = defineEvent({
+  channel: 'viewer:source-changed',
+  description:
+    'The watched file changed on disk. Carries its notes-relative path. Sent to every window, and only when the path can be told.',
+  payload: z.string()
+})
+
+export const workspaceTabChange = defineEvent({
+  channel: 'viewer:workspace-tab-changed',
+  description:
+    'The file of the watched tab changed on disk. Carries the id of the tab. Sent to every window, after `sourceChange`.',
+  payload: workspaceTabId
+})
+
 export const files = defineArea('files', {
   operations: {
     listTree,
@@ -205,14 +258,17 @@ export const files = defineArea('files', {
     copyPath,
     showInFinder,
     rename,
-    moveToTrash
+    moveToTrash,
+    watchWorkspaceTab,
+    unwatch
   },
-  events: {}
+  events: { treeChanged, catalogChanged, sourceChange, workspaceTabChange }
 })
 
 export type FileTreeResponse = z.output<typeof fileTreeResponse>
 export type FileCatalogEntry = z.output<typeof fileCatalogEntry>
 export type FileCatalogResponse = z.output<typeof fileCatalogResponse>
+export type FileCatalogChange = z.output<typeof fileCatalogChange>
 export type FileRenameInput = z.output<typeof renameInput>
 export type FileRenameResult = z.output<typeof fileRenameResult>
 export type FileTrashResult = z.output<typeof fileTrashResult>

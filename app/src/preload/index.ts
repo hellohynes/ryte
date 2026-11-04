@@ -1,7 +1,5 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
-import type { FileCatalogChangeEvent } from '../shared/files'
-import type { WorkspaceOpenFileInput, WorkspaceTabFileInput } from '../shared/workspace'
 import type {
   SearchAnswerMode as MainSearchAnswerMode,
   SearchRetrievalMode as MainSearchRetrievalMode,
@@ -53,17 +51,6 @@ export interface SearchQueryOptions {
 }
 
 interface LegacyRyteApi {
-  files: {
-    watch(absPath: string): Promise<void>
-    watchSource(input: WorkspaceOpenFileInput): Promise<void>
-    watchWorkspaceTab(input: WorkspaceTabFileInput): Promise<void>
-    unwatch(): Promise<void>
-    onChange(cb: (path: string) => void): () => void
-    onSourceChange(cb: (sourcePath: string) => void): () => void
-    onWorkspaceTabChange(cb: (tabId: string) => void): () => void
-    onTreeChanged(cb: () => void): () => void
-    onCatalogChanged(cb: (event?: FileCatalogChangeEvent) => void): () => void
-  }
   search: {
     query(q: string, options?: SearchQueryOptions): Promise<string | null>
     cancel(requestId: string): Promise<void>
@@ -82,37 +69,6 @@ interface LegacyRyteApi {
 export type RyteApi = MergeApi<LegacyRyteApi, ContractApi>
 
 const legacyApi: LegacyRyteApi = {
-  files: {
-    watch: (absPath) => ipcRenderer.invoke('files:watch', absPath),
-    watchSource: (input) => ipcRenderer.invoke('files:watch-source', input),
-    watchWorkspaceTab: (input) => ipcRenderer.invoke('files:watch-workspace-tab', input),
-    unwatch: () => ipcRenderer.invoke('files:unwatch'),
-    onChange: (cb) => {
-      const listener = (_: unknown, path: string): void => cb(path)
-      ipcRenderer.on('viewer:file-changed', listener)
-      return () => ipcRenderer.removeListener('viewer:file-changed', listener)
-    },
-    onSourceChange: (cb) => {
-      const listener = (_: unknown, sourcePath: string): void => cb(sourcePath)
-      ipcRenderer.on('viewer:source-changed', listener)
-      return () => ipcRenderer.removeListener('viewer:source-changed', listener)
-    },
-    onWorkspaceTabChange: (cb) => {
-      const listener = (_: unknown, tabId: string): void => cb(tabId)
-      ipcRenderer.on('viewer:workspace-tab-changed', listener)
-      return () => ipcRenderer.removeListener('viewer:workspace-tab-changed', listener)
-    },
-    onTreeChanged: (cb) => {
-      const listener = (): void => cb()
-      ipcRenderer.on('files:tree-changed', listener)
-      return () => ipcRenderer.removeListener('files:tree-changed', listener)
-    },
-    onCatalogChanged: (cb) => {
-      const listener = (_: unknown, event?: FileCatalogChangeEvent): void => cb(event)
-      ipcRenderer.on('files:catalog-changed', listener)
-      return () => ipcRenderer.removeListener('files:catalog-changed', listener)
-    }
-  },
   search: {
     query: (q, options) => ipcRenderer.invoke('search:query', q, options),
     cancel: (requestId) => ipcRenderer.invoke('search:cancel', requestId),

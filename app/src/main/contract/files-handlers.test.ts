@@ -555,7 +555,24 @@ describe('files operations through the registrar', () => {
     const ipc: IpcMainLike = {
       handle: (channel, listener) => void registered.set(channel, listener as never)
     }
-    registerOperations(ipc, { files: contract.files }, { files: made.handlers })
+    // The two watch operations have their own handlers and tests (`files-watch.test.ts`).
+    const { operations, events } = contract.files
+    const statelessFiles = {
+      name: contract.files.name,
+      operations: {
+        listTree: operations.listTree,
+        listCatalog: operations.listCatalog,
+        readSourceTitle: operations.readSourceTitle,
+        readWorkspaceTab: operations.readWorkspaceTab,
+        copyContent: operations.copyContent,
+        copyPath: operations.copyPath,
+        showInFinder: operations.showInFinder,
+        rename: operations.rename,
+        moveToTrash: operations.moveToTrash
+      },
+      events
+    }
+    registerOperations(ipc, { files: statelessFiles }, { files: made.handlers })
     return {
       ...made,
       channels: [...registered.keys()],

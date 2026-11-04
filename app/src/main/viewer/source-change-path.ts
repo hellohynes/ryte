@@ -1,6 +1,6 @@
 import { relative } from 'node:path'
 
-import { assertValidSourceFileInput } from '../ipc-validation'
+import { normalizeWorkspaceSourcePath } from '../../shared/source-path'
 
 export function sourcePathForViewerChange(
   changedPath: string,
@@ -10,7 +10,7 @@ export function sourcePathForViewerChange(
   if (watchedSourcePath) return watchedSourcePath
 
   try {
-    return assertValidSourceFileInput({ sourcePath: relative(notesRoot, changedPath) }).sourcePath
+    return normalizeWorkspaceSourcePath(relative(notesRoot, changedPath))
   } catch {
     return null
   }

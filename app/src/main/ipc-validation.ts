@@ -1,61 +1,12 @@
-import { isAbsolute } from 'node:path'
-
 import type { SearchOptions, SearchSnapshotFreshnessInput } from './search/search-service'
-import { WORKSPACE_TAB_ID_RE } from '../contract/primitives'
-import { MAX_PATH_LENGTH, normalizeWorkspaceSourcePath } from '../shared/source-path'
-import type { WorkspaceOpenFileInput, WorkspaceTabFileInput } from '../shared/workspace'
+import { MAX_PATH_LENGTH } from '../shared/source-path'
 
 const MAX_QUERY_LENGTH = 2000
-const MAX_TAB_ID_LENGTH = 200
 const REQUEST_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
 export function assertValidRequestId(value: unknown): string {
   if (typeof value !== 'string' || !REQUEST_ID_RE.test(value)) {
     throw new Error('Invalid request id')
-  }
-  return value
-}
-
-export function assertValidAbsolutePath(value: unknown): string {
-  if (
-    typeof value !== 'string' ||
-    value.length === 0 ||
-    value.length > MAX_PATH_LENGTH ||
-    !isAbsolute(value)
-  ) {
-    throw new Error('Invalid file path')
-  }
-  return value
-}
-
-function assertObjectWithKeys(
-  value: unknown,
-  allowedKeys: readonly string[],
-  label: string
-): Record<string, unknown> {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error(`Invalid ${label}`)
-  }
-  const input = value as Record<string, unknown>
-  for (const key of Object.keys(input)) {
-    if (!allowedKeys.includes(key)) throw new Error(`Invalid ${label} key: ${key}`)
-  }
-  return input
-}
-
-function assertValidWorkspaceSourcePath(value: unknown): string {
-  return normalizeWorkspaceSourcePath(value)
-}
-
-function assertValidWorkspaceTabId(value: unknown): string {
-  if (
-    typeof value !== 'string' ||
-    value.length === 0 ||
-    value.length > MAX_TAB_ID_LENGTH ||
-    value.includes('\0') ||
-    !WORKSPACE_TAB_ID_RE.test(value)
-  ) {
-    throw new Error('Invalid workspace tab id')
   }
   return value
 }
@@ -145,18 +96,4 @@ function assertFiniteNumber(value: unknown, key: string): number {
     throw new Error(`Invalid ${key}`)
   }
   return value
-}
-
-export function assertValidWorkspaceTabFileInput(value: unknown): WorkspaceTabFileInput {
-  const input = assertObjectWithKeys(value, ['tabId'], 'workspace tab file input')
-  return {
-    tabId: assertValidWorkspaceTabId(input.tabId)
-  }
-}
-
-export function assertValidSourceFileInput(value: unknown): WorkspaceOpenFileInput {
-  const input = assertObjectWithKeys(value, ['sourcePath'], 'source file input')
-  return {
-    sourcePath: assertValidWorkspaceSourcePath(input.sourcePath)
-  }
 }

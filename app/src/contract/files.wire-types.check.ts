@@ -14,9 +14,6 @@ type Flatten<T> = { [K in keyof T]: T[K] }
 // plain objects. Flatten each member so the two compare by their properties.
 type Plain<T> = T extends unknown ? { [K in keyof T]: T[K] } : never
 
-// The `files` area is partly migrated: the watch operations and the change events are still hand-written, so only
-// the members that moved are compared. The comparison tightens to a full equality of the area once they move.
-type Moved<T extends Record<keyof wire.FilesApi, unknown>> = Pick<Flatten<T>, keyof wire.FilesApi>
 // `rename` takes the intersection type, so it is compared by its flattened argument and its result; the other
 // members are compared as declared.
 type WithoutRename<T> = Omit<T, 'rename'>
@@ -25,8 +22,8 @@ type RenameOf<T extends { rename(...args: never[]): unknown }> = [
   ReturnType<T['rename']>
 ]
 
-type Built = Moved<AreaApi<typeof contract.files>>
-type Registered = Moved<ContractApi['files']>
+type Built = Flatten<AreaApi<typeof contract.files>>
+type Registered = Flatten<ContractApi['files']>
 
 export type FilesWireTypeChecks = [
   Assert<Equal<contract.FileTreeResponse, wire.FileTreeResponse>>,
@@ -36,9 +33,10 @@ export type FilesWireTypeChecks = [
   Assert<Equal<contract.FileRenameResult, wire.FileRenameResult>>,
   Assert<Equal<contract.FileTrashResult, wire.FileTrashResult>>,
   Assert<Equal<contract.FilesWorkspaceTabInput, wire.WorkspaceTabFileInput>>,
-  // The area carries exactly the moved operations: a missing or extra one fails this.
-  Assert<Equal<keyof Flatten<AreaApi<typeof contract.files>>, keyof wire.FilesApi>>,
-  // Every moved member of `window.ryte.files`: names, argument lists and results.
+  Assert<Equal<contract.FileCatalogChange, wire.FileCatalogChangeEvent>>,
+  // The area carries exactly the members `window.ryte.files` had: a missing or extra one fails this.
+  Assert<Equal<keyof Built, keyof wire.FilesApi>>,
+  // Every member of `window.ryte.files`: names, argument lists, results and subscriber callbacks.
   Assert<Equal<WithoutRename<Built>, WithoutRename<wire.FilesApi>>>,
   Assert<Equal<RenameOf<Built>, RenameOf<wire.FilesApi>>>,
   // And the object the renderer actually gets, once the area is registered.

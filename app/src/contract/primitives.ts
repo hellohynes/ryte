@@ -44,7 +44,7 @@ export const workspaceFileRef = z.union([
   z.strictObject({ externalPath, sourcePath: z.undefined().optional() })
 ])
 
-/** The one definition of a tab id's shape; the legacy tab validator imports it too. */
+/** The one definition of a tab id's shape. */
 export const WORKSPACE_TAB_ID_RE = /^[A-Za-z0-9][A-Za-z0-9:_.-]{0,199}$/
 
 /**

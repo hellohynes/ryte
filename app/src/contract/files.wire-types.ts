@@ -1,8 +1,8 @@
-// FROZEN SNAPSHOT of the hand-written declarations of the migrated `files` operations, copied from
-// `src/shared/files.ts`, `src/shared/workspace.ts` and `LegacyRyteApi.files` in `src/preload/index.ts` at bb14ce4,
-// before the contract replaced them. It is the oracle for the type-equality check in `files.wire-types.check.ts`:
-// the types inferred from the contract must equal it. Only the members that moved are here: `watch`,
-// `watchSource`, `watchWorkspaceTab`, `unwatch` and the change subscribers are still hand-written. Do not edit.
+// FROZEN SNAPSHOT of the hand-written declarations of the `files` area, copied from `src/shared/files.ts`,
+// `src/shared/workspace.ts` and `LegacyRyteApi.files` in `src/preload/index.ts` at bb14ce4 (the operations) and
+// 4b68b43 (the watch operations and the change subscribers), before the contract replaced them. It is the oracle for
+// the type-equality check in `files.wire-types.check.ts`: the types inferred from the contract must equal it.
+// `watch`, `watchSource` and `onChange` had no caller and were deleted; they are not here. Do not edit.
 
 import type { WorkspaceState } from './workspace.wire-types'
 
@@ -47,6 +47,10 @@ export interface FileCatalogResponse {
   files: FileCatalogEntry[]
 }
 
+export type FileCatalogChangeEvent =
+  | { type: 'upsert'; file: FileCatalogEntry }
+  | { type: 'remove'; sourcePath: string }
+
 export type FileRenameInput =
   | (WorkspaceSourceFileRef & { name: string })
   | (WorkspaceExternalFileRef & { name: string })
@@ -61,7 +65,7 @@ export interface FileTrashResult {
   workspace: WorkspaceState
 }
 
-/** The members of `window.ryte.files` that moved onto the contract. `read` and `readSource` were deleted. */
+/** All of `window.ryte.files` now. `read`, `readSource`, `watch`, `watchSource` and `onChange` were deleted. */
 export interface FilesApi {
   listTree(): Promise<FileTreeResponse>
   listCatalog(): Promise<FileCatalogResponse>
@@ -72,4 +76,10 @@ export interface FilesApi {
   moveToTrash(input: WorkspaceFileRef): Promise<FileTrashResult>
   readSourceTitle(input: WorkspaceOpenFileInput): Promise<string | null>
   readWorkspaceTab(input: WorkspaceTabFileInput): Promise<string>
+  watchWorkspaceTab(input: WorkspaceTabFileInput): Promise<void>
+  unwatch(): Promise<void>
+  onSourceChange(cb: (sourcePath: string) => void): () => void
+  onWorkspaceTabChange(cb: (tabId: string) => void): () => void
+  onTreeChanged(cb: () => void): () => void
+  onCatalogChanged(cb: (event?: FileCatalogChangeEvent) => void): () => void
 }

@@ -8,6 +8,7 @@ import { isWorkspaceSourceFileRef } from '../../shared/workspace'
 import type { WorkspaceTabFileDependencies } from '../workspace-tab-file'
 import { fileRefForWorkspaceTab } from '../workspace-tab-file'
 import type { WorkspaceStore } from '../workspace/workspace-store'
+import type { FilesWatchHandlers } from './files-watch'
 import type { Handlers } from './register'
 
 /** The subset of Electron's message-box options the trash confirmation uses. */
@@ -47,7 +48,8 @@ export interface FilesHandlerDependencies<TWindow> extends WorkspaceTabFileDepen
 }
 
 /**
- * The handlers for the file operations. Input is already validated. Notes are read through the notes-root check;
+ * The handlers for the file operations except the two that watch (`createViewerWatch`, which owns the watched
+ * file). Input is already validated. Notes are read through the notes-root check;
  * a file opened from outside the notes root is read as is. Rename and move-to-trash refresh the application menu
  * after the store call succeeds, so a failed or declined call leaves the menu alone.
  */
@@ -65,7 +67,7 @@ export function createFilesHandlers<TWindow>({
   windowFor,
   showMessageBox,
   refreshAppMenu
-}: FilesHandlerDependencies<TWindow>): Handlers<Contract>['files'] {
+}: FilesHandlerDependencies<TWindow>): Omit<Handlers<Contract>['files'], keyof FilesWatchHandlers> {
   return {
     listTree: async () => {
       const notesRoot = getNotesRoot()

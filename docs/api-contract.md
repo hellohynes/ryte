@@ -130,7 +130,13 @@ emitTo(target.webContents, contract.app.events.menuCommand, command)
 ```
 
 Name the key so the renderer-facing subscriber keeps the name you want: key `menuCommand` becomes
-`window.ryte.app.onMenuCommand`.
+`window.ryte.app.onMenuCommand`. The area, not the channel prefix, decides where the subscriber appears: the
+`files` area carries `viewer:source-changed` as `window.ryte.files.onSourceChange`, because that is where the
+renderer already subscribed.
+
+A payload that accepts `undefined` (`schema.optional()`) is an optional argument, `(payload?: X) => void`. Send it
+explicitly, `emit(event, undefined)`, so the wire carries the `undefined` as before. `files.catalogChanged` uses it:
+no payload means refresh the whole catalog.
 
 ## Change an operation
 

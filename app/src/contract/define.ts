@@ -58,12 +58,18 @@ export function defineArea<
   return { name, operations: area.operations, events: area.events }
 }
 
-/** The arguments an event carries: none for a payload-less event, one payload otherwise. */
+/**
+ * The arguments an event carries: none for a payload-less event, one payload otherwise. A payload that accepts
+ * `undefined` is an optional argument, so its subscriber is `(payload?: X) => void`. A sender still passes it
+ * explicitly (`emit(event, undefined)`), which is what keeps `undefined` on the wire.
+ */
 export type EventPayloadArgs<TEvent extends EventDefinition> = [
   NonNullable<TEvent['payload']>
 ] extends [never]
   ? []
-  : [payload: z.output<NonNullable<TEvent['payload']> & ZodType>]
+  : undefined extends z.output<NonNullable<TEvent['payload']> & ZodType>
+    ? [payload?: z.output<NonNullable<TEvent['payload']> & ZodType>]
+    : [payload: z.output<NonNullable<TEvent['payload']> & ZodType>]
 
 /** The type a caller passes to an operation. */
 export type OperationInput<T extends OperationDefinition> = z.input<T['input']>

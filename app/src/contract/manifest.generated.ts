@@ -25,9 +25,16 @@ export const manifest = {
       copyPath: 'files:copy-path',
       showInFinder: 'files:show-in-finder',
       rename: 'files:rename',
-      moveToTrash: 'files:move-to-trash'
+      moveToTrash: 'files:move-to-trash',
+      watchWorkspaceTab: 'files:watch-workspace-tab',
+      unwatch: 'files:unwatch'
     },
-    events: {}
+    events: {
+      treeChanged: 'files:tree-changed',
+      catalogChanged: 'files:catalog-changed',
+      sourceChange: 'viewer:source-changed',
+      workspaceTabChange: 'viewer:workspace-tab-changed'
+    }
   },
   indexer: {
     operations: {

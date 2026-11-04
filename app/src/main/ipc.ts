@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
-import { relative, sep } from 'node:path'
 
 import { app, BrowserWindow, clipboard, dialog, ipcMain, shell, type WebContents } from 'electron'
 
@@ -9,6 +8,7 @@ import { applyColorMode } from './appearance'
 import { createAppHandlers } from './contract/app-handlers'
 import { createDialogHandlers } from './contract/dialog-handlers'
 import { createFilesHandlers } from './contract/files-handlers'
+import { createViewerWatch, forwardFileChanges } from './contract/files-watch'
 import {
   createIndexerHandlers,
   forwardEmbeddingStatus,
@@ -26,13 +26,10 @@ import { indexerService } from './indexing/indexer-service'
 import { walkNotes } from './indexing/walker'
 import { watcher } from './indexing/watcher'
 import {
-  assertValidAbsolutePath,
   assertValidRequestId,
   assertValidSearchSnapshotFreshnessInput,
   assertValidSearchOptions,
-  assertValidSearchQuery,
-  assertValidSourceFileInput,
-  assertValidWorkspaceTabFileInput
+  assertValidSearchQuery
 } from './ipc-validation'
 import { fileRefForPickedMarkdownFile, resolveExternalMarkdownFile } from './picked-file'
 import { SearchService } from './search/search-service'
@@ -48,12 +45,8 @@ import { sourcePathForViewerChange } from './viewer/source-change-path'
 import { viewerWatcher } from './viewer/viewer-watcher'
 import { fileRefForWorkspaceTab as tabFileRef } from './workspace-tab-file'
 import { workspaceStore } from './workspace/workspace-store'
-import { type FileCatalogChangeEvent } from '../shared/files'
-import { isWorkspaceSourceFileRef } from '../shared/workspace'
 
 let searchService: SearchService | null = null
-let watchedViewerSourcePath: string | null = null
-let watchedViewerTabId: string | null = null
 
 interface ActiveSearchRequest {
   owner: WebContents
@@ -149,6 +142,23 @@ export function registerIpc(): void {
     startReindex: () => indexerService.triggerReindex()
   })
 
+  const viewerWatch = createViewerWatch({
+    viewerWatcher,
+    getNotesRoot: () => settingsStore.load().notesRoot,
+    fileRefForWorkspaceTab,
+    resolveSourcePathUnderRoot,
+    sourcePathForViewerChange,
+    emit
+  })
+
+  forwardFileChanges({
+    watcher,
+    getNotesRoot: () => settingsStore.load().notesRoot,
+    fileCatalogEntryFor,
+    markTasksStale: () => taskFactsService.markStale(),
+    emit
+  })
+
   registerOperations(ipcMain, contract, {
     app: createAppHandlers({ getVersion: () => app.getVersion() }),
     dialog: createDialogHandlers({
@@ -156,22 +166,25 @@ export function registerIpc(): void {
       showOpenDialog: (win, options) =>
         win ? dialog.showOpenDialog(win, options) : dialog.showOpenDialog(options)
     }),
-    files: createFilesHandlers({
-      store: workspaceStore,
-      getNotesRoot: () => settingsStore.load().notesRoot,
-      walkNotes,
-      listFileCatalog,
-      readTextFile: (path) => readFile(path, 'utf8'),
-      readSourceFile: readSourceFileSafe,
-      readSourceTitle: readSourceTitleSafe,
-      resolveExternalMarkdownFile,
-      clipboard,
-      shell,
-      windowFor: (sender) => BrowserWindow.fromWebContents(sender),
-      showMessageBox: (win, options) =>
-        win ? dialog.showMessageBox(win, options) : dialog.showMessageBox(options),
-      refreshAppMenu
-    }),
+    files: {
+      ...createFilesHandlers({
+        store: workspaceStore,
+        getNotesRoot: () => settingsStore.load().notesRoot,
+        walkNotes,
+        listFileCatalog,
+        readTextFile: (path) => readFile(path, 'utf8'),
+        readSourceFile: readSourceFileSafe,
+        readSourceTitle: readSourceTitleSafe,
+        resolveExternalMarkdownFile,
+        clipboard,
+        shell,
+        windowFor: (sender) => BrowserWindow.fromWebContents(sender),
+        showMessageBox: (win, options) =>
+          win ? dialog.showMessageBox(win, options) : dialog.showMessageBox(options),
+        refreshAppMenu
+      }),
+      ...viewerWatch
+    },
     indexer: createIndexerHandlers({
       service: indexerService,
       beforeClear: stopSearchesBeforeClear
@@ -193,107 +206,6 @@ export function registerIpc(): void {
         win ? dialog.showOpenDialog(win, options) : dialog.showOpenDialog(options),
       fileRefForPickedMarkdownFile
     })
-  })
-
-  ipcMain.handle('files:watch', async (_event, absPath: unknown) => {
-    const notesRoot = settingsStore.load().notesRoot
-    const safePath = await resolveSourcePathUnderRoot(assertValidAbsolutePath(absPath), notesRoot)
-    watchedViewerSourcePath = null
-    watchedViewerTabId = null
-    await viewerWatcher.watch(safePath)
-  })
-
-  ipcMain.handle('files:watch-source', async (_event, input: unknown) => {
-    const notesRoot = settingsStore.load().notesRoot
-    const { sourcePath } = assertValidSourceFileInput(input)
-    const safePath = await resolveSourcePathUnderRoot(sourcePath, notesRoot)
-    watchedViewerSourcePath = null
-    watchedViewerTabId = null
-    await viewerWatcher.watch(safePath)
-    watchedViewerSourcePath = sourcePath
-  })
-
-  ipcMain.handle('files:watch-workspace-tab', async (_event, input: unknown) => {
-    const notesRoot = settingsStore.load().notesRoot
-    const { tabId } = assertValidWorkspaceTabFileInput(input)
-    const fileRef = await fileRefForWorkspaceTab(tabId)
-    const safePath = isWorkspaceSourceFileRef(fileRef)
-      ? await resolveSourcePathUnderRoot(fileRef.sourcePath, notesRoot)
-      : fileRef.externalPath
-
-    watchedViewerSourcePath = null
-    watchedViewerTabId = null
-    await viewerWatcher.watch(safePath)
-    watchedViewerTabId = tabId
-    if (isWorkspaceSourceFileRef(fileRef)) {
-      watchedViewerSourcePath = fileRef.sourcePath
-    }
-  })
-
-  ipcMain.handle('files:unwatch', async () => {
-    watchedViewerSourcePath = null
-    watchedViewerTabId = null
-    await viewerWatcher.stop()
-  })
-
-  // Push viewer-watcher change events to all renderer windows.
-  viewerWatcher.onChange((path) => {
-    const notesRoot = settingsStore.load().notesRoot
-    const sourcePath = sourcePathForViewerChange(path, notesRoot, watchedViewerSourcePath)
-    if (sourcePath) {
-      for (const win of BrowserWindow.getAllWindows()) {
-        win.webContents.send('viewer:source-changed', sourcePath)
-      }
-    }
-    if (watchedViewerTabId) {
-      for (const win of BrowserWindow.getAllWindows()) {
-        win.webContents.send('viewer:workspace-tab-changed', watchedViewerTabId)
-      }
-    }
-    for (const win of BrowserWindow.getAllWindows()) {
-      win.webContents.send('viewer:file-changed', path)
-    }
-  })
-
-  watcher.onTreeChanged(() => {
-    for (const win of BrowserWindow.getAllWindows()) {
-      win.webContents.send('files:tree-changed')
-    }
-  })
-
-  watcher.onCatalogChanged((event) => {
-    const notesRoot = settingsStore.load().notesRoot
-    // Settings update their persisted root before the previous watcher has
-    // finished closing. Do not resolve a final old-root event against the new
-    // corpus root.
-    if (event.notesRoot !== notesRoot) return
-
-    taskFactsService.markStale()
-    emit(contract.tasks.events.changed)
-
-    void (async () => {
-      let catalogChange: FileCatalogChangeEvent | undefined
-      if (event.type === 'remove') {
-        catalogChange = {
-          type: 'remove',
-          sourcePath: relative(notesRoot, event.path).split(sep).join('/')
-        }
-      } else {
-        try {
-          catalogChange = {
-            type: 'upsert',
-            file: await fileCatalogEntryFor(notesRoot, event.path)
-          }
-        } catch {
-          // A rapid follow-up rename/delete can invalidate an upsert before it is read.
-          // Preserve the previous full-refresh fallback for that exceptional race.
-        }
-      }
-
-      for (const win of BrowserWindow.getAllWindows()) {
-        win.webContents.send('files:catalog-changed', catalogChange)
-      }
-    })()
   })
 
   ipcMain.handle('search:query', (event, rawQuery: unknown, rawOptions: unknown) => {
