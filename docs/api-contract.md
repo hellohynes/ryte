@@ -78,7 +78,7 @@ live window, and the renderer subscribes with `window.ryte.tasks.onChanged(callb
 3. **Write the handler** in `app/src/main/contract/<area>-handlers.ts`: add `ping: async (input, ctx) => ...` to the
    object returned by `create<Area>Handlers`. The type makes a missing or extra handler a compile error, so run
    `pnpm typecheck` now: `pnpm check:contract` does not report a missing handler. `input` is
-   already validated and typed; `ctx.sender` is the window that called. Take dependencies as parameters (the way
+   already validated and typed; `ctx.sender` is the `WebContents` of the page that called. Take dependencies as parameters (the way
    `createTaskHandlers` takes `service`, `settings` and `emit`) so the handler can be tested without Electron.
    - **New area:** create `<area>-handlers.ts` exporting `create<Area>Handlers(...)` that returns
      `Handlers<Contract>['<area>']`, and add `<area>: create<Area>Handlers(...)` to the `registerOperations(ipcMain,
@@ -121,7 +121,7 @@ validates it at runtime (main is trusted), so keep it plain data. The UI subscri
 (tasks, indexer status). `emit.to(webContents, event, payload)` sends to that one `WebContents` and nobody else: use it
 when the event belongs to one window (a search's results, a menu command), because a broadcast would show it in every
 other window. Both skip a destroyed window, and a failed send is logged (channel and reason, never the payload)
-without throwing. A handler gets the asking window as `ctx.sender`. For any other target, take the emitter and the
+without throwing. A handler gets the asking page's `WebContents` as `ctx.sender`, which is what `emit.to` takes. For any other target, take the emitter and the
 window lookup as parameters so a test can use fake windows:
 
 ```ts

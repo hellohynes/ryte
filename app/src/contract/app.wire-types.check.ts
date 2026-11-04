@@ -12,4 +12,4 @@ type Flatten<T> = { [K in keyof T]: T[K] }
 
 type Api = Flatten<ContractApi['app']>
 
-export type AppWireTypeChecks = [Assert<Equal<Pick<Api, keyof wire.AppApi>, wire.AppApi>>]
+export type AppWireTypeChecks = [Assert<Equal<Api, wire.AppApi>>]

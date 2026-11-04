@@ -17,6 +17,7 @@ const optionKey = process.platform === 'darwin' ? 'Alt' : 'Alt'
 
 // Set by `installAppMenu`. The menu is rebuilt when the recent files change, and each rebuild keeps the sender.
 let sendMenuCommand: MenuCommandSender = () => undefined
+let installed = false
 
 function recentLabel(recent: WorkspaceRecentFile): string {
   return recent.title || workspaceFileTitle(recent)
@@ -156,12 +157,14 @@ function windowMenu(): MenuItemConstructorOptions {
 
 export function installAppMenu(send: MenuCommandSender): void {
   sendMenuCommand = send
+  installed = true
   app.setName(APP_NAME)
   Menu.setApplicationMenu(
     Menu.buildFromTemplate([appMenu(), fileMenu(), editMenu(), viewMenu(), windowMenu()])
   )
 }
 
+/** Rebuilds the menu. Does nothing before `installAppMenu`: a menu without a sender would do nothing when clicked. */
 export function refreshAppMenu(): void {
-  installAppMenu(sendMenuCommand)
+  if (installed) installAppMenu(sendMenuCommand)
 }
