@@ -90,24 +90,46 @@ export type Emit = <TEvent extends EventDefinition>(
   ...payload: EventPayloadArgs<TEvent>
 ) => void
 
-/**
- * Broadcasts an event to every live window. The window provider is injected so the behavior is testable
- * without Electron. With no windows, or only destroyed ones, nothing is sent.
- */
-export function createEmitter(getWindows: () => readonly WindowLike[]): Emit {
-  return (event, ...payload) => {
-    for (const win of getWindows()) {
-      if (win.webContents.isDestroyed()) continue
-      try {
-        win.webContents.send(event.channel, ...payload)
-      } catch (error) {
-        // One window that cannot receive (a disposed render frame) must not stop delivery to the others,
-        // nor fail the operation that emitted. Log the channel and the reason, never the payload.
-        console.error(
-          `Failed to send ${event.channel} to a window:`,
-          error instanceof Error ? error.message : error
-        )
-      }
-    }
+/** Sends an event to one window only. */
+export type EmitTo = <TEvent extends EventDefinition>(
+  target: WindowLike['webContents'],
+  event: TEvent,
+  ...payload: EventPayloadArgs<TEvent>
+) => void
+
+export type Emitter = Emit & { to: EmitTo }
+
+// A destroyed target is skipped. A target that cannot receive (a disposed render frame) must not fail the
+// operation that emitted, nor stop delivery to the other windows when this is called in a loop. Log the
+// channel and the reason, never the payload.
+function sendToWindow(
+  target: WindowLike['webContents'],
+  channel: string,
+  payload: readonly unknown[]
+): void {
+  if (target.isDestroyed()) return
+  try {
+    target.send(channel, ...payload)
+  } catch (error) {
+    console.error(
+      `Failed to send ${channel} to a window:`,
+      error instanceof Error ? error.message : error
+    )
   }
+}
+
+/**
+ * `emit(event, payload?)` broadcasts to every live window; `emit.to(webContents, event, payload?)` sends to
+ * one. Use `to` for anything that belongs to a single window (a search's results, a menu command): a
+ * broadcast would show it in every other window. The window provider is injected so the behavior is
+ * testable without Electron. With no windows, or only destroyed ones, nothing is sent.
+ */
+export function createEmitter(getWindows: () => readonly WindowLike[]): Emitter {
+  const emit: Emit = (event, ...payload) => {
+    for (const win of getWindows()) sendToWindow(win.webContents, event.channel, payload)
+  }
+  const to: EmitTo = (target, event, ...payload) => {
+    sendToWindow(target, event.channel, payload)
+  }
+  return Object.assign(emit, { to })
 }

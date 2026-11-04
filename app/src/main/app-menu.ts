@@ -1,6 +1,5 @@
-import { app, BrowserWindow, Menu, type MenuItemConstructorOptions } from 'electron'
+import { app, Menu, type MenuItemConstructorOptions } from 'electron'
 
-import { APP_MENU_COMMAND_CHANNEL, type AppMenuCommand } from '../shared/app-menu'
 import {
   isWorkspaceSourceFileRef,
   workspaceFileDisplayPath,
@@ -8,6 +7,7 @@ import {
   type WorkspaceOpenRecentFileInput,
   type WorkspaceRecentFile
 } from '../shared/workspace'
+import type { MenuCommandSender } from './menu-command'
 import { workspaceStore } from './workspace/workspace-store'
 
 const APP_NAME = 'ryte'
@@ -15,13 +15,8 @@ const RECENT_MENU_LIMIT = 10
 const commandKey = process.platform === 'darwin' ? 'Command' : 'Ctrl'
 const optionKey = process.platform === 'darwin' ? 'Alt' : 'Alt'
 
-function targetWindow(): BrowserWindow | null {
-  return BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0] ?? null
-}
-
-function sendMenuCommand(command: AppMenuCommand): void {
-  targetWindow()?.webContents.send(APP_MENU_COMMAND_CHANNEL, command)
-}
+// Set by `installAppMenu`. The menu is rebuilt when the recent files change, and each rebuild keeps the sender.
+let sendMenuCommand: MenuCommandSender = () => undefined
 
 function recentLabel(recent: WorkspaceRecentFile): string {
   return recent.title || workspaceFileTitle(recent)
@@ -159,7 +154,8 @@ function windowMenu(): MenuItemConstructorOptions {
   }
 }
 
-export function installAppMenu(): void {
+export function installAppMenu(send: MenuCommandSender): void {
+  sendMenuCommand = send
   app.setName(APP_NAME)
   Menu.setApplicationMenu(
     Menu.buildFromTemplate([appMenu(), fileMenu(), editMenu(), viewMenu(), windowMenu()])
@@ -167,5 +163,5 @@ export function installAppMenu(): void {
 }
 
 export function refreshAppMenu(): void {
-  installAppMenu()
+  installAppMenu(sendMenuCommand)
 }

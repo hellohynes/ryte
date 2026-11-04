@@ -31,7 +31,6 @@ import type {
   SearchSnapshotFreshness,
   SearchSnapshotFreshnessInput
 } from '../main/search/search-service'
-import { APP_MENU_COMMAND_CHANNEL, type AppMenuCommand } from '../shared/app-menu'
 import {
   createContractApi,
   mergeContractApi,
@@ -76,9 +75,6 @@ export interface SearchQueryOptions {
 }
 
 interface LegacyRyteApi {
-  app: {
-    onMenuCommand(cb: (command: AppMenuCommand) => void): () => void
-  }
   workspace: {
     getState(): Promise<WorkspaceState>
     updateShell(patch: WorkspaceShellUpdate): Promise<WorkspaceState>
@@ -135,13 +131,6 @@ interface LegacyRyteApi {
 export type RyteApi = MergeApi<LegacyRyteApi, ContractApi>
 
 const legacyApi: LegacyRyteApi = {
-  app: {
-    onMenuCommand: (cb) => {
-      const listener = (_: unknown, command: AppMenuCommand): void => cb(command)
-      ipcRenderer.on(APP_MENU_COMMAND_CHANNEL, listener)
-      return () => ipcRenderer.removeListener(APP_MENU_COMMAND_CHANNEL, listener)
-    }
-  },
   workspace: {
     getState: () => ipcRenderer.invoke('workspace:get-state'),
     updateShell: (patch) => ipcRenderer.invoke('workspace:update-shell', patch),

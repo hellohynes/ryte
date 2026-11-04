@@ -6,9 +6,11 @@ import icon from '../../resources/icon.png?asset'
 
 import { installAppMenu } from './app-menu'
 import { applyColorMode } from './appearance'
+import { createEmitter } from './contract/register'
 import { indexerService } from './indexing/indexer-service'
 import { watcher } from './indexing/watcher'
 import { registerIpc } from './ipc'
+import { createMenuCommandSender } from './menu-command'
 import { installNavigationGuards, originForUrl } from './navigation'
 import { settingsStore } from './settings/settings-store'
 import { workspaceStore } from './workspace/workspace-store'
@@ -148,7 +150,13 @@ function startApp(): void {
   })
 
   registerIpc()
-  installAppMenu()
+  installAppMenu(
+    createMenuCommandSender({
+      emitTo: createEmitter(() => BrowserWindow.getAllWindows()).to,
+      getFocused: () => BrowserWindow.getFocusedWindow(),
+      getAll: () => BrowserWindow.getAllWindows()
+    })
+  )
 
   let lastNotifiedPhase: string | null = null
   indexerService.subscribe((status) => {

@@ -279,3 +279,78 @@ describe('createEmitter', () => {
     emit(fixtureStatusEvent)
   })
 })
+
+describe('createEmitter().to: one window only', () => {
+  it('sends to the target and to no other window', () => {
+    const target = fakeWindow()
+    const other = fakeWindow()
+    createEmitter(() => [target.win, other.win]).to(target.win.webContents, fixtureStatusEvent, {
+      phase: 'idle',
+      done: 2
+    })
+
+    expect(target.send.mock.calls).toEqual([['fixture:status-event', { phase: 'idle', done: 2 }]])
+    expect(other.send).not.toHaveBeenCalled()
+  })
+
+  it('sends a payload-less event with the channel only', () => {
+    const target = fakeWindow()
+    createEmitter(() => [target.win]).to(target.win.webContents, contract.tasks.events.changed)
+
+    expect(target.send.mock.calls).toEqual([['tasks:changed']])
+  })
+
+  it('reaches a target that is not among the windows the emitter lists', () => {
+    const target = fakeWindow()
+    createEmitter(() => []).to(target.win.webContents, contract.tasks.events.changed)
+
+    expect(target.send).toHaveBeenCalledTimes(1)
+  })
+
+  it('skips a destroyed target without sending or throwing', () => {
+    const destroyed = fakeWindow(true)
+    const live = fakeWindow()
+    const emit = createEmitter(() => [destroyed.win, live.win])
+
+    expect(() => emit.to(destroyed.win.webContents, contract.tasks.events.changed)).not.toThrow()
+    expect(destroyed.send).not.toHaveBeenCalled()
+    expect(live.send).not.toHaveBeenCalled()
+  })
+
+  it('logs the channel and reason, never the payload, when the send fails, and does not throw', () => {
+    const broken = fakeWindow()
+    broken.send.mockImplementation(() => {
+      throw new Error('Render frame was disposed before WebFrameMain could be accessed')
+    })
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+    try {
+      expect(() =>
+        createEmitter(() => [broken.win]).to(broken.win.webContents, fixtureStatusEvent, {
+          phase: 'idle',
+          done: 99_123
+        })
+      ).not.toThrow()
+
+      expect(logged).toHaveBeenCalledTimes(1)
+      const line = JSON.stringify(logged.mock.calls[0])
+      expect(line).toContain('fixture:status-event')
+      expect(line).toContain('Render frame was disposed')
+      expect(line).not.toContain('99123')
+      expect(line).not.toContain('idle')
+    } finally {
+      logged.mockRestore()
+    }
+  })
+
+  it('leaves the broadcast call unchanged: it still reaches every live window', () => {
+    const first = fakeWindow()
+    const second = fakeWindow()
+    const emit = createEmitter(() => [first.win, second.win])
+    emit(fixtureStatusEvent, { phase: 'idle', done: 1 })
+
+    expect(first.send).toHaveBeenCalledTimes(1)
+    expect(second.send).toHaveBeenCalledTimes(1)
+    // @ts-expect-error a payload-bearing event requires its payload on the one-window call too
+    emit.to(first.win.webContents, fixtureStatusEvent)
+  })
+})

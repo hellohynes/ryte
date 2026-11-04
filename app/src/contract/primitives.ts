@@ -2,7 +2,11 @@ import { isAbsolute } from 'node:path'
 
 import { z } from 'zod'
 
-import { MAX_PATH_LENGTH, normalizeWorkspaceSourcePath } from '../shared/source-path'
+import {
+  MAX_PATH_LENGTH,
+  normalizeWorkspaceExternalPath,
+  normalizeWorkspaceSourcePath
+} from '../shared/source-path'
 
 /**
  * A notes-root-relative file path, validated and normalized by the same function the legacy IPC
@@ -16,6 +20,29 @@ export const sourcePath = z.string().transform((value, ctx) => {
     return z.NEVER
   }
 })
+
+/**
+ * An absolute Markdown file path outside the notes root, validated and normalized by the same function the
+ * legacy IPC validators use.
+ */
+export const externalPath = z.string().transform((value, ctx) => {
+  try {
+    return normalizeWorkspaceExternalPath(value)
+  } catch {
+    ctx.addIssue({ code: 'custom', message: 'Invalid external path' })
+    return z.NEVER
+  }
+})
+
+/**
+ * A reference to a note file: exactly one of `sourcePath` (inside the notes root) or `externalPath`. The
+ * other key may be absent or `undefined`, as the legacy validator counted an `undefined` key as absent, so
+ * this is deliberately not covered by `hasNoExplicitUndefined`.
+ */
+export const workspaceFileRef = z.union([
+  z.strictObject({ sourcePath, externalPath: z.undefined().optional() }),
+  z.strictObject({ externalPath, sourcePath: z.undefined().optional() })
+])
 
 /**
  * An integer by `Number.isInteger`, matching the legacy validators. `z.int()` is narrower: it rejects

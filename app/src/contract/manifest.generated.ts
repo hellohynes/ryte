@@ -5,7 +5,9 @@ export const manifest = {
     operations: {
       getVersion: 'app:get-version'
     },
-    events: {}
+    events: {
+      menuCommand: 'app:menu-command'
+    }
   },
   dialog: {
     operations: {

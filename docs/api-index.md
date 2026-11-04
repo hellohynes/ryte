@@ -12,6 +12,10 @@ change or remove one.
 | --- | --- | --- | --- |
 | `app.getVersion` | `app:get-version` | The version of the running app, as shown in Preferences. | `none` |
 
+| Event | Channel | What it means | Payload |
+| --- | --- | --- | --- |
+| `app.menuCommand` | `app:menu-command` | A menu item was chosen. Sent to the focused window only, or the first window when none is focused. | `see schema` |
+
 ## dialog
 
 | Operation | Channel | What it does | Input |
