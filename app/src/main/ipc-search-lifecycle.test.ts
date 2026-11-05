@@ -278,6 +278,24 @@ describe('search IPC request lifecycle', () => {
     expect(otherWindow.send).not.toHaveBeenCalled()
   })
 
+  it('starts the search only after the request id has reached the window, on a later turn of the event loop', async () => {
+    const requester = makeWebContents()
+    mocks.windows = [{ webContents: requester }]
+
+    const requestId = await handler('search:query')(
+      { sender: requester },
+      { query: 'release plan' }
+    )
+
+    expect(requestId).toEqual(expect.any(String))
+    expect(mocks.search).not.toHaveBeenCalled()
+    expect(requester.send).not.toHaveBeenCalled()
+
+    await vi.runAllTimersAsync()
+    expect(mocks.search).toHaveBeenCalledTimes(1)
+    expect(mocks.search.mock.calls[0]?.[1]).toBe(requestId)
+  })
+
   it('applies a saved color mode to the window, and only when it was part of the change', async () => {
     await handler('settings:save')({}, { colorMode: 'dark' })
     expect(mocks.applyColorMode).toHaveBeenCalledWith('dark')

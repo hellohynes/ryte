@@ -343,6 +343,40 @@ describe('search.query handler', () => {
     ])
   })
 
+  it('hands the asking window the full error text unchanged, with the request id', async () => {
+    const t = setup({ ids: ['id-1'] })
+    const owner = makeWindow()
+    await t.search.handlers.query({ query: 'q' }, ctxOf(owner))
+    t.flush()
+    const text = 'OpenAI gpt-5.2 answer failed: 500 stub failure with a long tail of words'
+
+    callbacksOf(t.svc!).onError(text)
+
+    expect(t.emitTo.mock.calls).toEqual([[owner, events.error, { requestId: 'id-1', error: text }]])
+  })
+
+  it('does not let the late events of a cancelled request reach another request', async () => {
+    const t = setup({ ids: ['id-1', 'id-2'] })
+    const first = makeWindow()
+    const second = makeWindow()
+    await t.search.handlers.query({ query: 'one' }, ctxOf(first))
+    await t.search.handlers.query({ query: 'two' }, ctxOf(second))
+    t.flush()
+    const cancelled = callbacksOf(t.svc!, 0)
+    const running = callbacksOf(t.svc!, 1)
+
+    await t.search.handlers.cancel({ requestId: 'id-1' }, ctxOf(first))
+    cancelled.onStage('searching-local')
+    cancelled.onToken('late token')
+    cancelled.onDone()
+    expect(t.emitTo).not.toHaveBeenCalled()
+
+    running.onToken('own token')
+    expect(t.emitTo.mock.calls).toEqual([
+      [second, events.streamToken, { requestId: 'id-2', token: 'own token' }]
+    ])
+  })
+
   it('does not let a second query cancel the first', async () => {
     const t = setup({ ids: ['id-1', 'id-2'] })
     const owner = makeWindow()
