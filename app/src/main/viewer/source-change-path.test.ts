@@ -4,7 +4,7 @@ import { join, relative } from 'node:path'
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { assertValidSourceFileInput } from '../ipc-validation'
+import { normalizeWorkspaceSourcePath } from '../../shared/source-path'
 import { sourcePathForViewerChange } from './source-change-path'
 
 describe('sourcePathForViewerChange', () => {
@@ -29,9 +29,9 @@ describe('sourcePathForViewerChange', () => {
   it('preserves the watched source path when the notes root is a symlink', () => {
     const changedPath = join(root, 'sub', 'b.md')
 
-    expect(() =>
-      assertValidSourceFileInput({ sourcePath: relative(linkRoot, changedPath) })
-    ).toThrow('Invalid workspace source path')
+    expect(() => normalizeWorkspaceSourcePath(relative(linkRoot, changedPath))).toThrow(
+      'Invalid workspace source path'
+    )
 
     expect(sourcePathForViewerChange(changedPath, linkRoot, 'sub/b.md')).toBe('sub/b.md')
   })

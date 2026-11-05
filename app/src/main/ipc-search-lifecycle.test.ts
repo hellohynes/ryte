@@ -681,6 +681,14 @@ describe('search IPC request lifecycle', () => {
     })
   })
 
+  it('registers the two watch operations and none of the three deleted channels', () => {
+    expect(mocks.handlers.has('files:watch-workspace-tab')).toBe(true)
+    expect(mocks.handlers.has('files:unwatch')).toBe(true)
+    for (const channel of ['files:watch', 'files:watch-source']) {
+      expect(mocks.handlers.has(channel), channel).toBe(false)
+    }
+  })
+
   it('test_catalog_change_sends_one_typed_file_patch_to_each_window', async () => {
     const requester = makeWebContents()
     mocks.windows = [{ webContents: requester }]

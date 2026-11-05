@@ -15,6 +15,27 @@ export const manifest = {
     },
     events: {}
   },
+  files: {
+    operations: {
+      listTree: 'files:list-tree',
+      listCatalog: 'files:list-catalog',
+      readSourceTitle: 'files:read-source-title',
+      readWorkspaceTab: 'files:read-workspace-tab',
+      copyContent: 'files:copy-content',
+      copyPath: 'files:copy-path',
+      showInFinder: 'files:show-in-finder',
+      rename: 'files:rename',
+      moveToTrash: 'files:move-to-trash',
+      watchWorkspaceTab: 'files:watch-workspace-tab',
+      unwatch: 'files:unwatch'
+    },
+    events: {
+      treeChanged: 'files:tree-changed',
+      catalogChanged: 'files:catalog-changed',
+      sourceChange: 'viewer:source-changed',
+      workspaceTabChange: 'viewer:workspace-tab-changed'
+    }
+  },
   indexer: {
     operations: {
       getStatus: 'indexer:get-status',

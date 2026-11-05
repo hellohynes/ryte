@@ -22,6 +22,29 @@ change or remove one.
 | --- | --- | --- | --- |
 | `dialog.openFolder` | `dialog:open-folder` | Show the system folder picker over the window that asked: the chosen folder path, or null when it was cancelled or nothing was chosen. | `none` |
 
+## files
+
+| Operation | Channel | What it does | Input |
+| --- | --- | --- | --- |
+| `files.listTree` | `files:list-tree` | Every Markdown file under the notes folder as a path relative to it, sorted, with the notes folder. | `none` |
+| `files.listCatalog` | `files:list-catalog` | Every Markdown file under the notes folder with its title, folder, dates and size, sorted by path. | `none` |
+| `files.readSourceTitle` | `files:read-source-title` | The title of a note in the notes folder, or null when it has none. Fails when the path is outside the notes folder. | `{ sourcePath: string, externalPath?: unknown }` |
+| `files.readWorkspaceTab` | `files:read-workspace-tab` | The text of the file an open tab shows. A note must be inside the notes folder; a file opened from outside it is read as is. Fails when no tab has that id. | `{ tabId: string }` |
+| `files.copyContent` | `files:copy-content` | Put the text of a file on the clipboard. | `see schema` |
+| `files.copyPath` | `files:copy-path` | Put the full path of a file on the clipboard. | `see schema` |
+| `files.showInFinder` | `files:show-in-finder` | Reveal a file in Finder. | `see schema` |
+| `files.rename` | `files:rename` | Rename a file in its folder. The name must end in `.md`. Updates the open tabs and recent files, and refreshes the app menu. | `see schema` |
+| `files.moveToTrash` | `files:move-to-trash` | Ask the person to confirm over the window that asked, then move a file to the Trash and drop it from the open tabs and recent files. Returns `trashed: false` and the workspace unchanged when they decline. Refreshes the app menu after a move. | `see schema` |
+| `files.watchWorkspaceTab` | `files:watch-workspace-tab` | Watch the file an open tab shows, in place of whatever was watched before (one file at a time, for the whole app). A note must be inside the notes folder. Changes arrive as `sourceChange` and `workspaceTabChange` events. Fails when no tab has that id. | `{ tabId: string }` |
+| `files.unwatch` | `files:unwatch` | Stop watching the file that was being watched, if any. | `none` |
+
+| Event | Channel | What it means | Payload |
+| --- | --- | --- | --- |
+| `files.treeChanged` | `files:tree-changed` | A Markdown file was added, removed or renamed under the notes folder. Sent to every window. | `none` |
+| `files.catalogChanged` | `files:catalog-changed` | One file under the notes folder changed: its new catalog entry (`upsert`) or its path (`remove`). The payload is absent when the change could not be described, which means refresh the whole catalog. Sent to every window. | `see schema` |
+| `files.sourceChange` | `viewer:source-changed` | The watched file changed on disk. Carries its notes-relative path. Sent to every window, and only when the path can be told. | `string` |
+| `files.workspaceTabChange` | `viewer:workspace-tab-changed` | The file of the watched tab changed on disk. Carries the id of the tab. Sent to every window, after `sourceChange`. | `string` |
+
 ## indexer
 
 | Operation | Channel | What it does | Input |

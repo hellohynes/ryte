@@ -1,0 +1,2723 @@
+{
+  "header": {
+    "recordedFrom": "bb14ce449c41098b05bd1735bd082af34fd00a63",
+    "baseSha": "bb14ce449c41098b05bd1735bd082af34fd00a63",
+    "command": "node --import tsx record-files-vectors.ts",
+    "note": "Recorded from the pre-change validators (assertValidWorkspaceFileRefInput, ...FileRenameInput, ...SourceFileInput, ...WorkspaceTabFileInput) at baseSha. Replayed from a clean `git archive` of baseSha. Expectations are the oracle; do not regenerate from new code."
+  },
+  "vectors": [
+    {
+      "id": "fileRef: empty object",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "fileRef: undefined",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "fileRef: null",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "fileRef: string",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "fileRef: number",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "fileRef: boolean",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "fileRef: empty array",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "fileRef: array holding an object",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "fileRef: Date instance",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "fileRef: Map instance",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "fileRef: class instance with a valid own field",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference key: tabId"
+    },
+    {
+      "id": "fileRef: null-prototype object with a valid key",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "fileRef: symbol key is ignored",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "fileRef: only an unknown key",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference key: arbitrary"
+    },
+    {
+      "id": "fileRef: valid key with an unknown key",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference key: arbitrary"
+    },
+    {
+      "id": "fileRef: constructor as a key",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference key: constructor"
+    },
+    {
+      "id": "fileRef: toString as a key",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference key: toString"
+    },
+    {
+      "id": "fileRef: own __proto__ key",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference key: __proto__"
+    },
+    {
+      "id": "fileRef: own __proto__ key with a valid key",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference key: __proto__"
+    },
+    {
+      "id": "fileRef: inherited valid key only",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "fileRef: inherited unknown key only",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "fileRef: valid sourcePath only",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md"
+      }
+    },
+    {
+      "id": "fileRef: valid externalPath only",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/outside/a.md"
+      }
+    },
+    {
+      "id": "fileRef: neither key",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "fileRef: neither key beside an unknown key",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference key: arbitrary"
+    },
+    {
+      "id": "fileRef: both keys valid",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "fileRef: both keys with an invalid sourcePath",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "fileRef: both keys with an invalid externalPath",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "fileRef: sourcePath with externalPath undefined",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "fileRef: externalPath with sourcePath undefined",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.md"
+      }
+    },
+    {
+      "id": "fileRef: both keys undefined",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "fileRef: sourcePath null with externalPath undefined",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "fileRef: externalPath null with sourcePath undefined",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "fileRef: sourcePath with externalPath null",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "fileRef: valid sourcePath with an unknown key",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference key: extra"
+    },
+    {
+      "id": "fileRef: valid externalPath with an unknown key",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference key: extra"
+    },
+    {
+      "id": "fileRef: inherited sourcePath beside an own unknown key",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference key: arbitrary"
+    },
+    {
+      "id": "fileRef: inherited externalPath only",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.md"
+      }
+    },
+    {
+      "id": "fileRef: own sourcePath beside an inherited externalPath",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "fileRef: own externalPath beside an inherited sourcePath",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "fileRef: own sourcePath beside an inherited unknown key",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "fileRef: sourcePath typical",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md"
+      }
+    },
+    {
+      "id": "fileRef: sourcePath top level",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "fileRef: sourcePath dot-slash is normalized",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "fileRef: sourcePath redundant separators are normalized",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md"
+      }
+    },
+    {
+      "id": "fileRef: sourcePath trailing slash is normalized",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/"
+      }
+    },
+    {
+      "id": "fileRef: sourcePath does not need to be markdown",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.txt"
+      }
+    },
+    {
+      "id": "fileRef: sourcePath upper-case extension",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/A.MD"
+      }
+    },
+    {
+      "id": "fileRef: sourcePath unicode",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "sourcePath": "日本語/メモ.md"
+      }
+    },
+    {
+      "id": "fileRef: sourcePath with spaces",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "sourcePath": "my notes/a b.md"
+      }
+    },
+    {
+      "id": "fileRef: sourcePath parent traversal",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "fileRef: sourcePath traversal in the middle",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "fileRef: sourcePath backslash traversal",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "fileRef: sourcePath absolute",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "fileRef: sourcePath windows drive",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "fileRef: sourcePath windows rooted",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "fileRef: sourcePath dot only",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "fileRef: sourcePath dot dot",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "fileRef: sourcePath empty",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "fileRef: sourcePath NUL",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "fileRef: sourcePath 4096 characters",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "sourcePath": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.md"
+      }
+    },
+    {
+      "id": "fileRef: sourcePath 4097 characters",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "fileRef: sourcePath number",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "fileRef: sourcePath boolean",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "fileRef: sourcePath null",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "fileRef: sourcePath array",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "fileRef: sourcePath object",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "fileRef: sourcePath String object",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "fileRef: sourcePath explicit undefined",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "fileRef: externalPath typical",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/outside/a.md"
+      }
+    },
+    {
+      "id": "fileRef: externalPath root level",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "externalPath": "/a.md"
+      }
+    },
+    {
+      "id": "fileRef: externalPath upper-case extension",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/A.MD"
+      }
+    },
+    {
+      "id": "fileRef: externalPath mixed-case extension",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.Md"
+      }
+    },
+    {
+      "id": "fileRef: externalPath normalized away from a directory",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.md"
+      }
+    },
+    {
+      "id": "fileRef: externalPath traversal that stays absolute",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "externalPath": "/a.md"
+      }
+    },
+    {
+      "id": "fileRef: externalPath redundant separators are normalized",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.md"
+      }
+    },
+    {
+      "id": "fileRef: externalPath trailing slash",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.md/"
+      }
+    },
+    {
+      "id": "fileRef: externalPath normalizes to a non-markdown file",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "fileRef: externalPath normalizes to a directory",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "fileRef: externalPath no extension",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "fileRef: externalPath other extension",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "fileRef: externalPath md only in the directory name",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "fileRef: externalPath hidden file named md",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "fileRef: externalPath double extension",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "fileRef: externalPath relative",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "fileRef: externalPath dot-slash relative",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "fileRef: externalPath home-relative",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "fileRef: externalPath windows drive",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "externalPath": "C:\\Notes\\a.md"
+      }
+    },
+    {
+      "id": "fileRef: externalPath windows drive with forward slashes",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "externalPath": "C:/Notes/a.md"
+      }
+    },
+    {
+      "id": "fileRef: externalPath windows drive other extension",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "fileRef: externalPath windows UNC",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "externalPath": "\\\\server\\share\\a.md"
+      }
+    },
+    {
+      "id": "fileRef: externalPath windows rooted",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "externalPath": "\\Notes\\a.md"
+      }
+    },
+    {
+      "id": "fileRef: externalPath empty",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "fileRef: externalPath NUL",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "fileRef: externalPath 4096 characters",
+      "op": "fileRef",
+      "accepted": true,
+      "output": {
+        "externalPath": "/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.md"
+      }
+    },
+    {
+      "id": "fileRef: externalPath 4097 characters",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "fileRef: externalPath number",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "fileRef: externalPath boolean",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "fileRef: externalPath null",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "fileRef: externalPath array",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "fileRef: externalPath object",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "fileRef: externalPath String object",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "fileRef: externalPath explicit undefined",
+      "op": "fileRef",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "rename: empty object",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "rename: undefined",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file rename input"
+    },
+    {
+      "id": "rename: null",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file rename input"
+    },
+    {
+      "id": "rename: string",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file rename input"
+    },
+    {
+      "id": "rename: number",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file rename input"
+    },
+    {
+      "id": "rename: boolean",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file rename input"
+    },
+    {
+      "id": "rename: empty array",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file rename input"
+    },
+    {
+      "id": "rename: array holding an object",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file rename input"
+    },
+    {
+      "id": "rename: Date instance",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "rename: Map instance",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "rename: class instance with a valid own field",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file rename input key: tabId"
+    },
+    {
+      "id": "rename: null-prototype object with a valid key",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "rename: symbol key is ignored",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "rename: only an unknown key",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file rename input key: arbitrary"
+    },
+    {
+      "id": "rename: valid key with an unknown key",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file rename input key: arbitrary"
+    },
+    {
+      "id": "rename: constructor as a key",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file rename input key: constructor"
+    },
+    {
+      "id": "rename: toString as a key",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file rename input key: toString"
+    },
+    {
+      "id": "rename: own __proto__ key",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file rename input key: __proto__"
+    },
+    {
+      "id": "rename: own __proto__ key with a valid key",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file rename input key: __proto__"
+    },
+    {
+      "id": "rename: inherited valid key only",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "rename: inherited unknown key only",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "rename: only a name",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "rename: valid sourcePath without a name",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: valid externalPath without a name",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name explicit undefined beside a valid sourcePath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: inherited name beside an own sourcePath",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: own name beside an inherited sourcePath",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: invalid sourcePath with an invalid name",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "rename: valid sourcePath only",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: valid externalPath only",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/outside/a.md",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: neither key",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "rename: neither key beside an unknown key",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file rename input key: arbitrary"
+    },
+    {
+      "id": "rename: both keys valid",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "rename: both keys with an invalid sourcePath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "rename: both keys with an invalid externalPath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "rename: sourcePath with externalPath undefined",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: externalPath with sourcePath undefined",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.md",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: both keys undefined",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "rename: sourcePath null with externalPath undefined",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "rename: externalPath null with sourcePath undefined",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "rename: sourcePath with externalPath null",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "rename: valid sourcePath with an unknown key",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file rename input key: extra"
+    },
+    {
+      "id": "rename: valid externalPath with an unknown key",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file rename input key: extra"
+    },
+    {
+      "id": "rename: inherited sourcePath beside an own unknown key",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file rename input key: arbitrary"
+    },
+    {
+      "id": "rename: inherited externalPath only",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.md",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: own sourcePath beside an inherited externalPath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "rename: own externalPath beside an inherited sourcePath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "rename: own sourcePath beside an inherited unknown key",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: sourcePath typical",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: sourcePath top level",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: sourcePath dot-slash is normalized",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: sourcePath redundant separators are normalized",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: sourcePath trailing slash is normalized",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: sourcePath does not need to be markdown",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.txt",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: sourcePath upper-case extension",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/A.MD",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: sourcePath unicode",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "sourcePath": "日本語/メモ.md",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: sourcePath with spaces",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "sourcePath": "my notes/a b.md",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: sourcePath parent traversal",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "rename: sourcePath traversal in the middle",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "rename: sourcePath backslash traversal",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "rename: sourcePath absolute",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "rename: sourcePath windows drive",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "rename: sourcePath windows rooted",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "rename: sourcePath dot only",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "rename: sourcePath dot dot",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "rename: sourcePath empty",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "rename: sourcePath NUL",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "rename: sourcePath 4096 characters",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "sourcePath": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.md",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: sourcePath 4097 characters",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "rename: sourcePath number",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "rename: sourcePath boolean",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "rename: sourcePath null",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "rename: sourcePath array",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "rename: sourcePath object",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "rename: sourcePath String object",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "rename: sourcePath explicit undefined",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "rename: externalPath typical",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/outside/a.md",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: externalPath root level",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "/a.md",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: externalPath upper-case extension",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/A.MD",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: externalPath mixed-case extension",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.Md",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: externalPath normalized away from a directory",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.md",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: externalPath traversal that stays absolute",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "/a.md",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: externalPath redundant separators are normalized",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.md",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: externalPath trailing slash",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.md/",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: externalPath normalizes to a non-markdown file",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "rename: externalPath normalizes to a directory",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "rename: externalPath no extension",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "rename: externalPath other extension",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "rename: externalPath md only in the directory name",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "rename: externalPath hidden file named md",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "rename: externalPath double extension",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "rename: externalPath relative",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "rename: externalPath dot-slash relative",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "rename: externalPath home-relative",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "rename: externalPath windows drive",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "C:\\Notes\\a.md",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: externalPath windows drive with forward slashes",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "C:/Notes/a.md",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: externalPath windows drive other extension",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "rename: externalPath windows UNC",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "\\\\server\\share\\a.md",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: externalPath windows rooted",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "\\Notes\\a.md",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: externalPath empty",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "rename: externalPath NUL",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "rename: externalPath 4096 characters",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.md",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: externalPath 4097 characters",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "rename: externalPath number",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "rename: externalPath boolean",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "rename: externalPath null",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "rename: externalPath array",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "rename: externalPath object",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "rename: externalPath String object",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace external path"
+    },
+    {
+      "id": "rename: externalPath explicit undefined",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace file reference"
+    },
+    {
+      "id": "rename: name typical",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: name upper-case extension",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md",
+        "name": "B.MD"
+      }
+    },
+    {
+      "id": "rename: name mixed-case extension",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md",
+        "name": "b.Md"
+      }
+    },
+    {
+      "id": "rename: name with spaces",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md",
+        "name": "my note.md"
+      }
+    },
+    {
+      "id": "rename: name unicode",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md",
+        "name": "日本語メモ.md"
+      }
+    },
+    {
+      "id": "rename: name accented",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md",
+        "name": "é.md"
+      }
+    },
+    {
+      "id": "rename: name double extension ending in md",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md",
+        "name": "a.txt.md"
+      }
+    },
+    {
+      "id": "rename: name starts with a dot",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md",
+        "name": ".a.md"
+      }
+    },
+    {
+      "id": "rename: name dots before the extension",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md",
+        "name": "..md"
+      }
+    },
+    {
+      "id": "rename: name hidden file named md",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name md twice",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md",
+        "name": ".md.md"
+      }
+    },
+    {
+      "id": "rename: name 255 characters",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md",
+        "name": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn.md"
+      }
+    },
+    {
+      "id": "rename: name 256 characters",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name one character before the extension",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md",
+        "name": "a.md"
+      }
+    },
+    {
+      "id": "rename: name no extension",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name other extension",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name md in the middle",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name md without a dot",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name trailing space after the extension",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name trailing newline after the extension",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name space before the extension",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md",
+        "name": "b .md"
+      }
+    },
+    {
+      "id": "rename: name trailing dot",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name dot only",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name dot dot",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name forward slash",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name leading slash",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name backslash",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name parent traversal",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name NUL",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name NUL only",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name empty",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name number",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name boolean",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name null",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name array",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name object",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name String object",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name explicit undefined",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name typical beside an externalPath",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.md",
+        "name": "b.md"
+      }
+    },
+    {
+      "id": "rename: name upper-case extension beside an externalPath",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.md",
+        "name": "B.MD"
+      }
+    },
+    {
+      "id": "rename: name mixed-case extension beside an externalPath",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.md",
+        "name": "b.Md"
+      }
+    },
+    {
+      "id": "rename: name with spaces beside an externalPath",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.md",
+        "name": "my note.md"
+      }
+    },
+    {
+      "id": "rename: name unicode beside an externalPath",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.md",
+        "name": "日本語メモ.md"
+      }
+    },
+    {
+      "id": "rename: name accented beside an externalPath",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.md",
+        "name": "é.md"
+      }
+    },
+    {
+      "id": "rename: name double extension ending in md beside an externalPath",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.md",
+        "name": "a.txt.md"
+      }
+    },
+    {
+      "id": "rename: name starts with a dot beside an externalPath",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.md",
+        "name": ".a.md"
+      }
+    },
+    {
+      "id": "rename: name dots before the extension beside an externalPath",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.md",
+        "name": "..md"
+      }
+    },
+    {
+      "id": "rename: name hidden file named md beside an externalPath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name md twice beside an externalPath",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.md",
+        "name": ".md.md"
+      }
+    },
+    {
+      "id": "rename: name 255 characters beside an externalPath",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.md",
+        "name": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn.md"
+      }
+    },
+    {
+      "id": "rename: name 256 characters beside an externalPath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name one character before the extension beside an externalPath",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.md",
+        "name": "a.md"
+      }
+    },
+    {
+      "id": "rename: name no extension beside an externalPath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name other extension beside an externalPath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name md in the middle beside an externalPath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name md without a dot beside an externalPath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name trailing space after the extension beside an externalPath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name trailing newline after the extension beside an externalPath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name space before the extension beside an externalPath",
+      "op": "rename",
+      "accepted": true,
+      "output": {
+        "externalPath": "/tmp/a.md",
+        "name": "b .md"
+      }
+    },
+    {
+      "id": "rename: name trailing dot beside an externalPath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name dot only beside an externalPath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name dot dot beside an externalPath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name forward slash beside an externalPath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name leading slash beside an externalPath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name backslash beside an externalPath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name parent traversal beside an externalPath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name NUL beside an externalPath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name NUL only beside an externalPath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name empty beside an externalPath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name number beside an externalPath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name boolean beside an externalPath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name null beside an externalPath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name array beside an externalPath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name object beside an externalPath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name String object beside an externalPath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "rename: name explicit undefined beside an externalPath",
+      "op": "rename",
+      "accepted": false,
+      "legacyMessage": "Invalid file name"
+    },
+    {
+      "id": "sourceTitle: empty object",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "sourceTitle: undefined",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid source file input"
+    },
+    {
+      "id": "sourceTitle: null",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid source file input"
+    },
+    {
+      "id": "sourceTitle: string",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid source file input"
+    },
+    {
+      "id": "sourceTitle: number",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid source file input"
+    },
+    {
+      "id": "sourceTitle: boolean",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid source file input"
+    },
+    {
+      "id": "sourceTitle: empty array",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid source file input"
+    },
+    {
+      "id": "sourceTitle: array holding an object",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid source file input"
+    },
+    {
+      "id": "sourceTitle: Date instance",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "sourceTitle: Map instance",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "sourceTitle: class instance with a valid own field",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid source file input key: tabId"
+    },
+    {
+      "id": "sourceTitle: null-prototype object with a valid key",
+      "op": "sourceTitle",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "sourceTitle: symbol key is ignored",
+      "op": "sourceTitle",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "sourceTitle: only an unknown key",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid source file input key: arbitrary"
+    },
+    {
+      "id": "sourceTitle: valid key with an unknown key",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid source file input key: arbitrary"
+    },
+    {
+      "id": "sourceTitle: constructor as a key",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid source file input key: constructor"
+    },
+    {
+      "id": "sourceTitle: toString as a key",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid source file input key: toString"
+    },
+    {
+      "id": "sourceTitle: own __proto__ key",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid source file input key: __proto__"
+    },
+    {
+      "id": "sourceTitle: own __proto__ key with a valid key",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid source file input key: __proto__"
+    },
+    {
+      "id": "sourceTitle: inherited valid key only",
+      "op": "sourceTitle",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "sourceTitle: inherited unknown key only",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "sourceTitle: missing beside an unknown key",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid source file input key: arbitrary"
+    },
+    {
+      "id": "sourceTitle: valid sourcePath with an unknown key",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid source file input key: extra"
+    },
+    {
+      "id": "sourceTitle: externalPath is not a key",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid source file input key: externalPath"
+    },
+    {
+      "id": "sourceTitle: valid sourcePath with externalPath",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid source file input key: externalPath"
+    },
+    {
+      "id": "sourceTitle: valid sourcePath with externalPath undefined",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid source file input key: externalPath"
+    },
+    {
+      "id": "sourceTitle: inherited sourcePath beside an own unknown key",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid source file input key: arbitrary"
+    },
+    {
+      "id": "sourceTitle: own sourcePath beside an inherited unknown key",
+      "op": "sourceTitle",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "sourceTitle: sourcePath typical",
+      "op": "sourceTitle",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md"
+      }
+    },
+    {
+      "id": "sourceTitle: sourcePath top level",
+      "op": "sourceTitle",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "sourceTitle: sourcePath dot-slash is normalized",
+      "op": "sourceTitle",
+      "accepted": true,
+      "output": {
+        "sourcePath": "a.md"
+      }
+    },
+    {
+      "id": "sourceTitle: sourcePath redundant separators are normalized",
+      "op": "sourceTitle",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.md"
+      }
+    },
+    {
+      "id": "sourceTitle: sourcePath trailing slash is normalized",
+      "op": "sourceTitle",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/"
+      }
+    },
+    {
+      "id": "sourceTitle: sourcePath does not need to be markdown",
+      "op": "sourceTitle",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/a.txt"
+      }
+    },
+    {
+      "id": "sourceTitle: sourcePath upper-case extension",
+      "op": "sourceTitle",
+      "accepted": true,
+      "output": {
+        "sourcePath": "docs/A.MD"
+      }
+    },
+    {
+      "id": "sourceTitle: sourcePath unicode",
+      "op": "sourceTitle",
+      "accepted": true,
+      "output": {
+        "sourcePath": "日本語/メモ.md"
+      }
+    },
+    {
+      "id": "sourceTitle: sourcePath with spaces",
+      "op": "sourceTitle",
+      "accepted": true,
+      "output": {
+        "sourcePath": "my notes/a b.md"
+      }
+    },
+    {
+      "id": "sourceTitle: sourcePath parent traversal",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "sourceTitle: sourcePath traversal in the middle",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "sourceTitle: sourcePath backslash traversal",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "sourceTitle: sourcePath absolute",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "sourceTitle: sourcePath windows drive",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "sourceTitle: sourcePath windows rooted",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "sourceTitle: sourcePath dot only",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "sourceTitle: sourcePath dot dot",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "sourceTitle: sourcePath empty",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "sourceTitle: sourcePath NUL",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "sourceTitle: sourcePath 4096 characters",
+      "op": "sourceTitle",
+      "accepted": true,
+      "output": {
+        "sourcePath": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.md"
+      }
+    },
+    {
+      "id": "sourceTitle: sourcePath 4097 characters",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "sourceTitle: sourcePath number",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "sourceTitle: sourcePath boolean",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "sourceTitle: sourcePath null",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "sourceTitle: sourcePath array",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "sourceTitle: sourcePath object",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "sourceTitle: sourcePath String object",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "sourceTitle: sourcePath explicit undefined",
+      "op": "sourceTitle",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace source path"
+    },
+    {
+      "id": "tabFile: empty object",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: undefined",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab file input"
+    },
+    {
+      "id": "tabFile: null",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab file input"
+    },
+    {
+      "id": "tabFile: string",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab file input"
+    },
+    {
+      "id": "tabFile: number",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab file input"
+    },
+    {
+      "id": "tabFile: boolean",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab file input"
+    },
+    {
+      "id": "tabFile: empty array",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab file input"
+    },
+    {
+      "id": "tabFile: array holding an object",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab file input"
+    },
+    {
+      "id": "tabFile: Date instance",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: Map instance",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: class instance with a valid own field",
+      "op": "tabFile",
+      "accepted": true,
+      "output": {
+        "tabId": "tab-1"
+      }
+    },
+    {
+      "id": "tabFile: null-prototype object with a valid key",
+      "op": "tabFile",
+      "accepted": true,
+      "output": {
+        "tabId": "tab-1"
+      }
+    },
+    {
+      "id": "tabFile: symbol key is ignored",
+      "op": "tabFile",
+      "accepted": true,
+      "output": {
+        "tabId": "tab-1"
+      }
+    },
+    {
+      "id": "tabFile: only an unknown key",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab file input key: arbitrary"
+    },
+    {
+      "id": "tabFile: valid key with an unknown key",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab file input key: arbitrary"
+    },
+    {
+      "id": "tabFile: constructor as a key",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab file input key: constructor"
+    },
+    {
+      "id": "tabFile: toString as a key",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab file input key: toString"
+    },
+    {
+      "id": "tabFile: own __proto__ key",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab file input key: __proto__"
+    },
+    {
+      "id": "tabFile: own __proto__ key with a valid key",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab file input key: __proto__"
+    },
+    {
+      "id": "tabFile: inherited valid key only",
+      "op": "tabFile",
+      "accepted": true,
+      "output": {
+        "tabId": "tab-1"
+      }
+    },
+    {
+      "id": "tabFile: inherited unknown key only",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: missing beside an unknown key",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab file input key: arbitrary"
+    },
+    {
+      "id": "tabFile: valid tabId with an unknown key",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab file input key: extra"
+    },
+    {
+      "id": "tabFile: valid tabId with a sourcePath",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab file input key: sourcePath"
+    },
+    {
+      "id": "tabFile: inherited tabId beside an own unknown key",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab file input key: arbitrary"
+    },
+    {
+      "id": "tabFile: own tabId beside an inherited unknown key",
+      "op": "tabFile",
+      "accepted": true,
+      "output": {
+        "tabId": "tab-1"
+      }
+    },
+    {
+      "id": "tabFile: tabId typical uuid",
+      "op": "tabFile",
+      "accepted": true,
+      "output": {
+        "tabId": "3f2b8c1e-5d4a-4b9e-8f10-1234567890ab"
+      }
+    },
+    {
+      "id": "tabFile: tabId one character",
+      "op": "tabFile",
+      "accepted": true,
+      "output": {
+        "tabId": "a"
+      }
+    },
+    {
+      "id": "tabFile: tabId digit first",
+      "op": "tabFile",
+      "accepted": true,
+      "output": {
+        "tabId": "1"
+      }
+    },
+    {
+      "id": "tabFile: tabId 200 characters",
+      "op": "tabFile",
+      "accepted": true,
+      "output": {
+        "tabId": "abbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+      }
+    },
+    {
+      "id": "tabFile: tabId 201 characters",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: tabId allowed punctuation",
+      "op": "tabFile",
+      "accepted": true,
+      "output": {
+        "tabId": "a:b_c.d-e"
+      }
+    },
+    {
+      "id": "tabFile: tabId dot first",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: tabId dash first",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: tabId underscore first",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: tabId colon first",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: tabId empty",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: tabId space inside",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: tabId leading space",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: tabId trailing space",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: tabId trailing newline",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: tabId leading newline",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: tabId embedded newline",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: tabId slash",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: tabId backslash",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: tabId NUL",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: tabId NUL only",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: tabId unicode letter",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: tabId unicode inside",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: tabId full-width digit",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: tabId percent",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: tabId dot dot",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: tabId number",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: tabId boolean",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: tabId null",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: tabId array",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: tabId object",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: tabId NaN",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: tabId String object",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    },
+    {
+      "id": "tabFile: tabId explicit undefined",
+      "op": "tabFile",
+      "accepted": false,
+      "legacyMessage": "Invalid workspace tab id"
+    }
+  ]
+}

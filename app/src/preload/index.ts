@@ -1,19 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 
 import type {
-  FileCatalogResponse,
-  FileCatalogChangeEvent,
-  FileRenameInput,
-  FileRenameResult,
-  FileTrashResult,
-  FileTreeResponse
-} from '../shared/files'
-import type {
-  WorkspaceFileRef,
-  WorkspaceOpenFileInput,
-  WorkspaceTabFileInput
-} from '../shared/workspace'
-import type {
   SearchAnswerMode as MainSearchAnswerMode,
   SearchRetrievalMode as MainSearchRetrievalMode,
   SearchStage as MainSearchStage,
@@ -64,28 +51,6 @@ export interface SearchQueryOptions {
 }
 
 interface LegacyRyteApi {
-  files: {
-    listTree(): Promise<FileTreeResponse>
-    listCatalog(): Promise<FileCatalogResponse>
-    copyContent(input: WorkspaceFileRef): Promise<void>
-    copyPath(input: WorkspaceFileRef): Promise<void>
-    showInFinder(input: WorkspaceFileRef): Promise<void>
-    rename(input: FileRenameInput): Promise<FileRenameResult>
-    moveToTrash(input: WorkspaceFileRef): Promise<FileTrashResult>
-    read(absPath: string): Promise<string>
-    readSource(input: WorkspaceOpenFileInput): Promise<string>
-    readSourceTitle(input: WorkspaceOpenFileInput): Promise<string | null>
-    readWorkspaceTab(input: WorkspaceTabFileInput): Promise<string>
-    watch(absPath: string): Promise<void>
-    watchSource(input: WorkspaceOpenFileInput): Promise<void>
-    watchWorkspaceTab(input: WorkspaceTabFileInput): Promise<void>
-    unwatch(): Promise<void>
-    onChange(cb: (path: string) => void): () => void
-    onSourceChange(cb: (sourcePath: string) => void): () => void
-    onWorkspaceTabChange(cb: (tabId: string) => void): () => void
-    onTreeChanged(cb: () => void): () => void
-    onCatalogChanged(cb: (event?: FileCatalogChangeEvent) => void): () => void
-  }
   search: {
     query(q: string, options?: SearchQueryOptions): Promise<string | null>
     cancel(requestId: string): Promise<void>
@@ -104,48 +69,6 @@ interface LegacyRyteApi {
 export type RyteApi = MergeApi<LegacyRyteApi, ContractApi>
 
 const legacyApi: LegacyRyteApi = {
-  files: {
-    listTree: () => ipcRenderer.invoke('files:list-tree'),
-    listCatalog: () => ipcRenderer.invoke('files:list-catalog'),
-    copyContent: (input) => ipcRenderer.invoke('files:copy-content', input),
-    copyPath: (input) => ipcRenderer.invoke('files:copy-path', input),
-    showInFinder: (input) => ipcRenderer.invoke('files:show-in-finder', input),
-    rename: (input) => ipcRenderer.invoke('files:rename', input),
-    moveToTrash: (input) => ipcRenderer.invoke('files:move-to-trash', input),
-    read: (absPath) => ipcRenderer.invoke('files:read', absPath),
-    readSource: (input) => ipcRenderer.invoke('files:read-source', input),
-    readSourceTitle: (input) => ipcRenderer.invoke('files:read-source-title', input),
-    readWorkspaceTab: (input) => ipcRenderer.invoke('files:read-workspace-tab', input),
-    watch: (absPath) => ipcRenderer.invoke('files:watch', absPath),
-    watchSource: (input) => ipcRenderer.invoke('files:watch-source', input),
-    watchWorkspaceTab: (input) => ipcRenderer.invoke('files:watch-workspace-tab', input),
-    unwatch: () => ipcRenderer.invoke('files:unwatch'),
-    onChange: (cb) => {
-      const listener = (_: unknown, path: string): void => cb(path)
-      ipcRenderer.on('viewer:file-changed', listener)
-      return () => ipcRenderer.removeListener('viewer:file-changed', listener)
-    },
-    onSourceChange: (cb) => {
-      const listener = (_: unknown, sourcePath: string): void => cb(sourcePath)
-      ipcRenderer.on('viewer:source-changed', listener)
-      return () => ipcRenderer.removeListener('viewer:source-changed', listener)
-    },
-    onWorkspaceTabChange: (cb) => {
-      const listener = (_: unknown, tabId: string): void => cb(tabId)
-      ipcRenderer.on('viewer:workspace-tab-changed', listener)
-      return () => ipcRenderer.removeListener('viewer:workspace-tab-changed', listener)
-    },
-    onTreeChanged: (cb) => {
-      const listener = (): void => cb()
-      ipcRenderer.on('files:tree-changed', listener)
-      return () => ipcRenderer.removeListener('files:tree-changed', listener)
-    },
-    onCatalogChanged: (cb) => {
-      const listener = (_: unknown, event?: FileCatalogChangeEvent): void => cb(event)
-      ipcRenderer.on('files:catalog-changed', listener)
-      return () => ipcRenderer.removeListener('files:catalog-changed', listener)
-    }
-  },
   search: {
     query: (q, options) => ipcRenderer.invoke('search:query', q, options),
     cancel: (requestId) => ipcRenderer.invoke('search:cancel', requestId),
