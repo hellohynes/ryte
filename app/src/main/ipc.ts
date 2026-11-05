@@ -16,6 +16,7 @@ import {
   forwardRebuildNotice
 } from './contract/indexer-handlers'
 import { createEmitter, registerOperations } from './contract/register'
+import { createSearchHandlers } from './contract/search-handlers'
 import { createSettingsHandlers } from './contract/settings-handlers'
 import { createTaskHandlers } from './contract/tasks-handlers'
 import { createWorkspaceHandlers } from './contract/workspace-handlers'
@@ -27,7 +28,6 @@ import { walkNotes } from './indexing/walker'
 import { watcher } from './indexing/watcher'
 import {
   assertValidRequestId,
-  assertValidSearchSnapshotFreshnessInput,
   assertValidSearchOptions,
   assertValidSearchQuery
 } from './ipc-validation'
@@ -189,6 +189,7 @@ export function registerIpc(): void {
       service: indexerService,
       beforeClear: stopSearchesBeforeClear
     }),
+    search: createSearchHandlers({ getSearchService: getOrCreateSearchService }),
     settings: createSettingsHandlers({
       store: settingsStore,
       applyColorMode,
@@ -251,11 +252,5 @@ export function registerIpc(): void {
     if (activeRequest?.owner === event.sender) {
       cancelActiveSearchRequest(validRequestId)
     }
-  })
-
-  ipcMain.handle('search:check-snapshot-freshness', async (_event, rawInput: unknown) => {
-    const svc = getOrCreateSearchService()
-    if (!svc) throw new Error('Indexer not initialized')
-    return svc.checkSnapshotFreshness(assertValidSearchSnapshotFreshnessInput(rawInput))
   })
 }

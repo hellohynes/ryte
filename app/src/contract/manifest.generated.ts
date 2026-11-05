@@ -51,6 +51,12 @@ export const manifest = {
       embeddingStatus: 'indexer:embedding-status-event'
     }
   },
+  search: {
+    operations: {
+      checkSnapshotFreshness: 'search:check-snapshot-freshness'
+    },
+    events: {}
+  },
   settings: {
     operations: {
       getState: 'settings:get-state',

@@ -94,6 +94,21 @@ export function hasNoExplicitUndefined(value: Record<string, unknown>): boolean 
   return Object.values(value).every((entry) => entry !== undefined)
 }
 
+const MAX_SEARCH_QUERY_LENGTH = 2000
+
+/**
+ * A search query: trimmed, then 1 to 2000 characters. The length counts the trimmed text, so padding does not use
+ * up the limit, and the handler receives the trimmed value.
+ */
+export const searchQuery = z.string().transform((value, ctx) => {
+  const query = value.trim()
+  if (query.length === 0 || query.length > MAX_SEARCH_QUERY_LENGTH) {
+    ctx.addIssue({ code: 'custom', message: 'Invalid search query' })
+    return z.NEVER
+  }
+  return query
+})
+
 /**
  * An absolute path by `node:path`, non-empty and at most `MAX_PATH_LENGTH`, kept exactly as given (the legacy
  * validator did not normalize it).

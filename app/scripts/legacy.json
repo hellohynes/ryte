@@ -4,7 +4,7 @@
   "sendAllowed": [],
   "ignore": [],
   "channels": {
-    "request": ["search:cancel", "search:check-snapshot-freshness", "search:query"],
+    "request": ["search:cancel", "search:query"],
     "event": [
       "search:citation",
       "search:done",

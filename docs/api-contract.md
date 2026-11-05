@@ -9,18 +9,18 @@ The list of everything that exists today is generated: [api-index.md](api-index.
 
 ## Where things live
 
-| What | Where | Edit it? |
-| --- | --- | --- |
-| The definition of each operation and event (channel, input, response, example) | `app/src/contract/<area>.ts` | Yes: this is the one place |
-| The registry of areas | `app/src/contract/index.ts` | Only to add or remove an area |
-| Channel names for the preload | `app/src/contract/manifest.generated.ts` | No: `pnpm contract:generate` |
-| The list of operations | `docs/api-index.md` | No: `pnpm contract:generate` |
-| What an operation does in the main process | `app/src/main/contract/<area>-handlers.ts` | Yes: one handler per operation |
-| Registration, validation, the event emitter | `app/src/main/contract/register.ts` | Rarely |
-| `window.ryte.<area>` methods and `on<Event>` subscribers | built from the manifest by `app/src/preload/contract-api.ts` | No |
-| Wire types by name, for code that imports them (for example `app/src/shared/tasks.ts` and `app/src/shared/indexer.ts`) | `app/src/shared/<area>.ts` | Only to re-export types inferred from the definition (`export type { ... } from '../contract/<area>'`); never write a type by hand. A new operation does not need one unless code imports its types by name |
-| Operations that have not moved yet | `app/scripts/legacy.json` and the old code in `ipc.ts`, `ipc-validation.ts` and `preload/index.ts` | Only to shrink them |
-| The enforcement | `app/scripts/check-contract.mjs` | Rarely |
+| What                                                                                                                   | Where                                                                                              | Edit it?                                                                                                                                                                                                    |
+| ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| The definition of each operation and event (channel, input, response, example)                                         | `app/src/contract/<area>.ts`                                                                       | Yes: this is the one place                                                                                                                                                                                  |
+| The registry of areas                                                                                                  | `app/src/contract/index.ts`                                                                        | Only to add or remove an area                                                                                                                                                                               |
+| Channel names for the preload                                                                                          | `app/src/contract/manifest.generated.ts`                                                           | No: `pnpm contract:generate`                                                                                                                                                                                |
+| The list of operations                                                                                                 | `docs/api-index.md`                                                                                | No: `pnpm contract:generate`                                                                                                                                                                                |
+| What an operation does in the main process                                                                             | `app/src/main/contract/<area>-handlers.ts`                                                         | Yes: one handler per operation                                                                                                                                                                              |
+| Registration, validation, the event emitter                                                                            | `app/src/main/contract/register.ts`                                                                | Rarely                                                                                                                                                                                                      |
+| `window.ryte.<area>` methods and `on<Event>` subscribers                                                               | built from the manifest by `app/src/preload/contract-api.ts`                                       | No                                                                                                                                                                                                          |
+| Wire types by name, for code that imports them (for example `app/src/shared/tasks.ts` and `app/src/shared/indexer.ts`) | `app/src/shared/<area>.ts`                                                                         | Only to re-export types inferred from the definition (`export type { ... } from '../contract/<area>'`); never write a type by hand. A new operation does not need one unless code imports its types by name |
+| Operations that have not moved yet                                                                                     | `app/scripts/legacy.json` and the old code in `ipc.ts`, `ipc-validation.ts` and `preload/index.ts` | Only to shrink them                                                                                                                                                                                         |
+| The enforcement                                                                                                        | `app/scripts/check-contract.mjs`                                                                   | Rarely                                                                                                                                                                                                      |
 
 ## How a call flows
 
@@ -45,12 +45,12 @@ live window, and the renderer subscribes with `window.ryte.tasks.onChanged(callb
 
    ```ts
    export const ping = defineOperation({
-     channel: 'tasks:ping', // area:verb-noun, lowercase and hyphenated
-     description: 'One sentence a reader of api-index.md understands.',
+     channel: "tasks:ping", // area:verb-noun, lowercase and hyphenated
+     description: "One sentence a reader of api-index.md understands.",
      input: z.strictObject({ id: z.string().max(200) }), // z.undefined() when there is no input
      output: z.object({ ok: z.boolean() }),
-     example: { input: { id: 'a' }, output: { ok: true } }
-   })
+     example: { input: { id: "a" }, output: { ok: true } },
+   });
    ```
 
    - One input value, and always a **strict** object so unknown keys are rejected. Reuse `sourcePath` and `integer`
@@ -58,17 +58,22 @@ live window, and the renderer subscribes with `window.ryte.tasks.onChanged(callb
      `.refine(hasNoExplicitUndefined, ...)` so an explicit `undefined` is rejected too.
    - The `example` is validated against both schemas by a test, so it must be real.
    - A **new area** is a new file `app/src/contract/<area>.ts` exporting `defineArea('<area>', { operations,
-     events })` (both are required: pass `events: {}` when there are none), added to `contract` in
+events })` (both are required: pass `events: {}` when there are none), added to `contract` in
      `app/src/contract/index.ts` with an import and an entry. A new operation always goes in the contract,
      even in an area that has not been migrated yet (see [Legacy operations](#legacy-operations)).
 
      ```ts
      // app/src/contract/reports.ts
-     export const ping = defineOperation({ /* as above, with input: z.undefined() */ })
-     export const reports = defineArea('reports', { operations: { ping }, events: {} })
+     export const ping = defineOperation({
+       /* as above, with input: z.undefined() */
+     });
+     export const reports = defineArea("reports", {
+       operations: { ping },
+       events: {},
+     });
 
      // app/src/contract/index.ts: the key is the area name, and `window.ryte.reports` follows from it
-     export const contract = { indexer, reports, tasks } as const
+     export const contract = { indexer, reports, tasks } as const;
      ```
 
 2. **Regenerate**: `pnpm contract:generate`. It rewrites `manifest.generated.ts` and `docs/api-index.md`. Commit both.
@@ -82,16 +87,16 @@ live window, and the renderer subscribes with `window.ryte.tasks.onChanged(callb
    `createTaskHandlers` takes `service`, `settings` and `emit`) so the handler can be tested without Electron.
    - **New area:** create `<area>-handlers.ts` exporting `create<Area>Handlers(...)` that returns
      `Handlers<Contract>['<area>']`, and add `<area>: create<Area>Handlers(...)` to the `registerOperations(ipcMain,
-     contract, { ... })` call in `app/src/main/ipc.ts` (with its import). A handler with no dependencies takes no
+contract, { ... })` call in `app/src/main/ipc.ts` (with its import). A handler with no dependencies takes no
      parameters:
 
      ```ts
      // app/src/main/contract/reports-handlers.ts
-     import type { Contract } from '../../contract'
-     import type { Handlers } from './register'
+     import type { Contract } from "../../contract";
+     import type { Handlers } from "./register";
 
-     export function createReportsHandlers(): Handlers<Contract>['reports'] {
-       return { ping: async () => ({ ok: true }) }
+     export function createReportsHandlers(): Handlers<Contract>["reports"] {
+       return { ping: async () => ({ ok: true }) };
      }
      ```
 
@@ -126,7 +131,7 @@ window lookup as parameters so a test can use fake windows:
 
 ```ts
 // app/src/main/menu-command.ts: the focused window, else the first, gets the command
-emitTo(target.webContents, contract.app.events.menuCommand, command)
+emitTo(target.webContents, contract.app.events.menuCommand, command);
 ```
 
 Name the key so the renderer-facing subscriber keeps the name you want: key `menuCommand` becomes
@@ -149,17 +154,18 @@ types change, and so does every caller. Rules:
 - An area migrated from hand-written validators is covered by recorded vectors of the behavior it had before the
   contract: `tasks` (`app/src/contract/tasks.vectors.*`, recorded from the pre-contract code at `c4c7b3c`) and
   `settings` (`app/src/contract/settings.vectors.*`, recorded at `322bfd7`) and `workspace` (`app/src/contract/workspace.vectors.*`,
-  recorded at `ea721df`, and for the open-file, open-recent-file and record-recent operations at `cdd80d2`) and `files` (`app/src/contract/files.vectors.*`, recorded at `bb14ce4`). `<area>.vectors.inputs.ts` holds the authored
+  recorded at `ea721df`, and for the open-file, open-recent-file and record-recent operations at `cdd80d2`) and `files` (`app/src/contract/files.vectors.*`, recorded at `bb14ce4`) and `search` (`app/src/contract/search.vectors.*`, recorded at `68bf229`). `<area>.vectors.inputs.ts` holds the authored
   inputs, `<area>.vectors.expected.json` is the oracle recorded from the old validators, and a test checks every vector
   against the new schemas. The one-shot recorders were deleted with the old validators and are in git history
   (`a9ce30b:app/src/contract/record/record-vectors.ts` and
   `88ee7dc:app/src/contract/record/record-settings-vectors.ts`); the workspace validators it was recorded from are in
-  `ea721df:app/src/main/ipc-validation.ts` and `cdd80d2:app/src/main/ipc-validation.ts`, and the files validators in
-  `bb14ce4:app/src/main/ipc-validation.ts`. If you intentionally change what an operation accepts,
+  `ea721df:app/src/main/ipc-validation.ts` and `cdd80d2:app/src/main/ipc-validation.ts`, the files validators in
+  `bb14ce4:app/src/main/ipc-validation.ts`, and the search freshness validator in
+  `68bf229:app/src/main/ipc-validation.ts`. If you intentionally change what an operation accepts,
   add an entry with a reason to `ACCEPTED_DEVIATIONS` in `<area>.vectors.deviations.ts`; only a change that is stricter than
   the recording is a deviation, and anything that accepts more than the old validator did is a defect. Do not edit
   `<area>.vectors.expected.json`: it is the oracle.
-- `<area>.wire-types.ts` (`tasks`, `indexer`, `settings`, `workspace`, `files`) is a **frozen copy** of the hand-written declarations the contract
+- `<area>.wire-types.ts` (`tasks`, `indexer`, `settings`, `workspace`, `files`, `search`) is a **frozen copy** of the hand-written declarations the contract
   replaced, kept as the oracle for the compile-time check in `<area>.wire-types.check.ts`: the types inferred from the
   definition must equal it. It is hand-written on purpose and is the one exception to "never write a type by hand"; do not
   edit it to make the check pass. Keep it for as long as the contract should not drift from what those declarations said;
@@ -245,12 +251,12 @@ Review catches those.
 
 ## Commands
 
-| Command | What it does |
-| --- | --- |
-| `pnpm contract:generate` | Rewrite the manifest and `docs/api-index.md` from the definitions |
-| `pnpm contract:generate --check` | Fail if either is stale |
-| `pnpm check:contract` | The enforcement above |
-| `pnpm test:contract-scripts` | The check's own tests |
-| `pnpm typecheck` | Catches a missing or extra handler and every caller that no longer matches |
-| `pnpm test` | The whole test suite |
-| `pnpm validate` | Everything, including the above |
+| Command                          | What it does                                                               |
+| -------------------------------- | -------------------------------------------------------------------------- |
+| `pnpm contract:generate`         | Rewrite the manifest and `docs/api-index.md` from the definitions          |
+| `pnpm contract:generate --check` | Fail if either is stale                                                    |
+| `pnpm check:contract`            | The enforcement above                                                      |
+| `pnpm test:contract-scripts`     | The check's own tests                                                      |
+| `pnpm typecheck`                 | Catches a missing or extra handler and every caller that no longer matches |
+| `pnpm test`                      | The whole test suite                                                       |
+| `pnpm validate`                  | Everything, including the above                                            |

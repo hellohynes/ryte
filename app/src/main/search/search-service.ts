@@ -1,3 +1,8 @@
+import type {
+  SearchRetrievalMode,
+  SearchSnapshotFreshness,
+  SearchSnapshotFreshnessInput
+} from '../../contract/search'
 import { AnthropicProvider } from './anthropic-provider'
 import { type LLMProvider, type SearchChunk } from './llm-provider'
 import { OpenAIProvider } from './openai-provider'
@@ -26,26 +31,14 @@ export interface SourceResult {
   retrievalMode: SearchAppliedRetrievalMode
 }
 
-export type SearchRetrievalMode = 'auto' | 'keyword' | 'hybrid'
 export type SearchAppliedRetrievalMode = 'keyword' | 'hybrid'
+// The retrieval mode and the freshness types are defined once, in the contract.
+export type { SearchRetrievalMode, SearchSnapshotFreshness, SearchSnapshotFreshnessInput }
 export type SearchAnswerMode = 'settings' | 'local-only'
 
 export interface SearchOptions {
   retrievalMode?: SearchRetrievalMode
   answerMode?: SearchAnswerMode
-}
-
-export interface SearchSnapshotFreshnessInput {
-  query: string
-  retrievalMode: SearchRetrievalMode
-  generatedAt: number
-  sourcePaths: string[]
-}
-
-export interface SearchSnapshotFreshness {
-  state: 'current' | 'updates-available'
-  changedSourcePaths: string[]
-  relevantSourcePaths: string[]
 }
 
 export type SearchNoticeCode =

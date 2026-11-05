@@ -3,9 +3,7 @@ import { contextBridge, ipcRenderer } from 'electron'
 import type {
   SearchAnswerMode as MainSearchAnswerMode,
   SearchRetrievalMode as MainSearchRetrievalMode,
-  SearchStage as MainSearchStage,
-  SearchSnapshotFreshness,
-  SearchSnapshotFreshnessInput
+  SearchStage as MainSearchStage
 } from '../main/search/search-service'
 import {
   createContractApi,
@@ -54,7 +52,6 @@ interface LegacyRyteApi {
   search: {
     query(q: string, options?: SearchQueryOptions): Promise<string | null>
     cancel(requestId: string): Promise<void>
-    checkSnapshotFreshness(input: SearchSnapshotFreshnessInput): Promise<SearchSnapshotFreshness>
     onStage(cb: (requestId: string, stage: SearchStage) => void): () => void
     onToken(cb: (requestId: string, token: string) => void): () => void
     onSources(cb: (requestId: string, sources: SearchSource[]) => void): () => void
@@ -72,7 +69,6 @@ const legacyApi: LegacyRyteApi = {
   search: {
     query: (q, options) => ipcRenderer.invoke('search:query', q, options),
     cancel: (requestId) => ipcRenderer.invoke('search:cancel', requestId),
-    checkSnapshotFreshness: (input) => ipcRenderer.invoke('search:check-snapshot-freshness', input),
     onStage: (cb) => {
       const listener = (_: unknown, payload: { requestId: string; stage: SearchStage }): void =>
         cb(payload.requestId, payload.stage)

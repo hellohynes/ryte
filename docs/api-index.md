@@ -62,6 +62,12 @@ change or remove one.
 | `indexer.rebuildNotice` | `indexer:rebuild-notice-event` | The rebuild notice appeared or was dismissed (null); sent to every open window, so a window that opened before the notice existed still shows it. | `see schema` |
 | `indexer.embeddingStatus` | `indexer:embedding-status-event` | What smart search is doing changed; sent to every open window at once when its state changes and at most a few times a second while it makes progress. | `{ state: 'off' \| 'idle' \| 'running' \| 'paused', total: integer, done: integer, pending: integer, reason?: 'no-key' \| 'no-agreement' \| 'offline' \| 'rate-limit' \| 'service' \| 'auth', retryAt?: string }` |
 
+## search
+
+| Operation | Channel | What it does | Input |
+| --- | --- | --- | --- |
+| `search.checkSnapshotFreshness` | `search:check-snapshot-freshness` | Whether notes changed since a saved search summary was generated, and which of them matter to its query. Fails when the index is not ready. | `{ query: string, retrievalMode: 'auto' \| 'keyword' \| 'hybrid', generatedAt: number, sourcePaths: string[] }` |
+
 ## settings
 
 | Operation | Channel | What it does | Input |

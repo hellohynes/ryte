@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 
 import {
   assertValidRequestId,
-  assertValidSearchSnapshotFreshnessInput,
   assertValidSearchOptions,
   assertValidSearchQuery
 } from './ipc-validation'
@@ -29,28 +28,4 @@ describe('ipc validation', () => {
     )
     expect(() => assertValidSearchOptions({ arbitrary: true })).toThrow('Invalid search option')
   })
-})
-
-it('accepts bounded snapshot-freshness input and rejects invalid timestamps', () => {
-  expect(
-    assertValidSearchSnapshotFreshnessInput({
-      query: 'jira plans',
-      retrievalMode: 'keyword',
-      generatedAt: 100,
-      sourcePaths: ['plans/jira.md']
-    })
-  ).toEqual({
-    query: 'jira plans',
-    retrievalMode: 'keyword',
-    generatedAt: 100,
-    sourcePaths: ['plans/jira.md']
-  })
-  expect(() =>
-    assertValidSearchSnapshotFreshnessInput({
-      query: 'jira plans',
-      retrievalMode: 'keyword',
-      generatedAt: -1,
-      sourcePaths: []
-    })
-  ).toThrow('Invalid snapshot generated time')
 })
