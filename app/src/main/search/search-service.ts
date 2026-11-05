@@ -1,7 +1,14 @@
 import type {
+  SearchAnswerMode,
+  SearchCitation,
+  SearchNotice,
+  SearchNoticeCode,
+  SearchOptions,
   SearchRetrievalMode,
   SearchSnapshotFreshness,
-  SearchSnapshotFreshnessInput
+  SearchSnapshotFreshnessInput,
+  SearchSource,
+  SearchStage
 } from '../../contract/search'
 import { AnthropicProvider } from './anthropic-provider'
 import { type LLMProvider, type SearchChunk } from './llm-provider'
@@ -16,44 +23,21 @@ import {
   type ProviderId
 } from '../settings/settings-store'
 
-export interface CitationResult {
-  index: number
-  sourcePath: string
-  headingPath: string[]
+export type CitationResult = SearchCitation
+export type SourceResult = SearchSource
+
+export type SearchAppliedRetrievalMode = SearchSource['retrievalMode']
+// These are defined once, in the contract.
+export type {
+  SearchAnswerMode,
+  SearchNotice,
+  SearchNoticeCode,
+  SearchOptions,
+  SearchRetrievalMode,
+  SearchSnapshotFreshness,
+  SearchSnapshotFreshnessInput,
+  SearchStage
 }
-
-export interface SourceResult {
-  index: number
-  sourcePath: string
-  headingPath: string[]
-  preview: string
-  matchCount: number
-  retrievalMode: SearchAppliedRetrievalMode
-}
-
-export type SearchAppliedRetrievalMode = 'keyword' | 'hybrid'
-// The retrieval mode and the freshness types are defined once, in the contract.
-export type { SearchRetrievalMode, SearchSnapshotFreshness, SearchSnapshotFreshnessInput }
-export type SearchAnswerMode = 'settings' | 'local-only'
-
-export interface SearchOptions {
-  retrievalMode?: SearchRetrievalMode
-  answerMode?: SearchAnswerMode
-}
-
-export type SearchNoticeCode =
-  | 'no-local-sources'
-  | 'semantic-unavailable'
-  | 'cloud-answers-disabled'
-  | 'cloud-answers-not-acknowledged'
-  | 'provider-key-missing'
-
-export interface SearchNotice {
-  code: SearchNoticeCode
-  message: string
-}
-
-export type SearchStage = 'searching-local' | 'gathering-evidence' | 'writing-summary'
 
 export interface SearchCallbacks {
   onStage: (stage: SearchStage) => void

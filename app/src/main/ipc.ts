@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 
-import { app, BrowserWindow, clipboard, dialog, ipcMain, shell, type WebContents } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, ipcMain, shell } from 'electron'
 
 import { refreshAppMenu } from './app-menu'
 import { applyColorMode } from './appearance'
@@ -16,7 +16,7 @@ import {
   forwardRebuildNotice
 } from './contract/indexer-handlers'
 import { createEmitter, registerOperations } from './contract/register'
-import { createSearchHandlers } from './contract/search-handlers'
+import { createSearch } from './contract/search-handlers'
 import { createSettingsHandlers } from './contract/settings-handlers'
 import { createTaskHandlers } from './contract/tasks-handlers'
 import { createWorkspaceHandlers } from './contract/workspace-handlers'
@@ -26,11 +26,6 @@ import { createIndexerRestarter } from './indexer-restart'
 import { indexerService } from './indexing/indexer-service'
 import { walkNotes } from './indexing/walker'
 import { watcher } from './indexing/watcher'
-import {
-  assertValidRequestId,
-  assertValidSearchOptions,
-  assertValidSearchQuery
-} from './ipc-validation'
 import { fileRefForPickedMarkdownFile, resolveExternalMarkdownFile } from './picked-file'
 import { SearchService } from './search/search-service'
 import { settingsStore } from './settings/settings-store'
@@ -47,58 +42,6 @@ import { fileRefForWorkspaceTab as tabFileRef } from './workspace-tab-file'
 import { workspaceStore } from './workspace/workspace-store'
 
 let searchService: SearchService | null = null
-
-interface ActiveSearchRequest {
-  owner: WebContents
-  service: SearchService
-  onOwnerDestroyed: () => void
-}
-
-const activeSearchRequests = new Map<string, ActiveSearchRequest>()
-
-function clearActiveSearchRequest(requestId: string): void {
-  const activeRequest = activeSearchRequests.get(requestId)
-  if (!activeRequest) return
-  activeRequest.owner.removeListener('destroyed', activeRequest.onOwnerDestroyed)
-  activeSearchRequests.delete(requestId)
-}
-
-function cancelActiveSearchRequest(requestId: string): void {
-  const activeRequest = activeSearchRequests.get(requestId)
-  if (!activeRequest) return
-  activeRequest.service.cancel(requestId)
-  clearActiveSearchRequest(requestId)
-}
-
-function cancelAllActiveSearchRequests(): void {
-  for (const requestId of [...activeSearchRequests.keys()]) {
-    cancelActiveSearchRequest(requestId)
-  }
-}
-
-function registerActiveSearchRequest(
-  requestId: string,
-  owner: WebContents,
-  service: SearchService
-): void {
-  const onOwnerDestroyed = (): void => cancelActiveSearchRequest(requestId)
-  activeSearchRequests.set(requestId, { owner, service, onOwnerDestroyed })
-  owner.once('destroyed', onOwnerDestroyed)
-}
-
-function sendSearchEvent(
-  requestId: string,
-  channel: string,
-  payload: Record<string, unknown>
-): void {
-  const activeRequest = activeSearchRequests.get(requestId)
-  if (!activeRequest) return
-  if (activeRequest.owner.isDestroyed()) {
-    cancelActiveSearchRequest(requestId)
-    return
-  }
-  activeRequest.owner.send(channel, payload)
-}
 
 const fileRefForWorkspaceTab = (tabId: string): ReturnType<typeof tabFileRef> =>
   tabFileRef(tabId, { store: workspaceStore, resolveExternalMarkdownFile })
@@ -120,10 +63,17 @@ const emit = createEmitter(() => BrowserWindow.getAllWindows())
  * after the first window is visible.
  */
 export function registerIpc(): void {
+  const search = createSearch({
+    getSearchService: getOrCreateSearchService,
+    emitTo: emit.to,
+    randomUUID,
+    schedule: (task) => void setImmediate(task)
+  })
+
   // A search still running would read from the store while it is emptied. The indexer calls this only once
   // the rebuild is certain, so a refused or failed rebuild never kills the user's search.
   const stopSearchesBeforeClear = (): void => {
-    cancelAllActiveSearchRequests()
+    search.cancelAll()
     searchService = null
   }
 
@@ -134,7 +84,7 @@ export function registerIpc(): void {
   const restartIndexer = createIndexerRestarter({
     watcher,
     indexer: indexerService,
-    cancelSearches: cancelAllActiveSearchRequests,
+    cancelSearches: search.cancelAll,
     resetSearchService: () => {
       searchService = null // vectorStore is replaced; recreate on next search
     },
@@ -189,7 +139,7 @@ export function registerIpc(): void {
       service: indexerService,
       beforeClear: stopSearchesBeforeClear
     }),
-    search: createSearchHandlers({ getSearchService: getOrCreateSearchService }),
+    search: search.handlers,
     settings: createSettingsHandlers({
       store: settingsStore,
       applyColorMode,
@@ -207,50 +157,5 @@ export function registerIpc(): void {
         win ? dialog.showOpenDialog(win, options) : dialog.showOpenDialog(options),
       fileRefForPickedMarkdownFile
     })
-  })
-
-  ipcMain.handle('search:query', (event, rawQuery: unknown, rawOptions: unknown) => {
-    const query = assertValidSearchQuery(rawQuery)
-    const options = assertValidSearchOptions(rawOptions)
-    const svc = getOrCreateSearchService()
-    if (!svc) {
-      if (!event.sender.isDestroyed()) {
-        event.sender.send('search:error', { requestId: '', error: 'Indexer not initialized' })
-      }
-      return null
-    }
-    const requestId = randomUUID()
-    registerActiveSearchRequest(requestId, event.sender, svc)
-    setImmediate(() => {
-      void svc
-        .search(
-          query,
-          requestId,
-          {
-            onStage: (stage) => sendSearchEvent(requestId, 'search:stage', { requestId, stage }),
-            onToken: (token) =>
-              sendSearchEvent(requestId, 'search:stream-token', { requestId, token }),
-            onSources: (sources) =>
-              sendSearchEvent(requestId, 'search:sources', { requestId, sources }),
-            onCitation: (citation) =>
-              sendSearchEvent(requestId, 'search:citation', { requestId, ...citation }),
-            onNotice: (notice) =>
-              sendSearchEvent(requestId, 'search:notice', { requestId, notice }),
-            onDone: () => sendSearchEvent(requestId, 'search:done', { requestId }),
-            onError: (error) => sendSearchEvent(requestId, 'search:error', { requestId, error })
-          },
-          options
-        )
-        .finally(() => clearActiveSearchRequest(requestId))
-    })
-    return requestId
-  })
-
-  ipcMain.handle('search:cancel', (event, requestId: unknown) => {
-    const validRequestId = assertValidRequestId(requestId)
-    const activeRequest = activeSearchRequests.get(validRequestId)
-    if (activeRequest?.owner === event.sender) {
-      cancelActiveSearchRequest(validRequestId)
-    }
   })
 }

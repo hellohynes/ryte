@@ -254,7 +254,10 @@ describe('search IPC request lifecycle', () => {
     const otherWindow = makeWebContents()
     mocks.windows = [{ webContents: requester }, { webContents: otherWindow }]
 
-    const requestId = handler('search:query')({ sender: requester }, 'release plan', {}) as string
+    const requestId = (await handler('search:query')(
+      { sender: requester },
+      { query: 'release plan' }
+    )) as string
     await vi.runAllTimersAsync()
     const callbacks = mocks.search.mock.calls[0]?.[2] as {
       onStage(stage: string): void
@@ -316,7 +319,10 @@ describe('search IPC request lifecycle', () => {
     const requester = makeWebContents()
     mocks.windows = [{ webContents: requester }]
 
-    const requestId = handler('search:query')({ sender: requester }, 'release plan', {}) as string
+    const requestId = (await handler('search:query')(
+      { sender: requester },
+      { query: 'release plan' }
+    )) as string
     await vi.runAllTimersAsync()
     const callbacks = mocks.search.mock.calls[0]?.[2] as { onToken(token: string): void }
 
@@ -334,7 +340,7 @@ describe('search IPC request lifecycle', () => {
     // The cached search service is discarded too: the next query builds a new one over the rebuilt index.
     const { SearchService } = await import('./search/search-service')
     const built = vi.mocked(SearchService).mock.calls.length
-    handler('search:query')({ sender: requester }, 'after the rebuild', {})
+    await handler('search:query')({ sender: requester }, { query: 'after the rebuild' })
     await vi.runAllTimersAsync()
     expect(vi.mocked(SearchService).mock.calls.length).toBe(built + 1)
   })
@@ -343,7 +349,10 @@ describe('search IPC request lifecycle', () => {
     const requester = makeWebContents()
     mocks.windows = [{ webContents: requester }]
 
-    const requestId = handler('search:query')({ sender: requester }, 'release plan', {}) as string
+    const requestId = (await handler('search:query')(
+      { sender: requester },
+      { query: 'release plan' }
+    )) as string
     await vi.runAllTimersAsync()
     const callbacks = mocks.search.mock.calls[0]?.[2] as { onToken(token: string): void }
     requester.destroyed()
@@ -358,9 +367,12 @@ describe('search IPC request lifecycle', () => {
     const otherWindow = makeWebContents()
     mocks.windows = [{ webContents: requester }, { webContents: otherWindow }]
 
-    const requestId = handler('search:query')({ sender: requester }, 'release plan', {}) as string
+    const requestId = (await handler('search:query')(
+      { sender: requester },
+      { query: 'release plan' }
+    )) as string
     await vi.runAllTimersAsync()
-    handler('search:cancel')({ sender: otherWindow }, requestId)
+    await handler('search:cancel')({ sender: otherWindow }, { requestId })
 
     expect(mocks.cancel).not.toHaveBeenCalled()
   })
@@ -400,7 +412,7 @@ describe('search IPC request lifecycle', () => {
     const requester = makeWebContents()
     mocks.windows = [{ webContents: requester }]
 
-    handler('search:query')({ sender: requester }, 'release plan', {})
+    await handler('search:query')({ sender: requester }, { query: 'release plan' })
     await vi.runAllTimersAsync()
     mocks.clearAndRebuild.mockRejectedValue(new Error('rebuild refused'))
 
@@ -540,7 +552,10 @@ describe('search IPC request lifecycle', () => {
     const requester = makeWebContents()
     mocks.windows = [{ webContents: requester }]
 
-    const requestId = handler('search:query')({ sender: requester }, 'release plan', {}) as string
+    const requestId = (await handler('search:query')(
+      { sender: requester },
+      { query: 'release plan' }
+    )) as string
     await vi.runAllTimersAsync()
     await handler('settings:save')({ sender: requester }, { semanticIndexEnabled: true })
 
@@ -576,7 +591,7 @@ describe('search IPC request lifecycle', () => {
     async function startSearch(): Promise<ReturnType<typeof makeWebContents>> {
       const requester = makeWebContents()
       mocks.windows = [{ webContents: requester }]
-      handler('search:query')({ sender: requester }, 'release plan', {})
+      await handler('search:query')({ sender: requester }, { query: 'release plan' })
       await vi.runAllTimersAsync()
       return requester
     }
@@ -605,7 +620,7 @@ describe('search IPC request lifecycle', () => {
       const built = vi.mocked(SearchService).mock.calls.length
 
       await handler('settings:save')({ sender: requester }, { notesRoot: '/synthetic/new-root' })
-      handler('search:query')({ sender: requester }, 'after the restart', {})
+      await handler('search:query')({ sender: requester }, { query: 'after the restart' })
       await vi.runAllTimersAsync()
 
       expect(vi.mocked(SearchService).mock.calls.length).toBe(built + 1)

@@ -1,5 +1,5 @@
 // Compile-time check, enforced by `pnpm typecheck`: the types inferred from the contract equal the hand-written
-// declarations the contract replaced. A looser, wider or different inferred type fails the build here.
+// shapes in `search.wire-types.ts`. A looser, wider or different inferred type fails the build here.
 import type { AreaApi, ContractApi } from '../preload/contract-api'
 import type { RyteApi } from '../preload/index'
 import type * as contract from './search'
@@ -17,14 +17,19 @@ type Registered = Flatten<ContractApi['search']>
 
 export type SearchWireTypeChecks = [
   Assert<Equal<contract.SearchRetrievalMode, wire.SearchRetrievalMode>>,
+  Assert<Equal<contract.SearchAnswerMode, wire.SearchAnswerMode>>,
+  Assert<Equal<contract.SearchStage, wire.SearchStage>>,
+  Assert<Equal<contract.SearchSource, wire.SearchSource>>,
+  Assert<Equal<contract.SearchCitation, wire.SearchCitation>>,
+  Assert<Equal<contract.SearchNotice, wire.SearchNotice>>,
+  Assert<Equal<contract.SearchOptions, wire.SearchQueryOptions>>,
   Assert<Equal<contract.SearchSnapshotFreshnessInput, wire.SearchSnapshotFreshnessInput>>,
   Assert<Equal<contract.SearchSnapshotFreshness, wire.SearchSnapshotFreshness>>,
-  // The area carries exactly the members that moved: a missing or extra one fails this.
+  // The area carries exactly the members `window.ryte.search` has: a missing or extra one fails this.
   Assert<Equal<keyof Built, keyof wire.SearchApi>>,
-  // Names, argument lists and results of those members.
+  // Names, argument lists, results and subscriber callbacks of every member.
   Assert<Equal<Built, wire.SearchApi>>,
-  // And what the renderer gets: the merged `window.ryte.search`, compared only on the migrated members because the
-  // query, cancel and event members are still hand-written. The last search slice compares the whole object.
+  // And what the renderer gets: the whole `window.ryte.search`.
   Assert<Equal<Registered, wire.SearchApi>>,
-  Assert<Equal<Pick<RyteApi['search'], keyof wire.SearchApi>, wire.SearchApi>>
+  Assert<Equal<Flatten<RyteApi['search']>, wire.SearchApi>>
 ]

@@ -53,9 +53,19 @@ export const manifest = {
   },
   search: {
     operations: {
+      query: 'search:query',
+      cancel: 'search:cancel',
       checkSnapshotFreshness: 'search:check-snapshot-freshness'
     },
-    events: {}
+    events: {
+      stage: 'search:stage',
+      streamToken: 'search:stream-token',
+      sources: 'search:sources',
+      citation: 'search:citation',
+      notice: 'search:notice',
+      done: 'search:done',
+      error: 'search:error'
+    }
   },
   settings: {
     operations: {

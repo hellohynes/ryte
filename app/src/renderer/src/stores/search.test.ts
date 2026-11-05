@@ -36,12 +36,33 @@ function snapshot(overrides: Partial<HistoryEntry> = {}): HistoryEntry {
   }
 }
 
-type Listener = (requestId: string, ...args: never[]) => void
+type Listener = (payload: never) => void
+
+/** The one object each search event hands its listener, built from the arguments a test passes to `emit`. */
+function eventPayload(channel: string, requestId: string, value: unknown): Record<string, unknown> {
+  switch (channel) {
+    case 'stage':
+      return { requestId, stage: value }
+    case 'sources':
+      return { requestId, sources: value }
+    case 'token':
+      return { requestId, token: value }
+    case 'citation':
+      return { requestId, ...(value as object) }
+    case 'notice':
+      return { requestId, notice: value }
+    case 'error':
+      return { requestId, error: value }
+    default:
+      return { requestId }
+  }
+}
 
 /** A synthetic preload API whose event channels the tests drive by hand. */
 function installRyteApi(freshness: () => Promise<SearchSnapshotFreshness>): {
-  emit: (channel: string, ...args: unknown[]) => void
+  emit: (channel: string, requestId: string, value?: unknown) => void
   query: ReturnType<typeof vi.fn>
+  cancel: ReturnType<typeof vi.fn>
   checkSnapshotFreshness: ReturnType<typeof vi.fn>
 } {
   const listeners = new Map<string, Listener>()
@@ -50,16 +71,17 @@ function installRyteApi(freshness: () => Promise<SearchSnapshotFreshness>): {
     return () => listeners.delete(channel)
   }
   const query = vi.fn(async () => 'request-1')
+  const cancel = vi.fn(async () => undefined)
   const checkSnapshotFreshness = vi.fn(freshness)
   vi.stubGlobal('window', {
     ryte: {
       search: {
         query,
-        cancel: vi.fn(async () => undefined),
+        cancel,
         checkSnapshotFreshness,
         onStage: on('stage'),
         onSources: on('sources'),
-        onToken: on('token'),
+        onStreamToken: on('token'),
         onCitation: on('citation'),
         onNotice: on('notice'),
         onDone: on('done'),
@@ -68,8 +90,12 @@ function installRyteApi(freshness: () => Promise<SearchSnapshotFreshness>): {
     }
   })
   return {
-    emit: (channel, ...args) => (listeners.get(channel) as (...a: unknown[]) => void)(...args),
+    emit: (channel, requestId, value) =>
+      (listeners.get(channel) as (payload: unknown) => void)(
+        eventPayload(channel, requestId, value)
+      ),
     query,
+    cancel,
     checkSnapshotFreshness
   }
 }
@@ -296,5 +322,62 @@ describe('completed runs', () => {
       'writing-summary'
     ])
     expect(search.trace.completedAt).not.toBeNull()
+  })
+})
+
+describe('the search calls and events', () => {
+  beforeEach(() => setActivePinia(createPinia()))
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('starts a query with one object that holds the text and only the options given', async () => {
+    const api = installRyteApi(async () => current)
+    const search = useSearchStore()
+
+    await search.runQuery('jira plans', {}, {})
+    await search.runQuery('jira plans', { retrievalMode: 'keyword' }, {})
+    await search.runQuery('jira plans', { retrievalMode: 'hybrid', answerMode: 'local-only' }, {})
+
+    expect(api.query.mock.calls).toEqual([
+      [{ query: 'jira plans' }],
+      [{ query: 'jira plans', retrievalMode: 'keyword' }],
+      [{ query: 'jira plans', retrievalMode: 'hybrid', answerMode: 'local-only' }]
+    ])
+  })
+
+  it('cancels with the request id in an object, and not when nothing is running', async () => {
+    const api = installRyteApi(async () => current)
+    const search = useSearchStore()
+
+    await search.cancel()
+    expect(api.cancel).not.toHaveBeenCalled()
+
+    await search.runQuery('jira plans', {}, {})
+    await search.cancel()
+    expect(api.cancel.mock.calls).toEqual([[{ requestId: 'request-1' }]])
+    expect(search.status).toBe('idle')
+  })
+
+  it('keeps a citation without the request id that arrives with it', async () => {
+    const api = installRyteApi(async () => current)
+    const search = useSearchStore()
+    search.bind()
+
+    await search.runQuery('jira plans', {}, {})
+    api.emit('citation', 'request-1', snapshot().citations[0])
+
+    expect(search.citations).toStrictEqual(snapshot().citations)
+  })
+
+  it('ignores an event of another request', async () => {
+    const api = installRyteApi(async () => current)
+    const search = useSearchStore()
+    search.bind()
+
+    await search.runQuery('jira plans', {}, {})
+    api.emit('token', 'someone-else', 'not mine')
+    api.emit('done', 'someone-else')
+
+    expect(search.answer).toBe('')
+    expect(search.status).toBe('searching')
   })
 })

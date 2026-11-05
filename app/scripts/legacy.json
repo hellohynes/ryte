@@ -4,15 +4,7 @@
   "sendAllowed": [],
   "ignore": [],
   "channels": {
-    "request": ["search:cancel", "search:query"],
-    "event": [
-      "search:citation",
-      "search:done",
-      "search:error",
-      "search:notice",
-      "search:sources",
-      "search:stage",
-      "search:stream-token"
-    ]
+    "request": [],
+    "event": []
   }
 }

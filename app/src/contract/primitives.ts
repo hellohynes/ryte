@@ -109,6 +109,16 @@ export const searchQuery = z.string().transform((value, ctx) => {
   return query
 })
 
+const REQUEST_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+/**
+ * The id of a running request, as the main process makes it: a UUID of version 1 to 5 and variant 8, 9, a or b, in
+ * either case. The expression is anchored at both ends, so a trailing newline is not allowed.
+ */
+export const requestId = z
+  .string()
+  .refine((value) => REQUEST_ID_RE.test(value), 'Expected a request id')
+
 /**
  * An absolute path by `node:path`, non-empty and at most `MAX_PATH_LENGTH`, kept exactly as given (the legacy
  * validator did not normalize it).

@@ -66,7 +66,19 @@ change or remove one.
 
 | Operation | Channel | What it does | Input |
 | --- | --- | --- | --- |
+| `search.query` | `search:query` | Start a search. Returns the id of the request at once; the results arrive as events to the window that asked, each carrying that id. Returns null, after sending `error` with an empty id, when the index is not ready. | `{ query: string, retrievalMode?: 'auto' \| 'keyword' \| 'hybrid', answerMode?: 'settings' \| 'local-only' }` |
+| `search.cancel` | `search:cancel` | Stop a search that the calling window started. An id that is unknown, finished or another window's is ignored. A cancelled search sends no further event, not even `done`. | `{ requestId: string }` |
 | `search.checkSnapshotFreshness` | `search:check-snapshot-freshness` | Whether notes changed since a saved search summary was generated, and which of them matter to its query. Fails when the index is not ready. | `{ query: string, retrievalMode: 'auto' \| 'keyword' \| 'hybrid', generatedAt: number, sourcePaths: string[] }` |
+
+| Event | Channel | What it means | Payload |
+| --- | --- | --- | --- |
+| `search.stage` | `search:stage` | The search moved to a new stage. Sent to the window that asked only. | `{ requestId: string, stage: 'searching-local' \| 'gathering-evidence' \| 'writing-summary' }` |
+| `search.streamToken` | `search:stream-token` | The next piece of the written summary. Sent to the window that asked only. | `{ requestId: string, token: string }` |
+| `search.sources` | `search:sources` | The local sources found for the search. Sent to the window that asked only. | `{ requestId: string, sources: ({ index: number, sourcePath: string, headingPath: string[], preview: string, matchCount: number, retrievalMode: 'keyword' \| 'hybrid' })[] }` |
+| `search.citation` | `search:citation` | A source the summary cites, sent as soon as its marker is complete. Sent to the window that asked only. | `{ index: number, sourcePath: string, headingPath: string[], requestId: string }` |
+| `search.notice` | `search:notice` | Something the search skipped or fell back on. Sent to the window that asked only. | `{ requestId: string, notice: { code: 'no-local-sources' \| 'semantic-unavailable' \| 'cloud-answers-disabled' \| 'cloud-answers-not-acknowledged' \| 'provider-key-missing', message: string } }` |
+| `search.done` | `search:done` | The search finished. Sent to the window that asked only, once, and not after a cancel. | `{ requestId: string }` |
+| `search.error` | `search:error` | The search failed, or could not start because the index is not ready (then the request id is empty). Sent to the window that asked only. | `{ requestId: string, error: string }` |
 
 ## settings
 
