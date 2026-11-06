@@ -4,6 +4,23 @@ All notable Ryte changes should be recorded here before a tagged release.
 
 Ryte follows [Semantic Versioning](https://semver.org). The app version in `app/package.json` is the source of truth for packaged builds, Git tags, and DMG filenames. See the [Versioning Policy](#versioning-policy).
 
+## 0.2.0
+
+### Highlights
+
+- Search is ready sooner. Ryte now indexes notes by keyword first, so keyword search works as soon as the local pass finishes, and adds smart-search vectors in the background. Failures, a missing key or being offline only pause the background step and never touch the keyword index. Preferences, the status bar and the search box say what smart search is doing.
+- Each notes folder has its own index, and switching the notes folder no longer freezes the app. The first launch after updating can rebuild the index once, and Ryte shows a notice when it does. With smart search on and acknowledged, notes are embedded again in the background.
+- Indexing is sturdier. A note with invalid YAML front matter or an unreadable file no longer stops the whole index pass, and a pass or a single-file edit that is overtaken by a folder change or a restart stops quietly instead of showing an error. One recursive watcher replaces the previous notes folder watcher, and the file list refreshes when the notes folder changes.
+- Single line breaks in a note now show as line breaks.
+- The status bar text meets a 4.5:1 contrast ratio in the light and dark themes.
+- Behind the scenes, every message between the app's main process and its window now goes through one checked API contract (tasks, indexer, settings, app, dialog, workspace, files, search). Nothing visible changes except the wording of a rejected input, for example an invalid file name in the rename box now reads `Invalid files.rename input: name`. CI now runs once per pull request with read-only token permissions, and unused packages were removed from the app.
+
+### Validation
+
+- `pnpm --dir app validate`
+- `pnpm --dir app smoke:indexer` (synthetic fixtures)
+- `pnpm dmg:local` (ad-hoc signed Apple Silicon package)
+
 ## 0.1.0
 
 ### Highlights
