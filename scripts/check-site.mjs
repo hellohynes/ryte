@@ -8,6 +8,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { gzipSync } from 'node:zlib'
+import { PLACEHOLDERS } from './site-release.mjs'
 
 const site = resolve(dirname(fileURLToPath(import.meta.url)), '../site')
 const failures = []
@@ -123,9 +124,13 @@ for (const page of ['index.html', 'roadmap.html', 'releases.html']) {
   }
   // stencil/ is produced by `pnpm site:build`, not kept in site/.
   const BUILT = new Set(['stencil/'])
+  // {{version}} and {{download-url}} are filled from the latest release by `pnpm site:build` (scripts/site-release.mjs).
+  for (const match of html.matchAll(/\{\{([^}]*)\}\}/g)) {
+    if (!PLACEHOLDERS.includes(match[1])) fail(page, `unknown placeholder ${match[0]} (known: ${PLACEHOLDERS.join(', ')}).`)
+  }
   for (const match of html.matchAll(/\b(?:src|href)="([^"#?]+)(?:[?#][^"]*)?"/g)) {
     const target = match[1]
-    if (/^(https?:|mailto:|data:)/.test(target) || BUILT.has(target)) continue
+    if (/^(https?:|mailto:|data:)/.test(target) || BUILT.has(target) || /^\{\{[a-z-]+\}\}$/.test(target)) continue
     if (!existsSync(resolve(site, target))) fail(page, `${target} does not exist.`)
   }
 }

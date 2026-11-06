@@ -10,7 +10,7 @@
     "stencil": "corepack pnpm --dir app stencil",
     "dmg:local": "corepack pnpm --dir app package:mac:arm64",
     "site:build": "node scripts/build-site.mjs",
-    "site:preview": "node scripts/serve.mjs site 6001 --stencil http://localhost:6002/",
+    "site:preview": "node scripts/serve.mjs site 6001 --stencil http://localhost:6002/ --fill",
     "site:stencil": "corepack pnpm --dir app stencil",
     "site:serve": "node scripts/build-site.mjs && node scripts/serve.mjs site-dist 6001",
     "check:site": "node scripts/check-site.mjs",
