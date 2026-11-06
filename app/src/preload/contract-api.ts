@@ -71,8 +71,20 @@ export function createContractApi<TApi = ContractApi>(
     const built: Record<string, unknown> = {}
 
     for (const [operation, channel] of Object.entries(names.operations)) {
-      built[operation] = (...args: unknown[]): Promise<unknown> =>
-        ipc.invoke(channel, ...args.slice(0, 1))
+      built[operation] = (...args: unknown[]): Promise<unknown> => {
+        const result = ipc.invoke(channel, ...args.slice(0, 1))
+        if (area !== 'workspace' || operation !== 'openNativeFile') return result
+
+        // Keep picker refusals readable without exposing wire names to the renderer. The prefix
+        // follows the invoked manifest channel, including when the contract channel changes.
+        return result.catch((error: unknown) => {
+          const prefix = `Error invoking remote method '${channel}': Error:`
+          if (error instanceof Error && error.message.startsWith(prefix)) {
+            throw new Error(error.message.slice(prefix.length).trimStart())
+          }
+          throw error
+        })
+      }
     }
 
     for (const [event, channel] of Object.entries(names.events)) {

@@ -126,15 +126,6 @@ function messageFromError(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
-function normalizeNativeOpenErrorMessage(error: unknown): string {
-  const message = messageFromError(error)
-  const unwrapped = message.replace(
-    /^Error invoking remote method 'workspace:open-native-file': Error:\s*/,
-    ''
-  )
-  return unwrapped
-}
-
 function closeTabInState(state: WorkspaceState, tabId: string): WorkspaceState {
   const closedIndex = state.tabs.findIndex((tab) => tab.id === tabId)
   if (closedIndex === -1) return state
@@ -296,7 +287,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     try {
       state.value = await window.ryte.workspace.openNativeFile()
     } catch (e) {
-      error.value = normalizeNativeOpenErrorMessage(e)
+      error.value = messageFromError(e)
       throw e
     } finally {
       loading.value = false

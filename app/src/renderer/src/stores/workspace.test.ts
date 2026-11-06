@@ -1,6 +1,8 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { manifest } from '../../../contract/manifest.generated'
+import { createContractApi } from '../../../preload/contract-api'
 import { WORKSPACE_SCHEMA_VERSION, type WorkspaceState } from '../../../shared/workspace'
 import { useWorkspaceStore } from './workspace'
 
@@ -402,25 +404,45 @@ describe('useWorkspaceStore', () => {
     expect(store.error).toBe('Selected file must be a Markdown file')
   })
 
-  it('normalizes Electron-wrapped native file picker errors for display', async () => {
-    const initial = workspaceState()
-    const openNativeFile = vi
-      .fn()
-      .mockRejectedValue(
-        new Error(
-          "Error invoking remote method 'workspace:open-native-file': Error: Selected file must be a Markdown file"
+  it.each([manifest.workspace.operations.openNativeFile, 'fixture:replacement-picker'])(
+    'displays the refused-file message through preload on %s',
+    async (channel) => {
+      const initial = workspaceState()
+      const invoke = vi
+        .fn()
+        .mockRejectedValue(
+          new Error(
+            `Error invoking remote method '${channel}': Error: Selected file must be a Markdown file`
+          )
         )
+      const api = createContractApi(
+        { invoke, on: vi.fn(), removeListener: vi.fn() },
+        {
+          workspace: {
+            operations: { openNativeFile: channel },
+            events: {}
+          }
+        }
       )
-    installWorkspaceApi({ getState: vi.fn().mockResolvedValue(initial), openNativeFile })
+      installWorkspaceApi({
+        getState: vi.fn().mockResolvedValue(initial),
+        openNativeFile: api.workspace.openNativeFile
+      })
 
-    const store = useWorkspaceStore()
-    await store.hydrate()
+      const store = useWorkspaceStore()
+      await store.hydrate()
 
-    await expect(store.openNativeFile()).rejects.toThrow('Error invoking remote method')
+      await expect(store.openNativeFile()).rejects.toThrow(
+        /^Selected file must be a Markdown file$/
+      )
 
-    expect(store.state).toEqual(initial)
-    expect(store.error).toBe('Selected file must be a Markdown file')
-  })
+      expect(invoke).toHaveBeenCalledOnce()
+      expect(invoke).toHaveBeenCalledWith(channel)
+      expect(store.state).toEqual(initial)
+      expect(store.error).toBe('Selected file must be a Markdown file')
+      expect(store.loading).toBe(false)
+    }
+  )
 
   it('delegates file actions and applies rename and trash workspace results', async () => {
     const tab = {
