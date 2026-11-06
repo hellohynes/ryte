@@ -1,6 +1,3 @@
-import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
-
 import { describe, expect, it } from 'vitest'
 
 import { createContractApi } from '../preload/contract-api'
@@ -40,12 +37,6 @@ const operations = {
 }
 
 const events = { treeChanged, catalogChanged, sourceChange, workspaceTabChange }
-
-const legacyChannels = (
-  JSON.parse(
-    readFileSync(fileURLToPath(new URL('../../scripts/legacy.json', import.meta.url)), 'utf8')
-  ) as { channels: { request: string[]; event: string[] } }
-).channels
 
 describe('files operations', () => {
   it('keeps the wire channel names and the renderer-facing operation names', () => {
@@ -122,8 +113,7 @@ describe('files operations', () => {
   it('has no channel for read and read-source, which nothing called', () => {
     const channels = [
       ...Object.values(operations).map((operation) => operation.channel),
-      ...Object.values(manifest.files.operations),
-      ...legacyChannels.request
+      ...Object.values(manifest.files.operations)
     ]
     expect(channels).not.toContain('files:read')
     expect(channels).not.toContain('files:read-source')
@@ -131,33 +121,18 @@ describe('files operations', () => {
     expect(Object.keys(manifest.files.operations)).not.toContain('readSource')
   })
 
-  it('has no channel for the three that nothing called, in the contract, the manifest or the legacy list', () => {
+  it('has no channel for the three that nothing called, in the contract or the manifest', () => {
     const deleted = ['files:watch', 'files:watch-source', 'viewer:file-changed']
     const channels = [
       ...Object.values(operations).map((operation) => operation.channel),
       ...Object.values(events).map((event) => event.channel),
       ...Object.values(manifest.files.operations),
-      ...Object.values(manifest.files.events),
-      ...legacyChannels.request,
-      ...legacyChannels.event
+      ...Object.values(manifest.files.events)
     ]
     for (const channel of deleted) expect(channels, channel).not.toContain(channel)
     for (const name of ['watch', 'watchSource', 'onChange']) {
       expect(Object.keys(manifest.files.operations)).not.toContain(name)
       expect(Object.keys(manifest.files.events)).not.toContain(name)
-    }
-  })
-
-  it('leaves only the search channels on the legacy list', () => {
-    for (const list of [legacyChannels.request, legacyChannels.event]) {
-      expect(list.filter((channel) => !channel.startsWith('search:'))).toEqual([])
-    }
-    for (const channel of [
-      ...Object.values(operations).map((operation) => operation.channel),
-      ...Object.values(events).map((event) => event.channel)
-    ]) {
-      expect(legacyChannels.request, channel).not.toContain(channel)
-      expect(legacyChannels.event, channel).not.toContain(channel)
     }
   })
 

@@ -9,12 +9,7 @@ import type {
   SearchSource as ContractSearchSource,
   SearchStage as ContractSearchStage
 } from '../contract/search'
-import {
-  createContractApi,
-  mergeContractApi,
-  type ContractApi,
-  type MergeApi
-} from './contract-api'
+import { createContractApi, type ContractApi } from './contract-api'
 
 export type SearchRetrievalMode = ContractSearchRetrievalMode
 export type SearchAnswerMode = ContractSearchAnswerMode
@@ -26,15 +21,10 @@ export type SearchQueryOptions = ContractSearchOptions
 
 export type { IndexerStatus } from '../shared/indexer'
 
-// Every area is on the contract. The empty shell stays until `scripts/check-contract.mjs` stops looking for it.
-interface LegacyRyteApi {}
+/** The full `window.ryte` API, built from the contract. */
+export type RyteApi = ContractApi
 
-/** The full `window.ryte` API: the hand-written areas plus the areas built from the contract. */
-export type RyteApi = MergeApi<LegacyRyteApi, ContractApi>
-
-const legacyApi: LegacyRyteApi = {}
-
-const api: RyteApi = mergeContractApi(legacyApi, createContractApi(ipcRenderer))
+const api: RyteApi = createContractApi(ipcRenderer)
 
 if (process.contextIsolated) {
   try {

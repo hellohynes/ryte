@@ -54,11 +54,6 @@ export type AreaApi<TArea extends AreaDefinition> = {
 
 export type ContractApi = { [TArea in keyof Contract]: AreaApi<Contract[TArea]> }
 
-/** A hand-written area and a contract-built area of the same name become one object with both. */
-export type MergeApi<TLegacy, TBuilt> = Omit<TLegacy, keyof TBuilt> & {
-  [TArea in keyof TBuilt]: (TArea extends keyof TLegacy ? TLegacy[TArea] : unknown) & TBuilt[TArea]
-}
-
 const capitalize = (value: string): string => value.charAt(0).toUpperCase() + value.slice(1)
 
 /**
@@ -94,16 +89,4 @@ export function createContractApi<TApi = ContractApi>(
   }
 
   return api as TApi
-}
-
-/** Merges the built areas over the hand-written API. On a name clash the contract method wins. */
-export function mergeContractApi<TLegacy extends object, TBuilt extends object>(
-  legacy: TLegacy,
-  built: TBuilt
-): MergeApi<TLegacy, TBuilt> {
-  const merged: Record<string, unknown> = { ...(legacy as Record<string, unknown>) }
-  for (const [area, methods] of Object.entries(built)) {
-    merged[area] = { ...((legacy as Record<string, object>)[area] ?? {}), ...(methods as object) }
-  }
-  return merged as MergeApi<TLegacy, TBuilt>
 }

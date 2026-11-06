@@ -1,6 +1,3 @@
-import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
-
 import { describe, expect, it } from 'vitest'
 
 import { createContractApi } from '../preload/contract-api'
@@ -22,12 +19,6 @@ import {
   stage,
   streamToken
 } from './search'
-
-const legacyChannels = (
-  JSON.parse(
-    readFileSync(fileURLToPath(new URL('../../scripts/legacy.json', import.meta.url)), 'utf8')
-  ) as { channels: { request: string[]; event: string[] } }
-).channels
 
 const valid = {
   query: 'jira plans',
@@ -206,7 +197,7 @@ function schemaOf<TSchema>(event: { payload?: TSchema }): TSchema {
 const REQUEST_ID = '3f9c1d2e-7a4b-4c8e-9d1f-0a2b3c4d5e6f'
 
 describe('the search area', () => {
-  it('has all three operations and the seven events, and nothing left on the legacy list', () => {
+  it('has all three operations and the seven events', () => {
     expect(Object.keys(search.operations)).toEqual(['query', 'cancel', 'checkSnapshotFreshness'])
     expect(Object.keys(search.events)).toEqual([
       'stage',
@@ -217,8 +208,6 @@ describe('the search area', () => {
       'done',
       'error'
     ])
-    expect(legacyChannels.request).toEqual([])
-    expect(legacyChannels.event).toEqual([])
   })
 
   it('keeps every wire channel name', () => {
