@@ -7,11 +7,18 @@ on:
     paths:
       - "site/**"
       - "scripts/build-site.mjs"
+      - "scripts/site-release.mjs"
       - "app/src/renderer/src/stencil/**"
       - "app/vite.stencil.config.ts"
       - "app/package.json"
       - "app/pnpm-lock.yaml"
       - ".github/workflows/deploy-pages.yml"
+  # The release workflow creates the GitHub release in its last step, so when it succeeds the download exists
+  # and the site's version and links can follow it. A workflow_run runs on the default branch, which is the
+  # only ref the github-pages environment accepts (a release event would run on the tag and be rejected).
+  workflow_run:
+    workflows: ["Release macOS"]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -25,6 +32,11 @@ concurrency:
 
 jobs:
   build:
+    # After a release run, deploy only if it succeeded and was a real release tag (a dry-run tag has a
+    # suffix like -rc.1 and publishes nothing). No other trigger is filtered.
+    if: >-
+      github.event_name != 'workflow_run' ||
+      (github.event.workflow_run.conclusion == 'success' && !contains(github.event.workflow_run.head_branch, '-'))
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -48,6 +60,9 @@ jobs:
         working-directory: app
       - name: Build the site and the Stencil gallery
         run: node scripts/build-site.mjs
+        env:
+          # Reads the latest published release (read-only) to fill the version and download links.
+          GITHUB_TOKEN: ${{ github.token }}
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:

@@ -21,7 +21,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:native": "node scripts/test-native.mjs",
-    "test:release-scripts": "node --test scripts/check-release-version.test.mjs",
+    "test:release-scripts": "node --test scripts/check-release-version.test.mjs ../scripts/site-release.test.mjs",
     "smoke:indexer": "node scripts/run-indexer-smoke.mjs",
     "smoke:packaged": "node scripts/smoke-packaged-mac.mjs",
     "smoke:indexer:notes": "node --import tsx scripts/smoke-indexer.ts",

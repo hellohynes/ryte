@@ -63,3 +63,6 @@ jobs:
       # The same assembly the Pages deploy runs, so a broken gallery or site build fails the PR.
       - name: Site build
         run: node ../scripts/build-site.mjs
+        env:
+          # Reads the latest published release (read-only) to fill the site's version and download links.
+          GITHUB_TOKEN: ${{ github.token }}

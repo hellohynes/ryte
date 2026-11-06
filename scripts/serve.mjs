@@ -6,12 +6,16 @@
 import { createServer } from 'node:http'
 import { readFile, stat } from 'node:fs/promises'
 import { extname, join, normalize, resolve } from 'node:path'
+import { fillRelease, packageVersion } from './site-release.mjs'
 
 const [folder, portArg, ...flags] = process.argv.slice(2)
 const port = Number(portArg)
-const stencilUrl = flags[0] === '--stencil' ? flags[1] : undefined
+const stencilUrl = flags.includes('--stencil') ? flags[flags.indexOf('--stencil') + 1] : undefined
+// --fill: fill the {{version}} and {{download-url}} placeholders from app/package.json, so the unbuilt
+// site/ folder previews with real-looking links. The built artifact (site-dist) is already filled.
+const fillVersion = flags.includes('--fill') ? packageVersion() : undefined
 if (!folder || !Number.isInteger(port)) {
-  console.error('Usage: node scripts/serve.mjs <folder> <port> [--stencil <url>]')
+  console.error('Usage: node scripts/serve.mjs <folder> <port> [--stencil <url>] [--fill]')
   process.exit(1)
 }
 const root = resolve(folder)
@@ -34,7 +38,8 @@ const server = createServer(async (request, response) => {
     if (!file.startsWith(root)) throw new Error('outside the folder')
     if ((await stat(file)).isDirectory()) file = join(file, 'index.html')
     response.writeHead(200, { 'content-type': TYPES[extname(file)] ?? 'application/octet-stream' })
-    response.end(await readFile(file))
+    const body = await readFile(file)
+    response.end(fillVersion && extname(file) === '.html' ? fillRelease(body.toString('utf8'), fillVersion) : body)
   } catch {
     const path = new URL(request.url ?? '/', 'http://localhost').pathname
     if (stencilUrl && /^\/stencil(\/|$)/.test(path)) return sendStencil(response)
