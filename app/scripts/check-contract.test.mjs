@@ -194,6 +194,19 @@ test('rejects a malformed channel name in an IPC call, even in a wiring file', (
   }
 })
 
+test('a channel in a template literal with no substitutions is still a channel string', () => {
+  expectViolation(
+    { 'src/main/foo.ts': 'export const c = `tasks:x`\n' },
+    'inventory',
+    /tasks:x is not in the contract/
+  )
+  expectViolation(
+    { 'src/main/foo.ts': 'export const c = `tasks:list`\n' },
+    'inventory',
+    /tasks:list belongs to the contract/
+  )
+})
+
 test('other Electron events on webContents are not channels', () => {
   assert.deepEqual(
     run({
@@ -217,6 +230,8 @@ test('a string that merely looks like a channel has no escape hatch', () => {
   const violations = run({ 'src/main/foo.ts': `export const key = 'cache:warm'\n` })
   assert.ok(rules(violations).includes('inventory'))
   assert.match(messages(violations), /cache:warm is not in the contract/)
+  assert.match(messages(violations), /define it in src\/contract\/ \(see docs\/api-contract\.md\)/)
+  assert.match(messages(violations), /If it is not a channel at all, change the string/)
   assert.doesNotMatch(messages(violations), /legacy|ignore|sendAllowed/)
 })
 
@@ -327,6 +342,23 @@ test('a channel string in src/shared or src/preload (not wiring) fails', () => {
   }
 })
 
+test('import = require of electron is flagged like any electron import', () => {
+  expectViolation(
+    {
+      'src/contract/define.ts': `import electron = require('electron')\nexport const e = electron\n`
+    },
+    'imports',
+    /src\/contract\/ must not import electron/
+  )
+  expectViolation(
+    {
+      'src/renderer/src/bad.ts': `import electron = require('electron')\nexport const e = electron\n`
+    },
+    'renderer',
+    /must not import electron/
+  )
+})
+
 test('rejects electron, including a type-only import, inside src/contract', () => {
   expectViolation(
     {
@@ -409,5 +441,48 @@ test('rejects ipcRenderer, electron and contract value imports in the renderer, 
       'src/renderer/src/ok.ts': `import type { A } from '../../contract/tasks'\nexport type T = A\n`
     }),
     []
+  )
+})
+
+test('the renderer ipcRenderer rule applies to .ts files, not only .vue', () => {
+  expectViolation(
+    {
+      'src/renderer/src/bad.ts': `export const r = (w: any) => w.ipcRenderer\nipcRenderer.send('x')\n`
+    },
+    'renderer',
+    /must not reference ipcRenderer/
+  )
+})
+
+test('a value import of the contract is rejected in a .vue script block', () => {
+  expectViolation(
+    {
+      'src/renderer/src/Value.vue': `<script setup lang="ts">\nimport { list } from '../../contract/tasks'\nconsole.log(list)\n</script>\n`
+    },
+    'imports',
+    /renderer must not value-import/
+  )
+  assert.deepEqual(
+    run({
+      'src/renderer/src/Type.vue': `<script setup lang="ts">\nimport type { A } from '../../contract/tasks'\nconst a: A | null = null\nconsole.log(a)\n</script>\n`
+    }),
+    []
+  )
+})
+
+test('every script block of a .vue file is scanned, not only the first', () => {
+  expectViolation(
+    {
+      'src/renderer/src/Two.vue': `<script lang="ts">\nexport default { name: 'Two' }\n</script>\n<script setup lang="ts">\nimport { ipcRenderer } from 'electron'\nipcRenderer.send('app:get-version')\n</script>\n`
+    },
+    'renderer',
+    /must not reference ipcRenderer/
+  )
+  expectViolation(
+    {
+      'src/renderer/src/Two.vue': `<script lang="ts">\nexport default { name: 'Two' }\n</script>\n<script setup lang="ts">\nimport { list } from '../../contract/tasks'\nconsole.log(list)\n</script>\n`
+    },
+    'imports',
+    /renderer must not value-import/
   )
 })

@@ -9,8 +9,8 @@ import {
 } from '../shared/source-path'
 
 /**
- * A notes-root-relative file path, validated and normalized by the same function the legacy IPC
- * validators use (relative only, no traversal, no NUL, length-bounded).
+ * A notes-root-relative file path, validated and normalized by `normalizeWorkspaceSourcePath` (relative
+ * only, no traversal, no NUL, length-bounded).
  */
 export const sourcePath = z.string().transform((value, ctx) => {
   try {
@@ -22,8 +22,8 @@ export const sourcePath = z.string().transform((value, ctx) => {
 })
 
 /**
- * An absolute Markdown file path outside the notes root, validated and normalized by the same function the
- * legacy IPC validators use.
+ * An absolute Markdown file path outside the notes root, validated and normalized by
+ * `normalizeWorkspaceExternalPath`.
  */
 export const externalPath = z.string().transform((value, ctx) => {
   try {

@@ -36,9 +36,11 @@ export interface ViewerWatchDependencies {
  * Owns what the viewer watches (one file for the whole app, so the last watch wins) and sends the change events
  * to every window. Subscribes to the watcher once, here.
  *
- * Every watch first forgets the previous file, then starts the new one, then remembers it: a watch that fails
- * leaves nothing remembered, so a late change of the old file is not reported as a change of the new one. A
- * file opened from outside the notes folder is watched as is and has no source path.
+ * A watch first looks up the tab's file and, for a note, resolves its real path. If either throws, nothing
+ * changes and the previous watch stays. Then it forgets the previous file, starts the new watcher and
+ * remembers the new file. If the watcher throws, nothing is remembered, so a late change of the old file is
+ * not reported as a change of the new one. A file opened from outside the notes folder is watched as is and
+ * has no source path.
  */
 export function createViewerWatch({
   viewerWatcher,

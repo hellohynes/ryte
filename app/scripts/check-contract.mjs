@@ -294,7 +294,7 @@ export function checkContract({ files, manifestSource }) {
           line,
           inContract(path)
             ? `${channel} is defined in src/contract/ but missing from the generated manifest; run \`pnpm contract:generate\``
-            : `${channel} is not in the contract; define it in src/contract/ (see docs/api-contract.md)`
+            : `${channel} is not in the contract; define it in src/contract/ (see docs/api-contract.md). If it is not a channel at all, change the string so it is not shaped like area:name.`
         )
       }
     }
@@ -306,7 +306,7 @@ export function checkContract({ files, manifestSource }) {
           'inventory',
           path,
           hit.line,
-          `'${hit.name}' is not a valid channel name; use area:name, lowercase and hyphenated (for example files:read-source)`
+          `'${hit.name}' is not a valid channel name; use area:name, lowercase and hyphenated (for example files:read-source-title)`
         )
         continue
       }

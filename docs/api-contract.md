@@ -102,7 +102,7 @@ live window, and the renderer subscribes with `window.ryte.tasks.onChanged(callb
 
 5. **Call it** from a store or component: `await window.ryte.<area>.ping({ id })`. The types come from the
    definition, so `app/src/preload/index.ts` and `app/src/shared/` need no edit. `window.ryte.<area>.<operation>` and its
-   types appear on their own, also in an area that still has hand-written methods.
+   types appear on their own.
 
 6. Run `pnpm validate`.
 
@@ -179,11 +179,12 @@ handlers file and that file's test, and its import and entry in the `registerOpe
 
 ## No hand-written IPC
 
-`app/src/main/ipc.ts` and `app/src/preload/index.ts` hold no channel, validator or handler. They only pass `ipcMain` to
+`app/src/main/ipc.ts` and `app/src/preload/index.ts` only wire the contract: they hand `ipcMain` to
 `registerOperations` and `ipcRenderer` to `createContractApi`. A new operation goes in the contract (see
-[Add an operation](#add-an-operation)), never in either file. `check:contract` fails on a channel string anywhere
-outside `src/contract/`, wiring files included, and on `ipcMain`, `ipcRenderer`, `.send` and the like outside a fixed
-list of files (below).
+[Add an operation](#add-an-operation)), never in either file. `check:contract` excuses these two files for using
+`ipcMain` and `ipcRenderer`, but a channel string, a channel built from a template or by concatenation, or a
+malformed channel name fails there like anywhere else. It also fails on `ipcMain`, `ipcRenderer`, `.send` and the like
+outside a fixed list of files (below). It is a guardrail, not a security boundary (see the end of the next section).
 
 ## What is enforced
 
@@ -196,7 +197,7 @@ list of files (below).
   `.postMessage`. The list excuses those names, not channel strings: a channel written in `ipc.ts` or the preload
   still fails.
 - A channel is never built by concatenation or a template (`'tasks' + ':x'`, `` `tasks:${name}` ``) in an IPC call.
-- A channel name in an IPC call is always `area:name`, lowercase and hyphenated (`files:read-source`, not
+- A channel name in an IPC call is always `area:name`, lowercase and hyphenated (`files:read-source-title`, not
   `files:readAll`), checked on `ipcMain`, `ipcRenderer`, `.ipc` and the send methods of `webContents` and `sender`.
   `webContents.on('will-navigate')` and similar Electron events are not channels.
 - Every script file under `src/` is scanned (`.ts`, `.tsx`, `.mts`, `.cts`, `.js`, `.jsx`, `.mjs`, `.cjs`), and `.vue`

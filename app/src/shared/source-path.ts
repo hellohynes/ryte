@@ -7,8 +7,9 @@ function hasParentTraversal(value: string): boolean {
 }
 
 /**
- * Validates and normalizes a notes-root-relative file path. Shared by the legacy IPC validators and the
- * contract's `sourcePath` primitive so there is one implementation of the traversal rules.
+ * Validates and normalizes a notes-root-relative file path. Shared by the contract's `sourcePath` primitive,
+ * the workspace sort-mode folder key and the viewer's source-change path, so there is one implementation of the
+ * traversal rules.
  */
 export function normalizeWorkspaceSourcePath(value: unknown): string {
   if (
@@ -40,7 +41,7 @@ export function normalizeWorkspaceSourcePath(value: unknown): string {
 
 /**
  * Validates and normalizes an absolute Markdown file path outside the notes root (POSIX or Windows
- * style). Shared by the legacy IPC validators and the contract's `externalPath` primitive.
+ * style). Used by the contract's `externalPath` primitive.
  */
 export function normalizeWorkspaceExternalPath(value: unknown): string {
   if (
