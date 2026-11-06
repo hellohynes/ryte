@@ -195,6 +195,10 @@ h1 {
   background: var(--st-color-surface-base);
   scroll-margin-top: var(--st-space-700);
 }
+/* A release linked by anchor (releases.html#v0-2-0) must not land under the fixed top bar. */
+.timeline-item[id] {
+  scroll-margin-top: var(--st-space-700);
+}
 h2 {
   margin: 0;
   color: var(--st-color-text-strong);
