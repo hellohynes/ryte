@@ -139,7 +139,10 @@ export const SEMANTIC_GROUPS: Array<{ title: string; names: string[] }> = [
     title: 'Action',
     names: ['accent', 'accent-fill', 'fill-primary', 'link', 'link-strong', 'focus']
   },
-  { title: 'Status', names: ['danger', 'success', 'warning', 'info'] },
+  {
+    title: 'Status',
+    names: ['danger', 'success', 'success-strong', 'warning', 'info', 'info-strong']
+  },
   { title: 'Shadow', names: ['shadow'] }
 ]
 

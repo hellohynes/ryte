@@ -82,7 +82,7 @@ const isVisible = computed(() => view.value.visible)
   font-size: var(--st-type-body-sm-size);
   font-variant-numeric: tabular-nums;
   background: var(--st-color-surface-sunken);
-  color: var(--st-color-text-tertiary);
+  color: var(--st-color-text-secondary);
   overflow: hidden;
   transition:
     height 350ms ease,
@@ -102,7 +102,7 @@ const isVisible = computed(() => view.value.visible)
 }
 
 .status-bar.tone-busy {
-  color: var(--st-color-info);
+  color: var(--st-color-info-strong);
 }
 
 .status-bar.tone-error {
@@ -111,6 +111,6 @@ const isVisible = computed(() => view.value.visible)
 }
 
 .status-bar.tone-ready {
-  color: var(--st-color-success);
+  color: var(--st-color-success-strong);
 }
 </style>

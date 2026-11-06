@@ -431,8 +431,10 @@
   --st-color-focus: var(--st-blue-300);
   --st-color-danger: var(--st-red-300);
   --st-color-success: var(--st-green-500);
+  --st-color-success-strong: var(--st-green-300);
   --st-color-warning: var(--st-gold-200);
   --st-color-info: var(--st-blue-300);
+  --st-color-info-strong: var(--st-blue-200);
   --st-color-shadow: oklch(0.1 0.035 305);
   --st-shadow-strength-near: 55%;
   --st-shadow-strength-far: 40%;
@@ -486,8 +488,10 @@
     --st-color-focus: var(--st-blue-600);
     --st-color-danger: var(--st-red-600);
     --st-color-success: var(--st-green-700);
+    --st-color-success-strong: var(--st-green-900);
     --st-color-warning: var(--st-gold-800);
     --st-color-info: var(--st-blue-600);
+    --st-color-info-strong: var(--st-blue-900);
     --st-color-shadow: oklch(0.2 0.03 305);
     --st-shadow-strength-near: 16%;
     --st-shadow-strength-far: 12%;
@@ -541,8 +545,10 @@
   --st-color-focus: var(--st-blue-600);
   --st-color-danger: var(--st-red-600);
   --st-color-success: var(--st-green-700);
+  --st-color-success-strong: var(--st-green-900);
   --st-color-warning: var(--st-gold-800);
   --st-color-info: var(--st-blue-600);
+  --st-color-info-strong: var(--st-blue-900);
   --st-color-shadow: oklch(0.2 0.03 305);
   --st-shadow-strength-near: 16%;
   --st-shadow-strength-far: 12%;
