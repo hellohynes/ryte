@@ -68,7 +68,8 @@ describe('Indexer memory behavior', () => {
       markIndexed: (sourcePath: string) => {
         events.push(`mark:${sourcePath}`)
       },
-      markRemoved: vi.fn()
+      markRemoved: vi.fn(),
+      totals: () => ({ files: 2, chunks: 2 })
     } as unknown as IndexStateStore
     const vectorStore = {
       replaceFileTextChunks: (sourcePath: string) => {

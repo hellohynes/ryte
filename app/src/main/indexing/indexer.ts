@@ -158,7 +158,15 @@ export class Indexer {
     if (stopNow()) {
       return { filesIndexed: filesDone - filesSkipped, chunksIndexed: chunksDone, stopped: true }
     }
-    emit({ phase: 'done', filesTotal, filesDone, chunksTotal, chunksDone })
+    // Ready describes the saved index, not this pass's attempted files (which include unreadable notes).
+    const totals = indexState.totals()
+    emit({
+      phase: 'done',
+      filesTotal: totals.files,
+      filesDone: totals.files,
+      chunksTotal: totals.chunks,
+      chunksDone: totals.chunks
+    })
     return { filesIndexed: filesDone - filesSkipped, chunksIndexed: chunksDone }
   }
 
