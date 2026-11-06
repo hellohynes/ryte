@@ -339,8 +339,8 @@ describe('workspace handlers: openNativeFile', () => {
     expect(refreshAppMenu).not.toHaveBeenCalled()
   })
 
-  // The renderer unwraps Electron's "Error invoking remote method 'workspace:open-native-file': Error: <message>"
-  // (stores/workspace.ts, pinned by stores/workspace.test.ts), so the channel and a plain Error are what matter.
+  // Preload unwraps Electron's invocation error using the manifest channel (covered through the
+  // renderer store test), so the helper must keep throwing a plain Error with this message.
   it('throws the real helper message as a plain Error for a file that is not Markdown', async () => {
     const dir = await realpath(await mkdtemp(join(tmpdir(), 'ryte-native-')))
     try {

@@ -69,7 +69,7 @@ export function createWorkspaceHandlers<TWindow>({
       })
       if (result.canceled || result.filePaths.length === 0) return store.publicState()
 
-      // A refused file throws a plain Error. The renderer reads its message out of Electron's wrapped text.
+      // A refused file throws a plain Error. Preload unwraps Electron's text before the renderer sees it.
       const fileRef = await fileRefForPickedMarkdownFile(result.filePaths[0]!, notesRoot)
       const next = await store.openPickedFile(fileRef)
       refreshAppMenu()

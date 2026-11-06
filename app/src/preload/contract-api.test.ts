@@ -199,6 +199,27 @@ describe('createContractApi from the generated manifest', () => {
     await expect(createContractApi(ipc).tasks.refresh()).resolves.toBe('result')
   })
 
+  it.each([
+    new Error('Selected file must be a Markdown file'),
+    new Error("Error invoking remote method 'fixture:other-operation': Error: Other failure"),
+    'Picker unavailable'
+  ])('preserves unmatched picker rejections: %s', async (failure) => {
+    const { ipc, invoke } = fakeIpc()
+    invoke.mockRejectedValue(failure)
+
+    await expect(createContractApi(ipc).workspace.openNativeFile()).rejects.toBe(failure)
+  })
+
+  it('preserves wrapped errors from other operations', async () => {
+    const { ipc, invoke } = fakeIpc()
+    const failure = new Error(
+      `Error invoking remote method '${manifest.tasks.operations.refresh}': Error: Refresh failed`
+    )
+    invoke.mockRejectedValue(failure)
+
+    await expect(createContractApi(ipc).tasks.refresh()).rejects.toBe(failure)
+  })
+
   it('subscribes with a callback that gets no arguments and unsubscribes with the same listener', () => {
     const { ipc, on, removeListener, emit } = fakeIpc()
     const callback = vi.fn()
