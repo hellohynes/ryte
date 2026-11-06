@@ -1,7 +1,7 @@
 // Compile-time check, enforced by `pnpm typecheck`: the `tasks` API derived from the contract is
 // call-compatible with the hand-written shape it replaced, so renderer code written against the old
-// declaration keeps compiling. Also checks that a hand-written area and a built area merge.
-import type { ContractApi, MergeApi } from './contract-api'
+// declaration keeps compiling.
+import type { ContractApi } from './contract-api'
 import type {
   MarkdownTaskFact,
   TaskFactsResponse,
@@ -30,19 +30,4 @@ export type CompatibilityChecks = [
   Assert<Extends<MarkdownTaskFact, TaskFactsResponse['tasks'][number]>>,
   // Every pre-change member is still exposed (new operations may add more).
   Assert<Extends<'list' | 'refresh' | 'toggle' | 'onChanged', keyof ContractApi['tasks']>>
-]
-
-interface LegacyShape {
-  tasks: { legacyMethod(): void }
-  workspace: { open(): void }
-}
-
-type Merged = MergeApi<LegacyShape, ContractApi>
-
-export type MergeChecks = [
-  // A hand-written area that shares a name with a built one keeps its methods and gains the built ones.
-  Assert<Extends<Merged['tasks'], { legacyMethod(): void }>>,
-  Assert<Extends<Merged['tasks'], PreChangeTasksApi>>,
-  // Areas the contract does not build are untouched.
-  Assert<Extends<Merged['workspace'], { open(): void }>>
 ]

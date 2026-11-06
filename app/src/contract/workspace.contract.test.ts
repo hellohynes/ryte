@@ -1,9 +1,6 @@
-import { readFileSync } from 'node:fs'
-import { fileURLToPath } from 'node:url'
-
 import { describe, expect, it } from 'vitest'
 
-import { createContractApi, mergeContractApi } from '../preload/contract-api'
+import { createContractApi } from '../preload/contract-api'
 import { ContractInputError, parseOperationInput } from './define'
 import { manifest } from './manifest.generated'
 import {
@@ -39,12 +36,6 @@ const operations = {
   pruneMissingFileRefs
 }
 
-const legacyChannels = (
-  JSON.parse(
-    readFileSync(fileURLToPath(new URL('../../scripts/legacy.json', import.meta.url)), 'utf8')
-  ) as { channels: { request: string[] } }
-).channels.request
-
 describe('workspace operations', () => {
   it('keeps the wire channel names and the renderer-facing operation names', () => {
     expect(Object.keys(workspace.operations)).toEqual(Object.keys(operations))
@@ -79,15 +70,10 @@ describe('workspace operations', () => {
   it('has no channel for the window update, which nothing called', () => {
     const channels = [
       ...Object.values(operations).map((operation) => operation.channel),
-      ...Object.values(manifest.workspace.operations),
-      ...legacyChannels
+      ...Object.values(manifest.workspace.operations)
     ]
     expect(channels).not.toContain('workspace:update-window')
     expect(Object.keys(manifest.workspace.operations)).not.toContain('updateWindow')
-  })
-
-  it('leaves no workspace channel on the legacy list', () => {
-    expect(legacyChannels.filter((channel) => channel.startsWith('workspace:'))).toEqual([])
   })
 
   it('builds all of window.ryte.workspace from the contract, with the renderer-facing names', () => {
@@ -100,9 +86,8 @@ describe('workspace operations', () => {
       },
       manifest
     )
-    const merged = mergeContractApi({}, built) as { workspace: Record<string, unknown> }
 
-    expect(Object.keys(merged.workspace).sort()).toEqual(
+    expect(Object.keys(built.workspace).sort()).toEqual(
       [
         'closeTab',
         'focusTab',
@@ -119,10 +104,10 @@ describe('workspace operations', () => {
         'updateTabViewMode'
       ].sort()
     )
-    ;(merged.workspace.focusTab as (...args: unknown[]) => unknown)({ tabId: 'a' }, 'ignored')
+    ;(built.workspace.focusTab as (...args: unknown[]) => unknown)({ tabId: 'a' }, 'ignored')
     expect(invoked).toEqual([['workspace:focus-tab', { tabId: 'a' }]])
-    ;(merged.workspace.openNativeFile as () => unknown)()
-    ;(merged.workspace.openFile as (...args: unknown[]) => unknown)(
+    ;(built.workspace.openNativeFile as () => unknown)()
+    ;(built.workspace.openFile as (...args: unknown[]) => unknown)(
       { sourcePath: 'a.md' },
       'ignored'
     )

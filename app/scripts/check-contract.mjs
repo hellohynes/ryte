@@ -6,22 +6,17 @@
 // and reaches IPC only through window.ryte); it catches authoring mistakes.
 //
 // Rules, over non-test TypeScript files (tests, *.fixture.ts and src/contract/fixtures/** are skipped):
-//   inventory    every channel-shaped string literal (area:name) in src/main, src/preload, src/shared and
-//                src/contract is a contract channel or a legacy.json channel; a contract channel appears
-//                only under src/contract/; legacy.json holds no stale or overlapping entry.
-//   ipc-access   the identifiers ipcMain / ipcRenderer, and .send / .sendSync / .sendToFrame /
-//                .postMessage (also as element access or a destructured binding), appear only in the
-//                legacy files and the registrar and builder.
-//   imports      nothing under src/contract/ imports electron, and the generated manifest imports nothing;
-//                src/contract/ is value-imported only from src/main/ and, for the manifest alone, the
-//                preload builder; the renderer references neither ipcRenderer nor electron.
-//   preload-area a contract area with no channel left in legacy.json (channels are matched by their prefix) must
-//                not keep an entry in the hand-written LegacyRyteApi interface or legacyApi object of
-//                src/preload/index.ts that no longer calls ipcRenderer. The contract method wins the merge, so
-//                a dead leftover would otherwise sit there unnoticed; an entry that still calls IPC (for
-//                example files.onChange on a viewer:* channel) is live and stays. Anything the rule cannot read
-//                (a spread, a computed key, an extended interface, a renamed declaration, a changed manifest)
-//                fails the check instead of being skipped.
+//   inventory   every channel-shaped string literal (area:name) in src/main, src/preload, src/shared and
+//               src/contract is written only inside src/contract/ and appears in the generated manifest.
+//               There is no list of exceptions: a channel string anywhere else fails, wiring files included.
+//   ipc-access  the identifiers ipcMain / ipcRenderer, and .send / .sendSync / .sendToFrame /
+//               .postMessage (also as element access or a destructured binding), appear only in IPC_ALLOWED:
+//               the registrar, the preload builder and the two wiring files that hand ipcMain / ipcRenderer
+//               to them. A channel built by concatenation or a template, or not shaped `area:name`, fails
+//               wherever it is.
+//   imports     nothing under src/contract/ imports electron, and the generated manifest imports nothing;
+//               src/contract/ is value-imported only from src/main/ and, for the manifest alone, the
+//               preload builder; the renderer references neither ipcRenderer nor electron.
 //
 // The check is a pure function over a map of file paths to source text, so every counterexample is a test
 // (check-contract.test.mjs).
@@ -54,7 +49,9 @@ const INVENTORY_ROOTS = ['src/main/', 'src/preload/', 'src/shared/', 'src/contra
 const REGISTRAR = 'src/main/contract/register.ts'
 const BUILDER = 'src/preload/contract-api.ts'
 const MANIFEST = 'src/contract/manifest.generated.ts'
-const PRELOAD = 'src/preload/index.ts'
+// The only files that may reference IPC primitives. The two wiring files only hand ipcMain / ipcRenderer to the
+// registrar and the builder; this excuses the primitives, never a channel string.
+const IPC_ALLOWED = new Set([REGISTRAR, BUILDER, 'src/main/ipc.ts', 'src/preload/index.ts'])
 
 const isSkipped = (path) =>
   /\.test\.[cm]?[jt]sx?$|\.fixture\.[cm]?[jt]sx?$|\.d\.[cm]?ts$/.test(path) ||
@@ -222,212 +219,20 @@ function resolveSpecifier(from, specifier) {
 const stripExtension = (path) => path.replace(/\.(ts|mts|js|mjs)$/, '')
 const inContract = (path) => path === 'src/contract' || path.startsWith('src/contract/')
 
-const propertyName = (member) =>
-  member.name && (ts.isIdentifier(member.name) || ts.isStringLiteral(member.name))
-    ? member.name.text
-    : null
-
-const unwrap = (expression) => {
-  let value = expression
-  while (
-    ts.isAsExpression(value) ||
-    ts.isSatisfiesExpression(value) ||
-    ts.isParenthesizedExpression(value)
-  )
-    value = value.expression
-  return value
-}
-
-/** The top-level statements' variable declarations, so a same-named local deeper in the file is ignored. */
-const topLevelDeclarations = (sourceFile) =>
-  sourceFile.statements.flatMap((statement) =>
-    ts.isVariableStatement(statement) ? [...statement.declarationList.declarations] : []
+const manifestChannels = (manifestSource) =>
+  new Set(
+    [...manifestSource.matchAll(/'([a-z][a-z0-9-]*:[a-z][a-z0-9-]*)'/g)].map((match) => match[1])
   )
 
 /**
- * The area names in the generated manifest (the top-level keys of `const manifest = { ... }`), or null when
- * that declaration cannot be found or has a spread or computed key, so a changed manifest shape fails the
- * check instead of disabling the rule.
- */
-function manifestAreas(manifestSource) {
-  const declaration = topLevelDeclarations(parse(MANIFEST, manifestSource)).find(
-    (candidate) => candidate.name.getText() === 'manifest' && candidate.initializer
-  )
-  const value = declaration && unwrap(declaration.initializer)
-  if (!value || !ts.isObjectLiteralExpression(value)) return null
-  const names = value.properties.map(propertyName)
-  return names.includes(null) ? null : names
-}
-
-// Globals an entry may use without declaring them; the preload runs in a browser-like context.
-const GLOBAL_NAMES = new Set(['window', 'document', 'process', 'globalThis', 'self', 'navigator'])
-
-const bindingNames = (name, names) => {
-  if (ts.isIdentifier(name)) {
-    names.add(name.text)
-    return
-  }
-  for (const element of name.elements)
-    if (!ts.isOmittedExpression(element)) bindingNames(element.name, names)
-}
-
-/** Names declared or imported at the top level of the file: helpers, aliases and constants an entry may use. */
-const topLevelNames = (sourceFile) => {
-  const names = new Set(GLOBAL_NAMES)
-  for (const statement of sourceFile.statements) {
-    if (ts.isImportDeclaration(statement) && statement.importClause) {
-      const { name, namedBindings } = statement.importClause
-      if (name) names.add(name.text)
-      if (namedBindings && ts.isNamespaceImport(namedBindings)) names.add(namedBindings.name.text)
-      if (namedBindings && ts.isNamedImports(namedBindings))
-        for (const element of namedBindings.elements) names.add(element.name.text)
-    } else if (ts.isVariableStatement(statement)) {
-      for (const declaration of statement.declarationList.declarations)
-        bindingNames(declaration.name, names)
-    } else if (
-      (ts.isFunctionDeclaration(statement) ||
-        ts.isClassDeclaration(statement) ||
-        ts.isEnumDeclaration(statement) ||
-        ts.isModuleDeclaration(statement)) &&
-      statement.name &&
-      ts.isIdentifier(statement.name)
-    ) {
-      names.add(statement.name.text)
-    }
-  }
-  names.delete('legacyApi')
-  return names
-}
-
-/**
- * Whether a hand-written `legacyApi` entry may still be doing something. It is dead only when it is an inline
- * object or function that references no IPC, no legacy channel string and nothing declared or imported at the
- * top level of the file (a helper, an alias, a channel constant). A value the rule cannot look into (an
- * identifier, a shorthand, a call) counts as live, so the rule never advises deleting working code.
- */
-function entryIsLive(property, names, legacyChannels) {
-  if (!ts.isPropertyAssignment(property)) return true
-  const value = unwrap(property.initializer)
-  if (
-    !ts.isObjectLiteralExpression(value) &&
-    !ts.isArrowFunction(value) &&
-    !ts.isFunctionExpression(value)
-  )
-    return true
-  let live = false
-  visit(value, (node) => {
-    if (live) return
-    if (ts.isIdentifier(node)) {
-      const isKey = ts.isPropertyAssignment(node.parent) && node.parent.name === node
-      if (!isKey && (IPC_NAMES.has(node.text) || names.has(node.text))) live = true
-    } else if (
-      (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) &&
-      legacyChannels.has(node.text)
-    ) {
-      live = true
-    }
-  })
-  return live
-}
-
-/**
- * The area keys of the hand-written preload API, from the `LegacyRyteApi` interface and the `legacyApi`
- * object (top-level declarations only). An object entry is `live` when it still calls ipcRenderer.
- * `unreadable` lists what the rule cannot see: a spread, a computed key, an extended interface.
- */
-function legacyPreloadAreas(path, text, legacyChannels) {
-  const sourceFile = parse(path, text)
-  const names = topLevelNames(sourceFile)
-  const found = { interface: false, object: false, entries: [], unreadable: [] }
-
-  for (const statement of sourceFile.statements) {
-    if (!ts.isInterfaceDeclaration(statement) || statement.name.text !== 'LegacyRyteApi') continue
-    found.interface = true
-    if (statement.heritageClauses?.length) {
-      found.unreadable.push({
-        where: 'LegacyRyteApi',
-        line: lineOf(sourceFile, statement),
-        what: 'extends another type'
-      })
-    }
-    for (const member of statement.members) {
-      const name = propertyName(member)
-      if (name) {
-        found.entries.push({
-          name,
-          line: lineOf(sourceFile, member),
-          where: 'LegacyRyteApi',
-          live: false
-        })
-      } else {
-        found.unreadable.push({
-          where: 'LegacyRyteApi',
-          line: lineOf(sourceFile, member),
-          what: 'has a computed or unnamed member'
-        })
-      }
-    }
-  }
-
-  for (const declaration of topLevelDeclarations(sourceFile)) {
-    if (declaration.name.getText() !== 'legacyApi' || !declaration.initializer) continue
-    const value = unwrap(declaration.initializer)
-    if (!ts.isObjectLiteralExpression(value)) continue
-    found.object = true
-    for (const property of value.properties) {
-      const name = propertyName(property)
-      if (name) {
-        found.entries.push({
-          name,
-          line: lineOf(sourceFile, property),
-          where: 'legacyApi',
-          live: entryIsLive(property, names, legacyChannels)
-        })
-      } else {
-        found.unreadable.push({
-          where: 'legacyApi',
-          line: lineOf(sourceFile, property),
-          what: ts.isSpreadAssignment(property) ? 'spreads another object' : 'has a computed key'
-        })
-      }
-    }
-  }
-  return found
-}
-
-/**
- * @param {{ files: Record<string, string>, legacy: object, manifestSource: string }} input
+ * @param {{ files: Record<string, string>, manifestSource: string }} input
  * @returns {Array<{ rule: string, file: string, line: number, message: string }>}
  */
-export function checkContract({ files, legacy, manifestSource }) {
+export function checkContract({ files, manifestSource }) {
   const violations = []
   const fail = (rule, file, line, message) => violations.push({ rule, file, line, message })
 
-  const contractChannels = new Set(
-    [...manifestSource.matchAll(/'([a-z][a-z0-9-]*:[a-z][a-z0-9-]*)'/g)].map((match) => match[1])
-  )
-  const legacyChannels = new Set([
-    ...(legacy.channels?.request ?? []),
-    ...(legacy.channels?.event ?? [])
-  ])
-  const ignored = new Set((legacy.ignore ?? []).map((entry) => entry.channel))
-  const legacyFiles = new Set(legacy.files ?? [])
-  const sendAllowed = new Set((legacy.sendAllowed ?? []).map((entry) => entry.file))
-  const ipcAllowed = new Set([...legacyFiles, REGISTRAR, BUILDER])
-
-  for (const channel of legacyChannels) {
-    if (contractChannels.has(channel)) {
-      fail(
-        'inventory',
-        'scripts/legacy.json',
-        0,
-        `${channel} is a contract channel and a legacy channel; delete the legacy entry`
-      )
-    }
-  }
-
-  const seenChannels = new Set()
-  const filesWithAccess = new Set()
+  const contractChannels = manifestChannels(manifestSource)
 
   for (const [path, text] of Object.entries(files)) {
     const isTs = SCRIPT_FILE.test(path)
@@ -473,8 +278,6 @@ export function checkContract({ files, legacy, manifestSource }) {
 
     // inventory
     for (const { channel, line } of channels) {
-      if (ignored.has(channel)) continue
-      seenChannels.add(channel)
       if (contractChannels.has(channel)) {
         if (!inContract(path)) {
           fail(
@@ -484,14 +287,14 @@ export function checkContract({ files, legacy, manifestSource }) {
             `${channel} belongs to the contract; use the operation from src/contract/ instead of the string`
           )
         }
-      } else if (!legacyChannels.has(channel)) {
+      } else {
         fail(
           'inventory',
           path,
           line,
           inContract(path)
             ? `${channel} is defined in src/contract/ but missing from the generated manifest; run \`pnpm contract:generate\``
-            : `${channel} is not in the contract or scripts/legacy.json; define it in src/contract/ (see docs/api-contract.md). If it is not a channel at all (a DOM event or a cache key), add it to "ignore" in scripts/legacy.json with a reason`
+            : `${channel} is not in the contract; define it in src/contract/ (see docs/api-contract.md). If it is not a channel at all, change the string so it is not shaped like area:name.`
         )
       }
     }
@@ -503,7 +306,7 @@ export function checkContract({ files, legacy, manifestSource }) {
           'inventory',
           path,
           hit.line,
-          `'${hit.name}' is not a valid channel name; use area:name, lowercase and hyphenated (for example files:read-source)`
+          `'${hit.name}' is not a valid channel name; use area:name, lowercase and hyphenated (for example files:read-source-title)`
         )
         continue
       }
@@ -516,20 +319,12 @@ export function checkContract({ files, legacy, manifestSource }) {
         )
         continue
       }
-      const allowed =
-        hit.kind === 'ipc' ? ipcAllowed.has(path) : ipcAllowed.has(path) || sendAllowed.has(path)
-      if (allowed) {
-        if (legacyFiles.has(path)) filesWithAccess.add(path)
-        continue
-      }
+      if (IPC_ALLOWED.has(path)) continue
       fail(
         'ipc-access',
         path,
         hit.line,
-        `${hit.name} reaches IPC outside the registrar and preload builder; add an operation to src/contract/ instead` +
-          (hit.kind === 'send'
-            ? ' (if it is not IPC, for example a worker or a WebSocket, list the file in "sendAllowed" in scripts/legacy.json with a reason)'
-            : '')
+        `${hit.name} reaches IPC outside the registrar, the preload builder and the two wiring files; add an operation to src/contract/ instead`
       )
     }
 
@@ -563,107 +358,6 @@ export function checkContract({ files, legacy, manifestSource }) {
     }
   }
 
-  for (const channel of legacyChannels) {
-    if (!seenChannels.has(channel)) {
-      fail(
-        'inventory',
-        'scripts/legacy.json',
-        0,
-        `${channel} no longer appears in the code; delete the stale legacy entry`
-      )
-    }
-  }
-  for (const entry of ignored) {
-    if (
-      !seenChannels.has(entry) &&
-      ![...Object.values(files)].some((text) => text.includes(entry))
-    ) {
-      fail(
-        'inventory',
-        'scripts/legacy.json',
-        0,
-        `ignored channel ${entry} no longer appears in the code; delete the entry`
-      )
-    }
-  }
-  for (const file of legacyFiles) {
-    if (!(file in files)) {
-      fail(
-        'ipc-access',
-        'scripts/legacy.json',
-        0,
-        `${file} is listed as a legacy file but does not exist`
-      )
-    } else if (!filesWithAccess.has(file)) {
-      fail(
-        'ipc-access',
-        'scripts/legacy.json',
-        0,
-        `${file} no longer reaches IPC; delete it from the legacy files`
-      )
-    }
-  }
-  for (const entry of legacy.sendAllowed ?? []) {
-    if (!entry.reason)
-      fail(
-        'ipc-access',
-        'scripts/legacy.json',
-        0,
-        `sendAllowed entry for ${entry.file} needs a reason`
-      )
-  }
-
-  // preload-area: a fully migrated area keeps no dead hand-written preload entry.
-  const areas = manifestAreas(manifestSource)
-  if (areas === null) {
-    if (manifestSource.trim() !== '') {
-      fail(
-        'preload-area',
-        MANIFEST,
-        0,
-        'cannot read `const manifest = { ... }` (a spread or computed key also fails); if the generated manifest changed shape, update scripts/check-contract.mjs so stale preload entries are still caught'
-      )
-    }
-  } else if (PRELOAD in files) {
-    const areasWithLegacyChannels = new Set(
-      [...legacyChannels].map((channel) => channel.split(':')[0])
-    )
-    const migratedAreas = areas.filter((area) => !areasWithLegacyChannels.has(area))
-    if (migratedAreas.length > 0) {
-      const legacyPreload = legacyPreloadAreas(PRELOAD, files[PRELOAD], legacyChannels)
-      if (!legacyPreload.interface || !legacyPreload.object) {
-        fail(
-          'preload-area',
-          PRELOAD,
-          0,
-          'cannot find both a top-level `interface LegacyRyteApi` and `const legacyApi = { ... }` (`as`, `satisfies` and parentheses around the object are fine; `<T>{ ... }` and `Object.freeze(...)` are not); if they were renamed or wrapped, update scripts/check-contract.mjs so stale preload entries are still caught'
-        )
-      }
-      for (const { where, line, what } of legacyPreload.unreadable) {
-        fail(
-          'preload-area',
-          PRELOAD,
-          line,
-          `${where} ${what}, which this rule cannot read; list the areas directly so a stale entry can be found`
-        )
-      }
-      const live = new Set(
-        legacyPreload.entries
-          .filter((entry) => entry.where === 'legacyApi' && entry.live)
-          .map((entry) => entry.name)
-      )
-      for (const { name, line, where } of legacyPreload.entries) {
-        if (!migratedAreas.includes(name) || live.has(name)) continue
-        fail(
-          'preload-area',
-          PRELOAD,
-          line,
-          `${name} is fully in the contract (no ${name}: channel is left in scripts/legacy.json) and its hand-written entry in ${where} does nothing with IPC, so it is stale; the contract method wins the merge and the old one only hides a mistake. Delete it`
-        )
-      }
-    }
-  }
-
   return violations
 }
 
@@ -684,17 +378,16 @@ function readTree(root) {
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const app = resolve(dirname(fileURLToPath(import.meta.url)), '..')
   const files = readTree(app)
-  const legacy = JSON.parse(readFileSync(resolve(app, 'scripts/legacy.json'), 'utf8'))
-  const violations = checkContract({ files, legacy, manifestSource: files[MANIFEST] ?? '' })
+  const manifestSource = files[MANIFEST] ?? ''
+  const violations = checkContract({ files, manifestSource })
   if (violations.length > 0) {
     for (const v of violations)
       console.error(`${v.file}${v.line ? `:${v.line}` : ''}: [${v.rule}] ${v.message}`)
     console.error(`\n${violations.length} contract violation(s). See docs/api-contract.md.`)
     process.exitCode = 1
   } else {
-    const total = new Set(Object.values(legacy.channels).flat()).size
     console.log(
-      `Contract check passed: ${total} legacy channels, ${Object.keys(files).length} files scanned.`
+      `Contract check passed: ${manifestChannels(manifestSource).size} contract channels, ${Object.keys(files).length} files scanned.`
     )
   }
 }

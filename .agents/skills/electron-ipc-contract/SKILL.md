@@ -1,6 +1,6 @@
 ---
 name: electron-ipc-contract
-description: Add, change, remove, or migrate a Ryte operation or event between the main process and the UI through the API contract in app/src/contract. Use for new IPC operations, payload changes, events, subscriptions, handler behavior, cancellation, or IPC security fixes.
+description: Add, change, or remove a Ryte operation or event between the main process and the UI through the API contract in app/src/contract. Use for new IPC operations, payload changes, events, subscriptions, handler behavior, cancellation, or IPC security fixes.
 ---
 
 # Ryte API Contract
@@ -11,8 +11,8 @@ an `ipcMain` or `ipcRenderer` call, a validator, or a preload method: `pnpm chec
 
 ## Read first
 
-- `docs/api-contract.md`: where things live, and the procedures for add, add an event, change, remove, and migrate a
-  legacy operation. Follow the one that matches your change, step by step.
+- `docs/api-contract.md`: where things live, and the procedures for add, add an event, change, and remove. Follow the
+  one that matches your change, step by step.
 - `docs/api-index.md`: everything that exists today (generated). Check it before adding: an operation may already do
   this.
 
@@ -25,9 +25,9 @@ payload-size bounds, and the test that will prove it.
 
 ## Workflow
 
-1. Check `docs/api-index.md` and `app/scripts/legacy.json`: is the operation already in the contract, or still legacy?
-2. Follow the matching procedure in `docs/api-contract.md`. A new operation always goes in `app/src/contract/`, even in
-   an area that has not been migrated.
+1. Check `docs/api-index.md`: is the operation already in the contract?
+2. Follow the matching procedure in `docs/api-contract.md`. A new operation always goes in `app/src/contract/`, never in
+   `app/src/main/ipc.ts` or `app/src/preload/index.ts`.
 3. Keep the boundaries: filesystem, SQLite, credentials, provider calls and external links stay in main. The handler
    receives validated input and takes its dependencies as parameters so it can be tested without Electron. The
    renderer only calls `window.ryte`. Expose narrow, typed operations; there are no generic passthroughs.
@@ -44,7 +44,6 @@ payload-size bounds, and the test that will prove it.
 
 - Never rename a channel: it is the wire name. Add the new operation, move the callers, remove the old one.
 - Never edit `manifest.generated.ts`, `docs/api-index.md` or `tasks.vectors.expected.json` by hand.
-- Do not add to `app/scripts/legacy.json`; it only shrinks. Delete its entries when you migrate an operation.
 - An operation exposed to agents (when that exists) is additive-only: add optional fields and new operations,
   deprecate before removing.
 

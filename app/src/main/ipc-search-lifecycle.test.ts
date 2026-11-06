@@ -118,7 +118,6 @@ vi.mock('./settings/key-validation', () => ({
   listAuthorizedOpenAIModels: mocks.listModels
 }))
 vi.mock('./viewer/file-reader', () => ({
-  readFileSafe: vi.fn(),
   readSourceFileSafe: vi.fn(),
   readSourceTitleSafe: vi.fn(),
   resolveSourcePathUnderRoot: vi.fn()

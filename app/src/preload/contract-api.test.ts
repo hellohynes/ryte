@@ -1,12 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 
 import { manifest } from '../contract/manifest.generated'
-import {
-  createContractApi,
-  mergeContractApi,
-  type ContractManifest,
-  type IpcRendererLike
-} from './contract-api'
+import { createContractApi, type ContractManifest, type IpcRendererLike } from './contract-api'
 
 type Listener = (event: unknown, ...args: unknown[]) => void
 
@@ -272,29 +267,7 @@ describe('createContractApi with a payload-bearing event and another area', () =
   })
 })
 
-describe('mergeContractApi', () => {
-  it('keeps hand-written methods and areas and adds the built ones to a shared area', () => {
-    const open = vi.fn()
-    const legacyMethod = vi.fn()
-    const whoAmI = vi.fn()
-    const legacy = { workspace: { open }, fixture: { legacyMethod } }
-    const built = { fixture: { whoAmI } }
-
-    const merged = mergeContractApi(legacy, built)
-
-    expect(merged.workspace.open).toBe(open)
-    expect(merged.fixture.legacyMethod).toBe(legacyMethod)
-    expect(merged.fixture.whoAmI).toBe(whoAmI)
-    expect(Object.keys(legacy.fixture)).toEqual(['legacyMethod'])
-  })
-
-  it('lets the contract method win a name clash', () => {
-    const legacy = { fixture: { whoAmI: vi.fn() } }
-    const built = { fixture: { whoAmI: vi.fn() } }
-
-    expect(mergeContractApi(legacy, built).fixture.whoAmI).toBe(built.fixture.whoAmI)
-  })
-
+describe('createContractApi with the real manifest', () => {
   it('builds the real manifest into the same areas the manifest lists', () => {
     const api = createContractApi(fakeIpc().ipc)
     expect(Object.keys(api)).toEqual(Object.keys(manifest))

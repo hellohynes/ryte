@@ -19,7 +19,7 @@ The list of everything that exists today is generated: [api-index.md](api-index.
 | Registration, validation, the event emitter | `app/src/main/contract/register.ts` | Rarely |
 | `window.ryte.<area>` methods and `on<Event>` subscribers | built from the manifest by `app/src/preload/contract-api.ts` | No |
 | Wire types by name, for code that imports them (for example `app/src/shared/tasks.ts` and `app/src/shared/indexer.ts`) | `app/src/shared/<area>.ts` | Only to re-export types inferred from the definition (`export type { ... } from '../contract/<area>'`); never write a type by hand. A new operation does not need one unless code imports its types by name |
-| Operations that have not moved yet | None: `app/scripts/legacy.json` lists no channels, and `ipc-validation.ts` is gone | Do not add to it |
+| Wiring | `app/src/main/ipc.ts` passes `ipcMain` to `registerOperations`; `app/src/preload/index.ts` passes `ipcRenderer` to `createContractApi` | Only to register a new handlers module; never a channel, validator or handler |
 | The enforcement | `app/scripts/check-contract.mjs` | Rarely |
 
 ## How a call flows
@@ -59,8 +59,7 @@ live window, and the renderer subscribes with `window.ryte.tasks.onChanged(callb
    - The `example` is validated against both schemas by a test, so it must be real.
    - A **new area** is a new file `app/src/contract/<area>.ts` exporting `defineArea('<area>', { operations,
      events })` (both are required: pass `events: {}` when there are none), added to `contract` in
-     `app/src/contract/index.ts` with an import and an entry. A new operation always goes in the contract,
-     even in an area that has not been migrated yet (see [Legacy operations](#legacy-operations)).
+     `app/src/contract/index.ts` with an import and an entry.
 
      ```ts
      // app/src/contract/reports.ts
@@ -103,7 +102,7 @@ live window, and the renderer subscribes with `window.ryte.tasks.onChanged(callb
 
 5. **Call it** from a store or component: `await window.ryte.<area>.ping({ id })`. The types come from the
    definition, so `app/src/preload/index.ts` and `app/src/shared/` need no edit. `window.ryte.<area>.<operation>` and its
-   types appear on their own, also in an area that still has hand-written methods.
+   types appear on their own.
 
 6. Run `pnpm validate`.
 
@@ -178,65 +177,38 @@ error), so `typecheck` fails between deleting the definition and deleting the ha
 handlers file and that file's test, and its import and entry in the `registerOperations` call in
 `app/src/main/ipc.ts`.
 
-## Legacy operations
+## No hand-written IPC
 
-Every operation has moved onto the contract: `app/scripts/legacy.json` lists no channels, and `ipc-validation.ts` is
-gone. The rules below are what `check:contract` still enforces about the old hand-written wiring, so none can come
-back:
-
-- **New operations never go there.** `check:contract` rejects a channel that is in neither the contract nor
-  `legacy.json`.
-- **Migrating an old-style operation** (the procedure used for every area):
-  1. Record what the old validator accepts and rejects first (authored inputs, expectations recorded from the old
-     code) so the new schema is checked against behavior it cannot influence. `tasks.vectors.*` is the example.
-  2. Define it in the contract, write the handler, and delete the old `ipcMain.handle`, the `assertValid*`
-     function and its test, and the preload method and type. When the last operation of an area moves, also
-     delete the area's key from `LegacyRyteApi` and `legacyApi` unless it still calls IPC for another area's
-     channels; `check:contract` fails on a dead one.
-  3. Delete its channel from `legacy.json`. When a legacy file no longer reaches IPC at all, delete it from the
-     list too. `check:contract` fails on a stale entry, so the list only ever shrinks.
-- A half-migrated area works: contract methods are merged into the hand-written `window.ryte.<area>` object.
+`app/src/main/ipc.ts` and `app/src/preload/index.ts` only wire the contract: they hand `ipcMain` to
+`registerOperations` and `ipcRenderer` to `createContractApi`. A new operation goes in the contract (see
+[Add an operation](#add-an-operation)), never in either file. `check:contract` excuses these two files for using
+`ipcMain` and `ipcRenderer`, but a channel string, a channel built from a template or by concatenation, or a
+malformed channel name fails there like anywhere else. It also fails on `ipcMain`, `ipcRenderer`, `.send` and the like
+outside a fixed list of files (below). It is a guardrail, not a security boundary (see the end of the next section).
 
 ## What is enforced
 
 `pnpm validate` runs `pnpm contract:generate --check`, `pnpm check:contract` and the check's own tests:
 
-- Every channel string in `src/main`, `src/preload`, `src/shared` and `src/contract` is a contract channel or in
-  `legacy.json`, and a contract channel is written as a string only inside `src/contract/`.
-- Only the legacy files, `register.ts` and `contract-api.ts` may use `ipcMain`, `ipcRenderer`, `.send`, `.sendSync`,
-  `.sendToFrame` or `.postMessage`.
+- Every channel string in `src/main`, `src/preload`, `src/shared` and `src/contract` is a contract channel, and is
+  written as a string only inside `src/contract/`. There is no list of exceptions.
+- Only `register.ts`, `contract-api.ts`, `src/main/ipc.ts` and `src/preload/index.ts` (`IPC_ALLOWED` in
+  `scripts/check-contract.mjs`) may use `ipcMain`, `ipcRenderer`, `.send`, `.sendSync`, `.sendToFrame` or
+  `.postMessage`. The list excuses those names, not channel strings: a channel written in `ipc.ts` or the preload
+  still fails.
 - A channel is never built by concatenation or a template (`'tasks' + ':x'`, `` `tasks:${name}` ``) in an IPC call.
-- A channel name in an IPC call is always `area:name`, lowercase and hyphenated (`files:read-source`, not
+- A channel name in an IPC call is always `area:name`, lowercase and hyphenated (`files:read-source-title`, not
   `files:readAll`), checked on `ipcMain`, `ipcRenderer`, `.ipc` and the send methods of `webContents` and `sender`.
   `webContents.on('will-navigate')` and similar Electron events are not channels.
 - Every script file under `src/` is scanned (`.ts`, `.tsx`, `.mts`, `.cts`, `.js`, `.jsx`, `.mjs`, `.cjs`), and `.vue`
   files through their `<script>` blocks.
 - `src/contract/` never imports Electron, and is imported by value only from `src/main/` (and, for the manifest, the
   preload builder). The renderer never touches `ipcRenderer` or `electron`.
-- A contract area with no channel left in `legacy.json` (channels are matched to an area by their prefix) keeps no
-  dead entry in `LegacyRyteApi` or `legacyApi` in `app/src/preload/index.ts`. The contract method wins the merge, so
-  a leftover hand-written entry that does nothing would otherwise go unnoticed. An entry counts as dead only when it
-  is an inline object or function that references no IPC, no legacy channel string and nothing declared or imported
-  at the top level of the file (a helper, an alias, a constant, an enum or a namespace) and uses no browser global
-  such as `window` or `process`; a value the rule cannot look into (an
-  identifier, a shorthand, a call) counts as live, so the rule never advises deleting working code. A half-migrated
-  area keeps its entries. The rule fails instead of skipping when it cannot read something: a renamed declaration
-  (it looks for a top-level `interface LegacyRyteApi` and `const legacyApi = { ... }`, with or without `as`,
-  `satisfies` or parentheses), a spread, a computed key, an extended interface, or a manifest that no longer has the
-  `const manifest = { ... }` shape. Rename or restructure those and the check's own tests say what to update in
-  `scripts/check-contract.mjs`.
-- `legacy.json` cannot grow without editing the check's own test, whose numbers are exact: a migration that shrinks
-  the list lowers them.
-
-Two escape hatches exist, both in `app/scripts/legacy.json`, both need a reason and both are held at zero by that
-test, so using one is a deliberate, reviewed edit: `ignore` for a string that merely looks like a channel (a DOM
-event, a cache key), and `sendAllowed` for a file that calls `.send` or `.postMessage` on something that is not IPC
-(a worker, a WebSocket).
 
 It is a guardrail against authoring mistakes, not a security boundary: the renderer is sandboxed and reaches the main
 process only through `window.ryte`. It does not try to stop deliberate
 evasion, for example a computed property name (`e['ipc' + 'Main']`), a channel name hidden behind a helper, or a
-local alias of `webContents` inside a legacy file.
+local alias of `webContents` inside a wiring file.
 Review catches those.
 
 ## Long-running operations and streams

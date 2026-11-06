@@ -1,8 +1,5 @@
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
-import { dirname, resolve } from 'node:path'
 import { test } from 'node:test'
-import { fileURLToPath } from 'node:url'
 
 import { checkContract } from './check-contract.mjs'
 
@@ -11,22 +8,10 @@ const manifestSource = `export const manifest = {
 } as const
 `
 
-const baseLegacy = {
-  files: ['src/main/ipc.ts', 'src/preload/index.ts'],
-  sendAllowed: [],
-  ignore: [],
-  channels: { request: ['app:get-version'], event: [] }
-}
-
-// A hand-written preload like the real one: an interface and an object of areas that have not moved yet.
-function preload({ iface = 'app: { x(): void }', object = 'app: { x: 1 }', extra = '' } = {}) {
-  return [
-    `import { ipcRenderer } from 'electron'`,
-    `interface LegacyRyteApi { ${iface} }`,
-    `const legacyApi: LegacyRyteApi = { ${object} }`,
-    `ipcRenderer.invoke('app:get-version')`,
-    extra
-  ].join('\n')
+// The two wiring files hold no channel: they only hand ipcMain / ipcRenderer to the registrar and the builder.
+const wiring = {
+  'src/main/ipc.ts': `import { ipcMain } from 'electron'\nexport const wire = (register: (ipc: unknown) => void): void => register(ipcMain)\n`,
+  'src/preload/index.ts': `import { ipcRenderer } from 'electron'\nimport { createContractApi } from './contract-api'\nexport const api = createContractApi(ipcRenderer)\n`
 }
 
 // A small tree that follows every rule. Each test changes one thing and expects the matching violation.
@@ -35,18 +20,16 @@ const baseFiles = {
   'src/contract/tasks.ts': `export const list = { channel: 'tasks:list' }\nexport const changed = { channel: 'tasks:changed' }\n`,
   'src/main/contract/register.ts': `export const emit = (win: any, event: any): void => win.webContents.send(event.channel)\n`,
   'src/preload/contract-api.ts': `import { manifest } from '../contract/manifest.generated'\nexport const api = manifest\n`,
-  'src/main/ipc.ts': `import { ipcMain } from 'electron'\nipcMain.handle('app:get-version', () => 1)\n`,
-  'src/preload/index.ts': preload(),
+  ...wiring,
   'src/shared/tasks.ts': `export type { A } from '../contract/tasks'\n`,
   'src/renderer/src/App.vue': `<script setup lang="ts">\nconst emit = defineEmits<{ 'update:open': [boolean] }>()\nemit('update:open', true)\n</script>\n`
 }
 
-function run(changes = {}, legacy = baseLegacy) {
+function run(changes = {}) {
   const files = { ...baseFiles, ...changes }
   for (const [path, value] of Object.entries(changes)) if (value === null) delete files[path]
   return checkContract({
     files,
-    legacy,
     manifestSource: files['src/contract/manifest.generated.ts'] ?? ''
   })
 }
@@ -55,8 +38,8 @@ const rules = (violations) => violations.map((violation) => violation.rule)
 const messages = (violations) =>
   violations.map((violation) => `${violation.file}: ${violation.message}`).join('\n')
 
-function expectViolation(changes, rule, pattern, legacy) {
-  const violations = run(changes, legacy)
+function expectViolation(changes, rule, pattern) {
+  const violations = run(changes)
   assert.ok(
     rules(violations).includes(rule),
     `expected a ${rule} violation, got:\n${messages(violations) || '(none)'}`
@@ -96,7 +79,7 @@ test('rejects a raw handler for a new channel in a new file', () => {
   expectViolation(
     { 'src/main/new-area.ts': `ipcMain.handle('tasks:extra', () => 1)\n` },
     'inventory',
-    /tasks:extra is not in the contract or scripts\/legacy.json/
+    /tasks:extra is not in the contract/
   )
 })
 
@@ -116,13 +99,13 @@ test('rejects a raw send of a contract event, outside the contract', () => {
   assert.match(messages(violations), /tasks:changed belongs to the contract/)
 })
 
-test('rejects event.sender.send and other send variants outside the listed files', () => {
+test('rejects event.sender.send and other send variants outside the allowed files', () => {
   for (const call of [
-    `event.sender.send('app:get-version')`,
-    `wc.sendSync('app:get-version')`,
-    `wc.sendToFrame(1, 'app:get-version')`,
-    `wc.postMessage('app:get-version', 1)`,
-    `wc['send']('app:get-version')`,
+    `event.sender.send(name)`,
+    `wc.sendSync(name)`,
+    `wc.sendToFrame(1, name)`,
+    `wc.postMessage(name, 1)`,
+    `wc['send'](name)`,
     `const { send } = win.webContents`
   ]) {
     expectViolation({ 'src/main/foo.ts': `${call}\n` }, 'ipc-access', /reaches IPC outside/)
@@ -164,7 +147,7 @@ test('scans every script extension, not only .ts', () => {
   assert.deepEqual(run({ 'src/main/types.d.mts': `export declare const x: string\n` }), [])
 })
 
-test('rejects a channel built by concatenation or a template, even in a legacy file', () => {
+test('rejects a channel built by concatenation or a template, even in a wiring file', () => {
   for (const code of [
     `ipcMain.handle('tasks' + ':evil', () => 1)`,
     'ipcMain.handle(`tasks:${name}`, () => 1)',
@@ -174,7 +157,7 @@ test('rejects a channel built by concatenation or a template, even in a legacy f
   ]) {
     expectViolation(
       {
-        'src/main/ipc.ts': `import { ipcMain } from 'electron'\nipcMain.handle('app:get-version', () => 1)\n${code}\n`
+        'src/main/ipc.ts': `import { ipcMain } from 'electron'\n${code}\n`
       },
       'ipc-access',
       /builds its channel with concatenation or a template/
@@ -183,13 +166,13 @@ test('rejects a channel built by concatenation or a template, even in a legacy f
   // A plain identifier or property is a constant, not a built string.
   assert.deepEqual(
     run({
-      'src/main/ipc.ts': `import { ipcMain } from 'electron'\nipcMain.handle('app:get-version', () => 1)\nconst name = 'app:get-version'\nipcMain.removeHandler(name)\nwin.webContents.send(event.channel, 1)\n`
+      'src/main/ipc.ts': `import { ipcMain } from 'electron'\nconst name = event.channel\nipcMain.removeHandler(name)\nwin.webContents.send(event.channel, 1)\n`
     }),
     []
   )
 })
 
-test('rejects a malformed channel name in an IPC call, even in a legacy file', () => {
+test('rejects a malformed channel name in an IPC call, even in a wiring file', () => {
   for (const code of [
     `ipcMain.handle('files:readAll', () => 1)`,
     `ipcMain.handle('files:read_all', () => 1)`,
@@ -203,12 +186,25 @@ test('rejects a malformed channel name in an IPC call, even in a legacy file', (
   ]) {
     expectViolation(
       {
-        'src/main/ipc.ts': `import { ipcMain } from 'electron'\nipcMain.handle('app:get-version', () => 1)\n${code}\n`
+        'src/main/ipc.ts': `import { ipcMain } from 'electron'\n${code}\n`
       },
       'inventory',
       /is not a valid channel name/
     )
   }
+})
+
+test('a channel in a template literal with no substitutions is still a channel string', () => {
+  expectViolation(
+    { 'src/main/foo.ts': 'export const c = `tasks:x`\n' },
+    'inventory',
+    /tasks:x is not in the contract/
+  )
+  expectViolation(
+    { 'src/main/foo.ts': 'export const c = `tasks:list`\n' },
+    'inventory',
+    /tasks:list belongs to the contract/
+  )
 })
 
 test('other Electron events on webContents are not channels', () => {
@@ -230,58 +226,137 @@ test('the webContents .ipc object counts as IPC access', () => {
   )
 })
 
-test('the messages say what to do about a false positive', () => {
-  expectViolation(
-    { 'src/main/foo.ts': `export const key = 'cache:warm'\n` },
-    'inventory',
-    /add it to "ignore" in scripts\/legacy.json with a reason/
-  )
-  expectViolation(
-    { 'src/main/worker.ts': `export const f = (w: any): void => w.postMessage(1)\n` },
-    'ipc-access',
-    /list the file in "sendAllowed" in scripts\/legacy.json with a reason/
-  )
+test('a string that merely looks like a channel has no escape hatch', () => {
+  const violations = run({ 'src/main/foo.ts': `export const key = 'cache:warm'\n` })
+  assert.ok(rules(violations).includes('inventory'))
+  assert.match(messages(violations), /cache:warm is not in the contract/)
+  assert.match(messages(violations), /define it in src\/contract\/ \(see docs\/api-contract\.md\)/)
+  assert.match(messages(violations), /If it is not a channel at all, change the string/)
+  assert.doesNotMatch(messages(violations), /legacy|ignore|sendAllowed/)
 })
 
-test('rejects a new channel literal in a legacy file, and one in the preload', () => {
+test('a worker or socket send outside the allowed files has no escape hatch either', () => {
+  const violations = run({
+    'src/main/worker.ts': `export const f = (w: any): void => w.postMessage(1)\n`
+  })
+  assert.ok(rules(violations).includes('ipc-access'))
+  assert.doesNotMatch(messages(violations), /legacy|ignore|sendAllowed/)
+})
+
+// The allowlist excuses IPC primitives, never a channel string.
+test('the registrar, the builder and the two wiring files may reference IPC primitives', () => {
+  for (const [file, code] of Object.entries({
+    'src/main/contract/register.ts': `export const f = (ipcMain: any, win: any): void => { ipcMain.handle(name, () => 1); win.webContents.send(name) }\n`,
+    'src/preload/contract-api.ts': `export const f = (ipcRenderer: any): void => { ipcRenderer.invoke(name); ipcRenderer.on(name, cb); ipcRenderer.removeListener(name, cb) }\n`,
+    'src/main/ipc.ts': `import { ipcMain } from 'electron'\nexport const f = (win: any): void => { ipcMain.removeHandler(name); win.webContents.send(name); win.webContents.postMessage(name, 1) }\n`,
+    'src/preload/index.ts': `import { ipcRenderer } from 'electron'\nexport const f = (): void => { ipcRenderer.removeAllListeners(name) }\n`
+  })) {
+    assert.deepEqual(run({ [file]: code }), [], file)
+  }
+})
+
+test('a file outside the allowlist may not reference ipcMain or ipcRenderer', () => {
+  for (const file of [
+    'src/main/other.ts',
+    'src/main/index.ts',
+    'src/main/contract/tasks-handlers.ts',
+    'src/preload/other.ts',
+    'src/shared/other.ts',
+    'src/contract/other.ts'
+  ]) {
+    for (const name of ['ipcMain', 'ipcRenderer']) {
+      expectViolation(
+        { [file]: `import { ${name} } from 'electron'\nexport const x = ${name}\n` },
+        'ipc-access',
+        new RegExp(
+          `${name} reaches IPC outside the registrar, the preload builder and the two wiring`
+        )
+      )
+    }
+  }
+})
+
+test('the allowlist matches whole paths, not look-alikes', () => {
+  for (const file of [
+    'src/main/sub/ipc.ts',
+    'src/main/ipc.mts',
+    'src/main/ipc2.ts',
+    'src/preload/sub/index.ts',
+    'src/preload/index.cjs',
+    'src/main/contract/register.js',
+    'src/preload/contract-api.tsx'
+  ]) {
+    expectViolation(
+      { [file]: `import { ipcMain } from 'electron'\nexport const x = ipcMain\n` },
+      'ipc-access',
+      /ipcMain reaches IPC outside/
+    )
+  }
+})
+
+test('a hand-written channel string in a wiring file still fails', () => {
+  for (const [file, code] of [
+    [
+      'src/main/ipc.ts',
+      `import { ipcMain } from 'electron'\nipcMain.handle('app:brand-new', () => 1)\n`
+    ],
+    [
+      'src/preload/index.ts',
+      `import { ipcRenderer } from 'electron'\nipcRenderer.invoke('app:brand-new')\n`
+    ]
+  ]) {
+    expectViolation({ [file]: code }, 'inventory', /app:brand-new is not in the contract/)
+  }
+})
+
+test('a contract channel written as a string in a wiring file still fails', () => {
+  for (const [file, code] of [
+    [
+      'src/main/ipc.ts',
+      `import { ipcMain } from 'electron'\nipcMain.handle('tasks:list', () => 1)\n`
+    ],
+    [
+      'src/main/ipc.ts',
+      `import { ipcMain } from 'electron'\nexport const wc = (w: any): void => w.webContents.send('tasks:changed')\n`
+    ],
+    [
+      'src/preload/index.ts',
+      `import { ipcRenderer } from 'electron'\nipcRenderer.invoke('tasks:list')\n`
+    ],
+    [
+      'src/preload/index.ts',
+      `import { ipcRenderer } from 'electron'\nipcRenderer.on('tasks:changed', () => 1)\n`
+    ]
+  ]) {
+    expectViolation({ [file]: code }, 'inventory', /tasks:(list|changed) belongs to the contract/)
+  }
+})
+
+test('a channel string in src/shared or src/preload (not wiring) fails', () => {
+  for (const file of ['src/shared/x.ts', 'src/preload/helper.ts', 'src/main/helper.ts']) {
+    expectViolation(
+      { [file]: `export const c = 'tasks:x'\n` },
+      'inventory',
+      /tasks:x is not in the contract/
+    )
+  }
+})
+
+test('import = require of electron is flagged like any electron import', () => {
   expectViolation(
     {
-      'src/preload/index.ts': `import { ipcRenderer } from 'electron'\nipcRenderer.invoke('app:get-version')\nipcRenderer.invoke('app:brand-new')\n`
+      'src/contract/define.ts': `import electron = require('electron')\nexport const e = electron\n`
     },
-    'inventory',
-    /app:brand-new is not in the contract/
+    'imports',
+    /src\/contract\/ must not import electron/
   )
-})
-
-test('rejects a contract channel written as a string outside the contract', () => {
   expectViolation(
     {
-      'src/preload/index.ts': `import { ipcRenderer } from 'electron'\nipcRenderer.invoke('app:get-version')\nipcRenderer.invoke('tasks:list')\n`
+      'src/renderer/src/bad.ts': `import electron = require('electron')\nexport const e = electron\n`
     },
-    'inventory',
-    /tasks:list belongs to the contract/
+    'renderer',
+    /must not import electron/
   )
-})
-
-test('rejects a channel that is both a contract channel and a legacy channel', () => {
-  expectViolation({}, 'inventory', /tasks:list is a contract channel and a legacy channel/, {
-    ...baseLegacy,
-    channels: { request: ['app:get-version', 'tasks:list'], event: [] }
-  })
-})
-
-test('rejects a stale legacy channel and a stale legacy file', () => {
-  expectViolation({}, 'inventory', /app:gone no longer appears/, {
-    ...baseLegacy,
-    channels: { request: ['app:get-version', 'app:gone'], event: [] }
-  })
-  expectViolation(
-    { 'src/preload/index.ts': `export const none = 1\n` },
-    'ipc-access',
-    /src\/preload\/index.ts no longer reaches IPC/,
-    { ...baseLegacy, channels: { request: ['app:get-version'], event: [] } }
-  )
-  expectViolation({ 'src/main/ipc.ts': null }, 'ipc-access', /does not exist/)
 })
 
 test('rejects electron, including a type-only import, inside src/contract', () => {
@@ -300,6 +375,11 @@ test('rejects a manifest that imports anything', () => {
     'imports',
     /generated manifest must import nothing/
   )
+})
+
+test('a deleted manifest is still caught: the contract channels the code names have no home', () => {
+  const violations = run({ 'src/contract/manifest.generated.ts': null })
+  assert.ok(rules(violations).includes('inventory'), messages(violations) || '(none)')
 })
 
 test('rejects value imports of the contract outside main and the builder, accepts type imports', () => {
@@ -364,324 +444,45 @@ test('rejects ipcRenderer, electron and contract value imports in the renderer, 
   )
 })
 
-test('an ignore entry removes a false positive and goes stale when unused', () => {
-  const withIgnore = {
-    ...baseLegacy,
-    ignore: [{ channel: 'ui:toggle', reason: 'a DOM event name' }]
-  }
-  assert.deepEqual(run({ 'src/main/ui.ts': `export const e = 'ui:toggle'\n` }, withIgnore), [])
-  expectViolation({}, 'inventory', /ignored channel ui:toggle no longer appears/, withIgnore)
-})
-
-test('a sendAllowed file may call send, and needs a reason', () => {
-  const allowed = {
-    ...baseLegacy,
-    sendAllowed: [{ file: 'src/main/socket.ts', reason: 'a websocket, not IPC' }]
-  }
-  assert.deepEqual(
-    run({ 'src/main/socket.ts': `export const s = (ws: any): void => ws.send('hi')\n` }, allowed),
-    []
-  )
+test('the renderer ipcRenderer rule applies to .ts files, not only .vue', () => {
   expectViolation(
-    { 'src/main/socket.ts': `export const s = (ws: any): void => ws.send('hi')\n` },
-    'ipc-access',
-    /needs a reason/,
-    { ...baseLegacy, sendAllowed: [{ file: 'src/main/socket.ts' }] }
-  )
-})
-
-const preloadAreaViolations = (changes, legacy) =>
-  run(changes, legacy).filter((violation) => violation.rule === 'preload-area')
-
-test('rejects a dead hand-written preload entry for an area that has fully moved into the contract', () => {
-  // `tasks` is in the manifest and has no channel left in legacy.json; the entry calls no IPC.
-  const stale = {
-    'src/preload/index.ts': preload({
-      iface: 'app: { x(): void }; tasks: { x(): void }',
-      object: 'app: { x: 1 }; tasks: { x: 1 }'
-    })
-  }
-  const text = messages(preloadAreaViolations(stale))
-  assert.match(text, /tasks is fully in the contract[^\n]*LegacyRyteApi/)
-  assert.match(text, /tasks is fully in the contract[^\n]*legacyApi/)
-  // A quoted key is read like any other.
-  assert.equal(
-    preloadAreaViolations({
-      'src/preload/index.ts': preload({
-        iface: `app: { x(): void }; 'tasks': { x(): void }`,
-        object: `app: { x: 1 }; 'tasks': { x: 1 }`
-      })
-    }).length,
-    2
-  )
-})
-
-test('rejects an interface entry whose implementation is missing', () => {
-  expectViolation(
-    { 'src/preload/index.ts': preload({ iface: 'app: { x(): void }; tasks: { x(): void }' }) },
-    'preload-area',
-    /tasks is fully in the contract[^\n]*LegacyRyteApi/
-  )
-})
-
-test('a fully migrated area may keep an entry that still calls IPC on another area channel', () => {
-  // files.onChange-style: the area key differs from the channel prefix, and the entry is live.
-  const live = {
-    ...baseLegacy,
-    channels: { request: ['app:get-version'], event: ['viewer:changed'] }
-  }
-  const violations = run(
     {
-      'src/preload/index.ts': preload({
-        iface: 'app: { x(): void }; tasks: { onChange(): void }',
-        object: `app: { x: 1 }; tasks: { onChange: () => ipcRenderer.on('viewer:changed', () => 1) }`
-      })
+      'src/renderer/src/bad.ts': `export const r = (w: any) => w.ipcRenderer\nipcRenderer.send('x')\n`
     },
-    live
+    'renderer',
+    /must not reference ipcRenderer/
   )
-  assert.deepEqual(violations, [])
 })
 
-test('an area with only a request channel or only an event channel left is half migrated', () => {
-  for (const [channels, extra] of [
-    [{ request: ['app:get-version', 'tasks:old'], event: [] }, `ipcRenderer.invoke('tasks:old')`],
-    [
-      { request: ['app:get-version'], event: ['tasks:old-event'] },
-      `ipcRenderer.on('tasks:old-event', () => 1)`
-    ]
-  ]) {
-    const violations = run(
-      {
-        'src/preload/index.ts': preload({
-          iface: 'app: { x(): void }; tasks: { x(): void }',
-          object: 'app: { x: 1 }; tasks: { x: 1 }',
-          extra
-        })
-      },
-      { ...baseLegacy, channels }
-    )
-    assert.deepEqual(
-      violations.filter((violation) => violation.rule === 'preload-area'),
-      []
-    )
-  }
-})
-
-test('a nested key named like an area is not an area entry', () => {
+test('a value import of the contract is rejected in a .vue script block', () => {
+  expectViolation(
+    {
+      'src/renderer/src/Value.vue': `<script setup lang="ts">\nimport { list } from '../../contract/tasks'\nconsole.log(list)\n</script>\n`
+    },
+    'imports',
+    /renderer must not value-import/
+  )
   assert.deepEqual(
-    preloadAreaViolations({
-      'src/preload/index.ts': preload({
-        iface: 'app: { tasks: { x(): void } }',
-        object: 'app: { tasks: { x: 1 } }'
-      })
+    run({
+      'src/renderer/src/Type.vue': `<script setup lang="ts">\nimport type { A } from '../../contract/tasks'\nconst a: A | null = null\nconsole.log(a)\n</script>\n`
     }),
     []
   )
 })
 
-test('reads the declarations through as and satisfies, and only at the top level', () => {
-  const body = (object) =>
-    `import { ipcRenderer } from 'electron'\ninterface LegacyRyteApi { app: { x(): void }; tasks: { x(): void } }\n${object}\nipcRenderer.invoke('app:get-version')\n`
-  for (const object of [
-    `const legacyApi = { app: { x: 1 }, tasks: { x: 1 } } as LegacyRyteApi`,
-    `const legacyApi = { app: { x: 1 }, tasks: { x: 1 } } satisfies LegacyRyteApi`
-  ]) {
-    const text = messages(preloadAreaViolations({ 'src/preload/index.ts': body(object) }))
-    // The object is found through the wrapper (so no "cannot find" failure) and its entry is the one flagged.
-    assert.doesNotMatch(text, /cannot find/, object)
-    assert.match(text, /tasks is fully in the contract[^\n]*entry in legacyApi/, object)
-  }
-  // A same-named local in a function is not the real object, and does not hide or add an entry.
-  const withLocal = `import { ipcRenderer } from 'electron'
-interface LegacyRyteApi { app: { x(): void } }
-const legacyApi: LegacyRyteApi = { app: { x: 1 } }
-function helper() { const legacyApi = { tasks: { x: 1 } }; return legacyApi }
-ipcRenderer.invoke('app:get-version')
-`
-  assert.deepEqual(preloadAreaViolations({ 'src/preload/index.ts': withLocal }), [])
-})
-
-test('fails closed on what the preload-area rule cannot read', () => {
-  const declare = (iface, object) =>
-    `import { ipcRenderer } from 'electron'\ninterface LegacyRyteApi ${iface}\nconst legacyApi: LegacyRyteApi = ${object}\nipcRenderer.invoke('app:get-version')\n`
-  const cases = [
-    [
-      'renamed declarations',
-      `import { ipcRenderer } from 'electron'\nconst api = { tasks: {} }\nipcRenderer.invoke('app:get-version')\n`,
-      /cannot find both a top-level `interface LegacyRyteApi` and `const legacyApi/
-    ],
-    [
-      'a spread',
-      declare('{ app: { x(): void } }', '{ app: { x: 1 }, ...other }'),
-      /legacyApi spreads another object/
-    ],
-    [
-      'a computed key',
-      declare('{ app: { x(): void } }', `{ app: { x: 1 }, ['tasks']: { x: 1 } }`),
-      /legacyApi has a computed key/
-    ],
-    [
-      'an extended interface',
-      declare('extends Base { app: { x(): void } }', '{ app: { x: 1 } }'),
-      /LegacyRyteApi extends another type/
-    ]
-  ]
-  for (const [label, source, pattern] of cases) {
-    assert.match(
-      messages(preloadAreaViolations({ 'src/preload/index.ts': source })),
-      pattern,
-      label
-    )
-  }
-})
-
-test('fails closed when the generated manifest changes shape', () => {
+test('every script block of a .vue file is scanned, not only the first', () => {
   expectViolation(
     {
-      'src/contract/manifest.generated.ts': `export const areas = { tasks: { operations: {}, events: {} } }\n`
+      'src/renderer/src/Two.vue': `<script lang="ts">\nexport default { name: 'Two' }\n</script>\n<script setup lang="ts">\nimport { ipcRenderer } from 'electron'\nipcRenderer.send('app:get-version')\n</script>\n`
     },
-    'preload-area',
-    /cannot read `const manifest = \{ \.\.\. \}`/
+    'renderer',
+    /must not reference ipcRenderer/
   )
-})
-
-test('an entry that reaches IPC through a helper, an alias, a constant or an opaque value is live', () => {
-  const live = { ...baseLegacy, channels: { request: ['app:get-version'], event: ['viewer:x'] } }
-  const source = (top, entry) =>
-    `import { ipcRenderer } from 'electron'
-${top}
-interface LegacyRyteApi { app: { x(): void }; tasks: { x(): void } }
-const legacyApi: LegacyRyteApi = { app: { x: 1 }, tasks: ${entry} }
-ipcRenderer.invoke('app:get-version')
-`
-  const cases = {
-    'a helper that takes the channel': [
-      `function subscribe(channel: string, cb: () => void): void { ipcRenderer.on(channel, cb) }`,
-      `{ on: (cb) => subscribe('viewer:x', cb) }`
-    ],
-    'an alias of ipcRenderer': [
-      `const ipc = ipcRenderer`,
-      `{ on: (cb) => ipc.on('viewer:x', cb) }`
-    ],
-    'a channel constant': [`const CHANNEL = 'viewer:x'`, `{ channel: () => CHANNEL }`],
-    'a channel string with no call': [``, `{ channel: () => 'viewer:x' }`],
-    'an identifier value': [`const tasksApi = { x: 1 }`, `tasksApi`],
-    'a call value': [`function makeTasks() { return { x: 1 } }`, `makeTasks()`],
-    'a destructured helper': [
-      `const helpers = { sub: (cb: () => void) => cb() }\nconst { sub } = helpers`,
-      `{ on: (cb) => sub(cb) }`
-    ],
-    'an array-destructured helper': [
-      `const helpers = [(cb: () => void) => cb()]\nconst [sub] = helpers`,
-      `{ on: (cb) => sub(cb) }`
-    ],
-    'an enum': [`enum Channel { Changed = 1 }`, `{ channel: () => Channel.Changed }`],
-    'a namespace': [
-      `namespace Bus { export const send = (): void => undefined }`,
-      `{ on: () => Bus.send() }`
-    ],
-    'a browser global': [``, `{ on: (cb) => window.addEventListener('message', cb) }`],
-    'a process global': [``, `{ platform: () => process.platform }`]
-  }
-  for (const [label, [top, entry]] of Object.entries(cases)) {
-    assert.deepEqual(
-      preloadAreaViolations({ 'src/preload/index.ts': source(top, entry) }, live),
-      [],
-      label
-    )
-  }
-  // A shorthand entry is opaque too.
-  const shorthand = `import { ipcRenderer } from 'electron'
-const tasks = { x: 1 }
-interface LegacyRyteApi { app: { x(): void }; tasks: { x(): void } }
-const legacyApi: LegacyRyteApi = { app: { x: 1 }, tasks }
-ipcRenderer.invoke('app:get-version')
-`
-  assert.deepEqual(preloadAreaViolations({ 'src/preload/index.ts': shorthand }), [])
-})
-
-test('an entry that only mentions IPC in a comment, or uses its own parameters, is dead', () => {
-  const dead = `import { ipcRenderer } from 'electron'
-interface LegacyRyteApi { app: { x(): void }; tasks: { x(): void } }
-const legacyApi: LegacyRyteApi = {
-  app: { x: 1 },
-  // used to call ipcRenderer.invoke('tasks:list')
-  tasks: { list: (input) => input }
-}
-ipcRenderer.invoke('app:get-version')
-`
-  assert.match(
-    messages(preloadAreaViolations({ 'src/preload/index.ts': dead })),
-    /tasks is fully in the contract[^\n]*entry in legacyApi/
+  expectViolation(
+    {
+      'src/renderer/src/Two.vue': `<script lang="ts">\nexport default { name: 'Two' }\n</script>\n<script setup lang="ts">\nimport { list } from '../../contract/tasks'\nconsole.log(list)\n</script>\n`
+    },
+    'imports',
+    /renderer must not value-import/
   )
-})
-
-test('fails closed on a wrapper the rule does not unwrap', () => {
-  for (const object of [
-    `const legacyApi = <LegacyRyteApi>{ app: { x: 1 }, tasks: { x: 1 } }`,
-    `const legacyApi = Object.freeze({ app: { x: 1 }, tasks: { x: 1 } })`
-  ]) {
-    assert.match(
-      messages(
-        preloadAreaViolations({
-          'src/preload/index.ts': `import { ipcRenderer } from 'electron'\ninterface LegacyRyteApi { app: { x(): void } }\n${object}\nipcRenderer.invoke('app:get-version')\n`
-        })
-      ),
-      /cannot find both a top-level/,
-      object
-    )
-  }
-})
-
-test('fails closed on a manifest with a spread or a computed key, and a deleted manifest is still caught', () => {
-  for (const manifest of [
-    `export const manifest = { ...other } as const\n`,
-    `export const manifest = { ['tasks']: { operations: {}, events: {} } } as const\n`
-  ]) {
-    expectViolation(
-      { 'src/contract/manifest.generated.ts': manifest },
-      'preload-area',
-      /cannot read `const manifest/
-    )
-  }
-  // Without the manifest, the contract channels the code still names have no home: the inventory rule fails.
-  const violations = run({ 'src/contract/manifest.generated.ts': null })
-  assert.ok(rules(violations).includes('inventory'), messages(violations) || '(none)')
-})
-
-test('the preload-area rule needs a contract area and a preload file', () => {
-  // No contract area at all: nothing to be stale, and no complaint about missing declarations.
-  const empty = run({
-    'src/contract/manifest.generated.ts': 'export const manifest = {} as const\n',
-    'src/contract/tasks.ts': '',
-    'src/shared/tasks.ts': '',
-    'src/preload/index.ts': `import { ipcRenderer } from 'electron'\nipcRenderer.invoke('app:get-version')\n`
-  })
-  assert.deepEqual(
-    empty.filter((violation) => violation.rule === 'preload-area'),
-    []
-  )
-  // No preload file in the tree: skipped (a missing legacy file is reported by the legacy-file rule).
-  const noPreload = run(
-    { 'src/preload/index.ts': null },
-    { ...baseLegacy, files: ['src/main/ipc.ts'] }
-  )
-  assert.deepEqual(
-    noPreload.filter((violation) => violation.rule === 'preload-area'),
-    []
-  )
-})
-
-// The ratchet: scripts/legacy.json can only shrink. The numbers are exact on purpose, so a migration that
-// shrinks the list must lower them here, and nothing can grow the list back to an old ceiling without a
-// deliberate edit of this test. Raising them needs a reason in the change that does it.
-test('legacy.json does not grow', () => {
-  const legacy = JSON.parse(
-    readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), 'legacy.json'), 'utf8')
-  )
-  assert.equal(legacy.channels.request.length, 0, 'request channels')
-  assert.equal(legacy.channels.event.length, 0, 'event channels')
-  assert.equal(legacy.files.length, 2, 'legacy files')
-  assert.deepEqual(legacy.sendAllowed, [], 'sendAllowed')
-  assert.deepEqual(legacy.ignore, [], 'ignore')
 })
