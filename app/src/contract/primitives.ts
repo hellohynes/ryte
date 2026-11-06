@@ -94,6 +94,31 @@ export function hasNoExplicitUndefined(value: Record<string, unknown>): boolean 
   return Object.values(value).every((entry) => entry !== undefined)
 }
 
+const MAX_SEARCH_QUERY_LENGTH = 2000
+
+/**
+ * A search query: trimmed, then 1 to 2000 characters. The length counts the trimmed text, so padding does not use
+ * up the limit, and the handler receives the trimmed value.
+ */
+export const searchQuery = z.string().transform((value, ctx) => {
+  const query = value.trim()
+  if (query.length === 0 || query.length > MAX_SEARCH_QUERY_LENGTH) {
+    ctx.addIssue({ code: 'custom', message: 'Invalid search query' })
+    return z.NEVER
+  }
+  return query
+})
+
+const REQUEST_ID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+/**
+ * The id of a running request, as the main process makes it: a UUID of version 1 to 5 and variant 8, 9, a or b, in
+ * either case. The expression is anchored at both ends, so a trailing newline is not allowed.
+ */
+export const requestId = z
+  .string()
+  .refine((value) => REQUEST_ID_RE.test(value), 'Expected a request id')
+
 /**
  * An absolute path by `node:path`, non-empty and at most `MAX_PATH_LENGTH`, kept exactly as given (the legacy
  * validator did not normalize it).

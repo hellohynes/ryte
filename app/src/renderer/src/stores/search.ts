@@ -125,7 +125,7 @@ export const useSearchStore = defineStore('search', () => {
     activeRetrievalMode.value = options.retrievalMode ?? 'auto'
     status.value = 'searching'
     trace.value.startedAt = Date.now()
-    activeRequestId.value = await window.ryte.search.query(q, options)
+    activeRequestId.value = await window.ryte.search.query({ query: q, ...options })
     if (!activeRequestId.value) {
       status.value = 'error'
       error.value = 'Indexer not ready — wait for local indexing to initialize'
@@ -134,7 +134,7 @@ export const useSearchStore = defineStore('search', () => {
 
   async function cancel(): Promise<void> {
     if (activeRequestId.value) {
-      await window.ryte.search.cancel(activeRequestId.value)
+      await window.ryte.search.cancel({ requestId: activeRequestId.value })
     }
     reset()
   }
@@ -188,7 +188,7 @@ export const useSearchStore = defineStore('search', () => {
     const cleanups: Array<() => void> = []
 
     cleanups.push(
-      window.ryte.search.onStage((requestId, nextStage) => {
+      window.ryte.search.onStage(({ requestId, stage: nextStage }) => {
         if (requestId !== activeRequestId.value) return
         stage.value = nextStage
         trace.value.stageAt[nextStage] = Date.now()
@@ -196,14 +196,14 @@ export const useSearchStore = defineStore('search', () => {
     )
 
     cleanups.push(
-      window.ryte.search.onSources((requestId, retrieved) => {
+      window.ryte.search.onSources(({ requestId, sources: retrieved }) => {
         if (requestId !== activeRequestId.value) return
         sources.value = retrieved
       })
     )
 
     cleanups.push(
-      window.ryte.search.onToken((requestId, token) => {
+      window.ryte.search.onStreamToken(({ requestId, token }) => {
         if (requestId !== activeRequestId.value) return
         status.value = 'streaming'
         answer.value += token
@@ -211,21 +211,21 @@ export const useSearchStore = defineStore('search', () => {
     )
 
     cleanups.push(
-      window.ryte.search.onCitation((requestId, citation) => {
+      window.ryte.search.onCitation(({ requestId, ...citation }) => {
         if (requestId !== activeRequestId.value) return
         citations.value.push(citation)
       })
     )
 
     cleanups.push(
-      window.ryte.search.onNotice((requestId, notice) => {
+      window.ryte.search.onNotice(({ requestId, notice }) => {
         if (requestId !== activeRequestId.value) return
         notices.value.push(notice)
       })
     )
 
     cleanups.push(
-      window.ryte.search.onDone((requestId) => {
+      window.ryte.search.onDone(({ requestId }) => {
         if (requestId !== activeRequestId.value) return
         const completedAt = Date.now()
         if (historyOptions.value.retention !== 'off') {
@@ -251,7 +251,7 @@ export const useSearchStore = defineStore('search', () => {
     )
 
     cleanups.push(
-      window.ryte.search.onError((requestId, msg) => {
+      window.ryte.search.onError(({ requestId, error: msg }) => {
         if (requestId !== activeRequestId.value) return
         status.value = 'error'
         error.value = msg

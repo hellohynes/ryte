@@ -19,7 +19,7 @@ The list of everything that exists today is generated: [api-index.md](api-index.
 | Registration, validation, the event emitter | `app/src/main/contract/register.ts` | Rarely |
 | `window.ryte.<area>` methods and `on<Event>` subscribers | built from the manifest by `app/src/preload/contract-api.ts` | No |
 | Wire types by name, for code that imports them (for example `app/src/shared/tasks.ts` and `app/src/shared/indexer.ts`) | `app/src/shared/<area>.ts` | Only to re-export types inferred from the definition (`export type { ... } from '../contract/<area>'`); never write a type by hand. A new operation does not need one unless code imports its types by name |
-| Operations that have not moved yet | `app/scripts/legacy.json` and the old code in `ipc.ts`, `ipc-validation.ts` and `preload/index.ts` | Only to shrink them |
+| Operations that have not moved yet | None: `app/scripts/legacy.json` lists no channels, and `ipc-validation.ts` is gone | Do not add to it |
 | The enforcement | `app/scripts/check-contract.mjs` | Rarely |
 
 ## How a call flows
@@ -149,18 +149,21 @@ types change, and so does every caller. Rules:
 - An area migrated from hand-written validators is covered by recorded vectors of the behavior it had before the
   contract: `tasks` (`app/src/contract/tasks.vectors.*`, recorded from the pre-contract code at `c4c7b3c`) and
   `settings` (`app/src/contract/settings.vectors.*`, recorded at `322bfd7`) and `workspace` (`app/src/contract/workspace.vectors.*`,
-  recorded at `ea721df`, and for the open-file, open-recent-file and record-recent operations at `cdd80d2`) and `files` (`app/src/contract/files.vectors.*`, recorded at `bb14ce4`). `<area>.vectors.inputs.ts` holds the authored
+  recorded at `ea721df`, and for the open-file, open-recent-file and record-recent operations at `cdd80d2`) and `files` (`app/src/contract/files.vectors.*`, recorded at `bb14ce4`) and `search` (`app/src/contract/search.vectors.*`, recorded at `68bf229`, and `app/src/contract/search.query.vectors.*` for the query text, the options and the request id, recorded at `1bffddd`). `<area>.vectors.inputs.ts` holds the authored
   inputs, `<area>.vectors.expected.json` is the oracle recorded from the old validators, and a test checks every vector
   against the new schemas. The one-shot recorders were deleted with the old validators and are in git history
   (`a9ce30b:app/src/contract/record/record-vectors.ts` and
   `88ee7dc:app/src/contract/record/record-settings-vectors.ts`); the workspace validators it was recorded from are in
-  `ea721df:app/src/main/ipc-validation.ts` and `cdd80d2:app/src/main/ipc-validation.ts`, and the files validators in
-  `bb14ce4:app/src/main/ipc-validation.ts`. If you intentionally change what an operation accepts,
+  `ea721df:app/src/main/ipc-validation.ts` and `cdd80d2:app/src/main/ipc-validation.ts`, the files validators in
+  `bb14ce4:app/src/main/ipc-validation.ts`, and the search freshness validator in
+  `68bf229:app/src/main/ipc-validation.ts`, and the search query, options and request-id validators in
+  `1bffddd:app/src/main/ipc-validation.ts`. If you intentionally change what an operation accepts,
   add an entry with a reason to `ACCEPTED_DEVIATIONS` in `<area>.vectors.deviations.ts`; only a change that is stricter than
   the recording is a deviation, and anything that accepts more than the old validator did is a defect. Do not edit
   `<area>.vectors.expected.json`: it is the oracle.
-- `<area>.wire-types.ts` (`tasks`, `indexer`, `settings`, `workspace`, `files`) is a **frozen copy** of the hand-written declarations the contract
-  replaced, kept as the oracle for the compile-time check in `<area>.wire-types.check.ts`: the types inferred from the
+- `<area>.wire-types.ts` (`tasks`, `indexer`, `settings`, `workspace`, `files`, `search`) is a **frozen copy** of the hand-written declarations the contract
+  replaced (for `search`, those declarations with the owner's decision to take one object where the old methods took
+  positional arguments), kept as the oracle for the compile-time check in `<area>.wire-types.check.ts`: the types inferred from the
   definition must equal it. It is hand-written on purpose and is the one exception to "never write a type by hand"; do not
   edit it to make the check pass. Keep it for as long as the contract should not drift from what those declarations said;
   delete it, with its check, only when the owner decides the types may change freely.
@@ -177,12 +180,13 @@ handlers file and that file's test, and its import and entry in the `registerOpe
 
 ## Legacy operations
 
-Operations that predate the contract still run through `ipc.ts`, `ipc-validation.ts` and `preload/index.ts`, and are
-listed in `app/scripts/legacy.json`. Rules:
+Every operation has moved onto the contract: `app/scripts/legacy.json` lists no channels, and `ipc-validation.ts` is
+gone. The rules below are what `check:contract` still enforces about the old hand-written wiring, so none can come
+back:
 
 - **New operations never go there.** `check:contract` rejects a channel that is in neither the contract nor
   `legacy.json`.
-- **Migrate an operation when you touch it, or sweep a whole area.** To migrate one:
+- **Migrating an old-style operation** (the procedure used for every area):
   1. Record what the old validator accepts and rejects first (authored inputs, expectations recorded from the old
      code) so the new schema is checked against behavior it cannot influence. `tasks.vectors.*` is the example.
   2. Define it in the contract, write the handler, and delete the old `ipcMain.handle`, the `assertValid*`
@@ -235,11 +239,29 @@ evasion, for example a computed property name (`e['ipc' + 'Main']`), a channel n
 local alias of `webContents` inside a legacy file.
 Review catches those.
 
+## Long-running operations and streams
+
+`search` is the worked example (`app/src/contract/search.ts`, `app/src/main/contract/search-handlers.ts`). The pattern:
+
+- The operation **returns an id** at once and does the work after the reply: `query` registers the request, schedules
+  the search with `setImmediate`, and returns the id, so the id reaches the window before the first event. Do not
+  await the work inside the handler.
+- The results are **events to the asking window only**, sent with `emit.to(sender, event, payload)` and never the
+  broadcast, each carrying the id (`requestId`) so the renderer can tell its own run from an older one. An id on an
+  event is a plain string: a failure before the work starts sends `error` with an empty id.
+- The **registry of running requests is owned by the handler module** (`createSearch(...)`), which takes the emitter,
+  the id generator and the scheduler as parameters so a test controls them. It returns `{ handlers, cancelAll }`:
+  `handlers` goes to `registerOperations` (an extra key there is an error), and `cancelAll` goes to whatever must stop
+  every request, here the indexer's clear-and-rebuild hook and the settings restart.
+- A request is **cancelled by its owner**: `cancel({ requestId })` stops it only when the calling window started it;
+  an unknown, finished or foreign id is ignored and says nothing. Closing the window cancels its requests, and an
+  event that finds the window destroyed cancels too. A cancelled request sends no further event, not even a
+  terminal one. A finished request leaves the registry, so nothing is cancelled or sent for it afterwards.
+- A call that takes options takes **one object**, `{ query, retrievalMode?, answerMode? }`, never positional
+  arguments, and an event hands its listener **one object**, `({ requestId, ... }) => void`.
+
 ## Not covered yet
 
-- Operations with several positional arguments (`search:query(q, options)`): give the operation one object input when
-  you migrate it.
-- Long-running or cancellable operations and streams (`search:cancel`, search events): each needs a design.
 - Exposing an operation to agents over MCP. When that lands, an exposed operation is **additive-only**: agents ship
   separately from Ryte, so add optional fields and new operations, and deprecate before removing.
 

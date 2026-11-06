@@ -1,3 +1,15 @@
+import type {
+  SearchAnswerMode,
+  SearchCitation,
+  SearchNotice,
+  SearchNoticeCode,
+  SearchOptions,
+  SearchRetrievalMode,
+  SearchSnapshotFreshness,
+  SearchSnapshotFreshnessInput,
+  SearchSource,
+  SearchStage
+} from '../../contract/search'
 import { AnthropicProvider } from './anthropic-provider'
 import { type LLMProvider, type SearchChunk } from './llm-provider'
 import { OpenAIProvider } from './openai-provider'
@@ -11,56 +23,21 @@ import {
   type ProviderId
 } from '../settings/settings-store'
 
-export interface CitationResult {
-  index: number
-  sourcePath: string
-  headingPath: string[]
+export type CitationResult = SearchCitation
+export type SourceResult = SearchSource
+
+export type SearchAppliedRetrievalMode = SearchSource['retrievalMode']
+// These are defined once, in the contract.
+export type {
+  SearchAnswerMode,
+  SearchNotice,
+  SearchNoticeCode,
+  SearchOptions,
+  SearchRetrievalMode,
+  SearchSnapshotFreshness,
+  SearchSnapshotFreshnessInput,
+  SearchStage
 }
-
-export interface SourceResult {
-  index: number
-  sourcePath: string
-  headingPath: string[]
-  preview: string
-  matchCount: number
-  retrievalMode: SearchAppliedRetrievalMode
-}
-
-export type SearchRetrievalMode = 'auto' | 'keyword' | 'hybrid'
-export type SearchAppliedRetrievalMode = 'keyword' | 'hybrid'
-export type SearchAnswerMode = 'settings' | 'local-only'
-
-export interface SearchOptions {
-  retrievalMode?: SearchRetrievalMode
-  answerMode?: SearchAnswerMode
-}
-
-export interface SearchSnapshotFreshnessInput {
-  query: string
-  retrievalMode: SearchRetrievalMode
-  generatedAt: number
-  sourcePaths: string[]
-}
-
-export interface SearchSnapshotFreshness {
-  state: 'current' | 'updates-available'
-  changedSourcePaths: string[]
-  relevantSourcePaths: string[]
-}
-
-export type SearchNoticeCode =
-  | 'no-local-sources'
-  | 'semantic-unavailable'
-  | 'cloud-answers-disabled'
-  | 'cloud-answers-not-acknowledged'
-  | 'provider-key-missing'
-
-export interface SearchNotice {
-  code: SearchNoticeCode
-  message: string
-}
-
-export type SearchStage = 'searching-local' | 'gathering-evidence' | 'writing-summary'
 
 export interface SearchCallbacks {
   onStage: (stage: SearchStage) => void

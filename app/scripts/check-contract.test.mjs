@@ -679,8 +679,8 @@ test('legacy.json does not grow', () => {
   const legacy = JSON.parse(
     readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), 'legacy.json'), 'utf8')
   )
-  assert.equal(legacy.channels.request.length, 3, 'request channels')
-  assert.equal(legacy.channels.event.length, 7, 'event channels')
+  assert.equal(legacy.channels.request.length, 0, 'request channels')
+  assert.equal(legacy.channels.event.length, 0, 'event channels')
   assert.equal(legacy.files.length, 2, 'legacy files')
   assert.deepEqual(legacy.sendAllowed, [], 'sendAllowed')
   assert.deepEqual(legacy.ignore, [], 'ignore')

@@ -1,0 +1,1385 @@
+{
+  "header": {
+    "recordedFrom": "1bffddd74fa356acc1d7ed00b16ebe1afc201b1d",
+    "baseSha": "1bffddd74fa356acc1d7ed00b16ebe1afc201b1d",
+    "command": "node --import tsx record-search-query-vectors.ts",
+    "note": "Recorded from the pre-change validators (assertValidSearchQuery, assertValidSearchOptions, assertValidRequestId) at baseSha. Expectations are the oracle; do not regenerate from new code."
+  },
+  "vectors": [
+    {
+      "id": "searchQuery: typical",
+      "op": "searchQuery",
+      "accepted": true,
+      "output": "jira plans"
+    },
+    {
+      "id": "searchQuery: empty",
+      "op": "searchQuery",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "searchQuery: one space",
+      "op": "searchQuery",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "searchQuery: whitespace only",
+      "op": "searchQuery",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "searchQuery: one character",
+      "op": "searchQuery",
+      "accepted": true,
+      "output": "a"
+    },
+    {
+      "id": "searchQuery: 2000 characters",
+      "op": "searchQuery",
+      "accepted": true,
+      "output": "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"
+    },
+    {
+      "id": "searchQuery: 2001 characters",
+      "op": "searchQuery",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "searchQuery: 2000 characters with leading space",
+      "op": "searchQuery",
+      "accepted": true,
+      "output": "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"
+    },
+    {
+      "id": "searchQuery: 2000 characters padded both sides to over 2000",
+      "op": "searchQuery",
+      "accepted": true,
+      "output": "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq"
+    },
+    {
+      "id": "searchQuery: 2001 characters padded both sides",
+      "op": "searchQuery",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "searchQuery: trimmed to one character",
+      "op": "searchQuery",
+      "accepted": true,
+      "output": "z"
+    },
+    {
+      "id": "searchQuery: interior whitespace is kept",
+      "op": "searchQuery",
+      "accepted": true,
+      "output": "a  b\tc\nd"
+    },
+    {
+      "id": "searchQuery: trailing newline",
+      "op": "searchQuery",
+      "accepted": true,
+      "output": "jira plans"
+    },
+    {
+      "id": "searchQuery: unicode",
+      "op": "searchQuery",
+      "accepted": true,
+      "output": "café 日本語"
+    },
+    {
+      "id": "searchQuery: 1000 emoji (2000 units)",
+      "op": "searchQuery",
+      "accepted": true,
+      "output": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀"
+    },
+    {
+      "id": "searchQuery: 1001 emoji (2002 units)",
+      "op": "searchQuery",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "searchQuery: no-break space is trimmed",
+      "op": "searchQuery",
+      "accepted": true,
+      "output": "x"
+    },
+    {
+      "id": "searchQuery: byte order mark is trimmed",
+      "op": "searchQuery",
+      "accepted": true,
+      "output": "x"
+    },
+    {
+      "id": "searchQuery: line separator is trimmed",
+      "op": "searchQuery",
+      "accepted": true,
+      "output": "x"
+    },
+    {
+      "id": "searchQuery: zero-width space is not trimmed",
+      "op": "searchQuery",
+      "accepted": true,
+      "output": "​"
+    },
+    {
+      "id": "searchQuery: zero-width space beside text",
+      "op": "searchQuery",
+      "accepted": true,
+      "output": "​x"
+    },
+    {
+      "id": "searchQuery: NUL",
+      "op": "searchQuery",
+      "accepted": true,
+      "output": "\u0000"
+    },
+    {
+      "id": "searchQuery: NUL beside text",
+      "op": "searchQuery",
+      "accepted": true,
+      "output": "a\u0000b"
+    },
+    {
+      "id": "searchQuery: number",
+      "op": "searchQuery",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "searchQuery: zero",
+      "op": "searchQuery",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "searchQuery: boolean",
+      "op": "searchQuery",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "searchQuery: bigint",
+      "op": "searchQuery",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "searchQuery: null",
+      "op": "searchQuery",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "searchQuery: explicit undefined",
+      "op": "searchQuery",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "searchQuery: array",
+      "op": "searchQuery",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "searchQuery: array of one string",
+      "op": "searchQuery",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "searchQuery: object",
+      "op": "searchQuery",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "searchQuery: String object",
+      "op": "searchQuery",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "searchQuery: function",
+      "op": "searchQuery",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "searchOptions: undefined",
+      "op": "searchOptions",
+      "accepted": true,
+      "output": {}
+    },
+    {
+      "id": "searchOptions: null",
+      "op": "searchOptions",
+      "accepted": true,
+      "output": {}
+    },
+    {
+      "id": "searchOptions: empty object",
+      "op": "searchOptions",
+      "accepted": true,
+      "output": {}
+    },
+    {
+      "id": "searchOptions: retrievalMode only, keyword",
+      "op": "searchOptions",
+      "accepted": true,
+      "output": {
+        "retrievalMode": "keyword"
+      }
+    },
+    {
+      "id": "searchOptions: answerMode only, local-only",
+      "op": "searchOptions",
+      "accepted": true,
+      "output": {
+        "answerMode": "local-only"
+      }
+    },
+    {
+      "id": "searchOptions: both valid",
+      "op": "searchOptions",
+      "accepted": true,
+      "output": {
+        "retrievalMode": "hybrid",
+        "answerMode": "settings"
+      }
+    },
+    {
+      "id": "searchOptions: both valid, answerMode first",
+      "op": "searchOptions",
+      "accepted": true,
+      "output": {
+        "retrievalMode": "auto",
+        "answerMode": "local-only"
+      }
+    },
+    {
+      "id": "searchOptions: empty array",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid search options"
+    },
+    {
+      "id": "searchOptions: array holding valid options",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid search options"
+    },
+    {
+      "id": "searchOptions: string",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid search options"
+    },
+    {
+      "id": "searchOptions: empty string",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid search options"
+    },
+    {
+      "id": "searchOptions: number",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid search options"
+    },
+    {
+      "id": "searchOptions: zero",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid search options"
+    },
+    {
+      "id": "searchOptions: boolean true",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid search options"
+    },
+    {
+      "id": "searchOptions: boolean false",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid search options"
+    },
+    {
+      "id": "searchOptions: bigint",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid search options"
+    },
+    {
+      "id": "searchOptions: symbol",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid search options"
+    },
+    {
+      "id": "searchOptions: function",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid search options"
+    },
+    {
+      "id": "searchOptions: String object",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid search option: 0"
+    },
+    {
+      "id": "searchOptions: Date instance",
+      "op": "searchOptions",
+      "accepted": true,
+      "output": {}
+    },
+    {
+      "id": "searchOptions: Map",
+      "op": "searchOptions",
+      "accepted": true,
+      "output": {}
+    },
+    {
+      "id": "searchOptions: class instance with valid own fields",
+      "op": "searchOptions",
+      "accepted": true,
+      "output": {
+        "retrievalMode": "keyword",
+        "answerMode": "local-only"
+      }
+    },
+    {
+      "id": "searchOptions: class instance with a method on the prototype",
+      "op": "searchOptions",
+      "accepted": true,
+      "output": {
+        "retrievalMode": "auto"
+      }
+    },
+    {
+      "id": "searchOptions: null-prototype object with valid keys",
+      "op": "searchOptions",
+      "accepted": true,
+      "output": {
+        "retrievalMode": "hybrid",
+        "answerMode": "settings"
+      }
+    },
+    {
+      "id": "searchOptions: null-prototype empty object",
+      "op": "searchOptions",
+      "accepted": true,
+      "output": {}
+    },
+    {
+      "id": "searchOptions: symbol key beside valid keys is ignored",
+      "op": "searchOptions",
+      "accepted": true,
+      "output": {
+        "retrievalMode": "keyword"
+      }
+    },
+    {
+      "id": "searchOptions: symbol key only",
+      "op": "searchOptions",
+      "accepted": true,
+      "output": {}
+    },
+    {
+      "id": "searchOptions: own __proto__ key",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid search option: __proto__"
+    },
+    {
+      "id": "searchOptions: own __proto__ key beside valid keys",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid search option: __proto__"
+    },
+    {
+      "id": "searchOptions: inherited retrievalMode only",
+      "op": "searchOptions",
+      "accepted": true,
+      "output": {
+        "retrievalMode": "keyword"
+      }
+    },
+    {
+      "id": "searchOptions: inherited valid keys beside one own valid key",
+      "op": "searchOptions",
+      "accepted": true,
+      "output": {
+        "retrievalMode": "auto",
+        "answerMode": "local-only"
+      }
+    },
+    {
+      "id": "searchOptions: inherited invalid retrievalMode only",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "searchOptions: inherited unknown key only",
+      "op": "searchOptions",
+      "accepted": true,
+      "output": {}
+    },
+    {
+      "id": "searchOptions: own valid key beside an inherited unknown key",
+      "op": "searchOptions",
+      "accepted": true,
+      "output": {
+        "retrievalMode": "keyword"
+      }
+    },
+    {
+      "id": "searchOptions: unknown key",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid search option: extra"
+    },
+    {
+      "id": "searchOptions: valid key with an unknown key",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid search option: extra"
+    },
+    {
+      "id": "searchOptions: unknown key with an explicit undefined value",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid search option: extra"
+    },
+    {
+      "id": "searchOptions: query key",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid search option: query"
+    },
+    {
+      "id": "searchOptions: requestId key",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid search option: requestId"
+    },
+    {
+      "id": "searchOptions: constructor key",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid search option: constructor"
+    },
+    {
+      "id": "searchOptions: toString key",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid search option: toString"
+    },
+    {
+      "id": "searchOptions: case-different key",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid search option: RetrievalMode"
+    },
+    {
+      "id": "searchOptions: retrievalMode explicit undefined key",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "searchOptions: answerMode explicit undefined key",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid answer mode"
+    },
+    {
+      "id": "searchOptions: both keys explicit undefined",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "searchOptions: valid retrievalMode with answerMode explicit undefined",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid answer mode"
+    },
+    {
+      "id": "searchOptions: valid answerMode with retrievalMode explicit undefined",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "searchOptions: retrievalMode null key",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "searchOptions: answerMode null key",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid answer mode"
+    },
+    {
+      "id": "searchOptions: retrievalMode auto",
+      "op": "searchOptions",
+      "accepted": true,
+      "output": {
+        "retrievalMode": "auto"
+      }
+    },
+    {
+      "id": "searchOptions: retrievalMode keyword",
+      "op": "searchOptions",
+      "accepted": true,
+      "output": {
+        "retrievalMode": "keyword"
+      }
+    },
+    {
+      "id": "searchOptions: retrievalMode hybrid",
+      "op": "searchOptions",
+      "accepted": true,
+      "output": {
+        "retrievalMode": "hybrid"
+      }
+    },
+    {
+      "id": "searchOptions: retrievalMode upper-case auto",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "searchOptions: retrievalMode capitalized keyword",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "searchOptions: retrievalMode empty",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "searchOptions: retrievalMode leading space",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "searchOptions: retrievalMode trailing space",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "searchOptions: retrievalMode trailing newline",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "searchOptions: retrievalMode semantic",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "searchOptions: retrievalMode an answer mode",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "searchOptions: retrievalMode settings",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "searchOptions: retrievalMode number",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "searchOptions: retrievalMode boolean",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "searchOptions: retrievalMode null",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "searchOptions: retrievalMode explicit undefined",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "searchOptions: retrievalMode array",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "searchOptions: retrievalMode object",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "searchOptions: retrievalMode String object",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "searchOptions: answerMode settings",
+      "op": "searchOptions",
+      "accepted": true,
+      "output": {
+        "answerMode": "settings"
+      }
+    },
+    {
+      "id": "searchOptions: answerMode local-only",
+      "op": "searchOptions",
+      "accepted": true,
+      "output": {
+        "answerMode": "local-only"
+      }
+    },
+    {
+      "id": "searchOptions: answerMode upper-case settings",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid answer mode"
+    },
+    {
+      "id": "searchOptions: answerMode capitalized local-only",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid answer mode"
+    },
+    {
+      "id": "searchOptions: answerMode local only with a space",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid answer mode"
+    },
+    {
+      "id": "searchOptions: answerMode local_only",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid answer mode"
+    },
+    {
+      "id": "searchOptions: answerMode empty",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid answer mode"
+    },
+    {
+      "id": "searchOptions: answerMode leading space",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid answer mode"
+    },
+    {
+      "id": "searchOptions: answerMode trailing newline",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid answer mode"
+    },
+    {
+      "id": "searchOptions: answerMode cloud",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid answer mode"
+    },
+    {
+      "id": "searchOptions: answerMode a retrieval mode",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid answer mode"
+    },
+    {
+      "id": "searchOptions: answerMode number",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid answer mode"
+    },
+    {
+      "id": "searchOptions: answerMode boolean",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid answer mode"
+    },
+    {
+      "id": "searchOptions: answerMode null",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid answer mode"
+    },
+    {
+      "id": "searchOptions: answerMode explicit undefined",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid answer mode"
+    },
+    {
+      "id": "searchOptions: answerMode array",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid answer mode"
+    },
+    {
+      "id": "searchOptions: answerMode object",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid answer mode"
+    },
+    {
+      "id": "searchOptions: answerMode String object",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid answer mode"
+    },
+    {
+      "id": "searchOptions: invalid retrievalMode beside a valid answerMode",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "searchOptions: valid retrievalMode beside an invalid answerMode",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid answer mode"
+    },
+    {
+      "id": "searchOptions: both invalid",
+      "op": "searchOptions",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "requestId: typical v4",
+      "op": "requestId",
+      "accepted": true,
+      "output": "3f9c1d2e-7a4b-4c8e-9d1f-0a2b3c4d5e6f"
+    },
+    {
+      "id": "requestId: upper-case v4",
+      "op": "requestId",
+      "accepted": true,
+      "output": "3F9C1D2E-7A4B-4C8E-9D1F-0A2B3C4D5E6F"
+    },
+    {
+      "id": "requestId: mixed-case v4",
+      "op": "requestId",
+      "accepted": true,
+      "output": "3f9C1d2E-7a4B-4c8E-9d1F-0a2B3c4D5e6F"
+    },
+    {
+      "id": "requestId: nil uuid",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: max uuid",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: version 0",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: version 0 upper-case",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: version 1",
+      "op": "requestId",
+      "accepted": true,
+      "output": "aaaaaaaa-1111-1222-8333-444444444444"
+    },
+    {
+      "id": "requestId: version 1 upper-case",
+      "op": "requestId",
+      "accepted": true,
+      "output": "AAAAAAAA-1111-1222-8333-444444444444"
+    },
+    {
+      "id": "requestId: version 2",
+      "op": "requestId",
+      "accepted": true,
+      "output": "aaaaaaaa-1111-2222-8333-444444444444"
+    },
+    {
+      "id": "requestId: version 2 upper-case",
+      "op": "requestId",
+      "accepted": true,
+      "output": "AAAAAAAA-1111-2222-8333-444444444444"
+    },
+    {
+      "id": "requestId: version 3",
+      "op": "requestId",
+      "accepted": true,
+      "output": "aaaaaaaa-1111-3222-8333-444444444444"
+    },
+    {
+      "id": "requestId: version 3 upper-case",
+      "op": "requestId",
+      "accepted": true,
+      "output": "AAAAAAAA-1111-3222-8333-444444444444"
+    },
+    {
+      "id": "requestId: version 4",
+      "op": "requestId",
+      "accepted": true,
+      "output": "aaaaaaaa-1111-4222-8333-444444444444"
+    },
+    {
+      "id": "requestId: version 4 upper-case",
+      "op": "requestId",
+      "accepted": true,
+      "output": "AAAAAAAA-1111-4222-8333-444444444444"
+    },
+    {
+      "id": "requestId: version 5",
+      "op": "requestId",
+      "accepted": true,
+      "output": "aaaaaaaa-1111-5222-8333-444444444444"
+    },
+    {
+      "id": "requestId: version 5 upper-case",
+      "op": "requestId",
+      "accepted": true,
+      "output": "AAAAAAAA-1111-5222-8333-444444444444"
+    },
+    {
+      "id": "requestId: version 6",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: version 6 upper-case",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: version 7",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: version 7 upper-case",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: version 8",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: version 8 upper-case",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: version 9",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: version 9 upper-case",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: version a",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: version a upper-case",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: version b",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: version b upper-case",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: version c",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: version c upper-case",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: version d",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: version d upper-case",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: version e",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: version e upper-case",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: version f",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: version f upper-case",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: variant 0",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: variant 0 upper-case",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: variant 1",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: variant 1 upper-case",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: variant 2",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: variant 2 upper-case",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: variant 3",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: variant 3 upper-case",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: variant 4",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: variant 4 upper-case",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: variant 5",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: variant 5 upper-case",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: variant 6",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: variant 6 upper-case",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: variant 7",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: variant 7 upper-case",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: variant 8",
+      "op": "requestId",
+      "accepted": true,
+      "output": "aaaaaaaa-1111-4222-8333-444444444444"
+    },
+    {
+      "id": "requestId: variant 8 upper-case",
+      "op": "requestId",
+      "accepted": true,
+      "output": "AAAAAAAA-1111-4222-8333-444444444444"
+    },
+    {
+      "id": "requestId: variant 9",
+      "op": "requestId",
+      "accepted": true,
+      "output": "aaaaaaaa-1111-4222-9333-444444444444"
+    },
+    {
+      "id": "requestId: variant 9 upper-case",
+      "op": "requestId",
+      "accepted": true,
+      "output": "AAAAAAAA-1111-4222-9333-444444444444"
+    },
+    {
+      "id": "requestId: variant a",
+      "op": "requestId",
+      "accepted": true,
+      "output": "aaaaaaaa-1111-4222-a333-444444444444"
+    },
+    {
+      "id": "requestId: variant a upper-case",
+      "op": "requestId",
+      "accepted": true,
+      "output": "AAAAAAAA-1111-4222-A333-444444444444"
+    },
+    {
+      "id": "requestId: variant b",
+      "op": "requestId",
+      "accepted": true,
+      "output": "aaaaaaaa-1111-4222-b333-444444444444"
+    },
+    {
+      "id": "requestId: variant b upper-case",
+      "op": "requestId",
+      "accepted": true,
+      "output": "AAAAAAAA-1111-4222-B333-444444444444"
+    },
+    {
+      "id": "requestId: variant c",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: variant c upper-case",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: variant d",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: variant d upper-case",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: variant e",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: variant e upper-case",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: variant f",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: variant f upper-case",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: version 1 variant 8",
+      "op": "requestId",
+      "accepted": true,
+      "output": "aaaaaaaa-1111-1222-8333-444444444444"
+    },
+    {
+      "id": "requestId: version 5 variant b",
+      "op": "requestId",
+      "accepted": true,
+      "output": "aaaaaaaa-1111-5222-b333-444444444444"
+    },
+    {
+      "id": "requestId: version 5 variant 9 upper-case",
+      "op": "requestId",
+      "accepted": true,
+      "output": "AAAAAAAA-1111-5222-9333-444444444444"
+    },
+    {
+      "id": "requestId: empty",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: one character short",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: one character long",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: no hyphens",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: one hyphen missing",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: groups regrouped",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: braces",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: urn prefix",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: non-hex character",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: leading space",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: trailing space",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: trailing newline",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: leading newline",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: two ids on two lines",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: NUL at the end",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: full-width digit",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: an empty request id as the not-ready error carries",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: number",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: boolean",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: bigint",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: null",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: explicit undefined",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: array holding a valid id",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: object",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: String object",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: object with a toString that returns a valid id",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: function",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    },
+    {
+      "id": "requestId: symbol",
+      "op": "requestId",
+      "accepted": false,
+      "legacyMessage": "Invalid request id"
+    }
+  ]
+}

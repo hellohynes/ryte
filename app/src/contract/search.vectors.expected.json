@@ -1,0 +1,1662 @@
+{
+  "header": {
+    "recordedFrom": "68bf229525a51d12f6ec4e5f1e73034cb120e8b5",
+    "baseSha": "68bf229525a51d12f6ec4e5f1e73034cb120e8b5",
+    "command": "node --import tsx record-search-vectors.ts",
+    "note": "Recorded from the pre-change validator (assertValidSearchSnapshotFreshnessInput) at baseSha. Expectations are the oracle; do not regenerate from new code."
+  },
+  "vectors": [
+    {
+      "id": "freshness: empty object",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: undefined",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search snapshot freshness input"
+    },
+    {
+      "id": "freshness: null",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search snapshot freshness input"
+    },
+    {
+      "id": "freshness: string",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search snapshot freshness input"
+    },
+    {
+      "id": "freshness: number",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search snapshot freshness input"
+    },
+    {
+      "id": "freshness: boolean",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search snapshot freshness input"
+    },
+    {
+      "id": "freshness: empty array",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search snapshot freshness input"
+    },
+    {
+      "id": "freshness: array holding an object",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search snapshot freshness input"
+    },
+    {
+      "id": "freshness: Date instance",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: Map instance",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: class instance with a valid own field",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search snapshot freshness key: tabId"
+    },
+    {
+      "id": "freshness: null-prototype object with a valid key",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: symbol key is ignored",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: only an unknown key",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search snapshot freshness key: arbitrary"
+    },
+    {
+      "id": "freshness: valid key with an unknown key",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search snapshot freshness key: arbitrary"
+    },
+    {
+      "id": "freshness: constructor as a key",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search snapshot freshness key: constructor"
+    },
+    {
+      "id": "freshness: toString as a key",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search snapshot freshness key: toString"
+    },
+    {
+      "id": "freshness: own __proto__ key",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search snapshot freshness key: __proto__"
+    },
+    {
+      "id": "freshness: own __proto__ key with a valid key",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search snapshot freshness key: __proto__"
+    },
+    {
+      "id": "freshness: inherited valid key only",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: inherited unknown key only",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: array holding a valid input",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search snapshot freshness input"
+    },
+    {
+      "id": "freshness: empty string",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search snapshot freshness input"
+    },
+    {
+      "id": "freshness: zero",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search snapshot freshness input"
+    },
+    {
+      "id": "freshness: function",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search snapshot freshness input"
+    },
+    {
+      "id": "freshness: valid input",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: class instance with valid own fields",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: null-prototype object with valid keys",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: symbol key beside valid keys is ignored",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: own __proto__ key with valid keys",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search snapshot freshness key: __proto__"
+    },
+    {
+      "id": "freshness: every key inherited",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: query inherited beside three own keys",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: sourcePaths inherited beside three own keys",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "a.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: valid own keys beside an inherited unknown key",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: valid own keys beside an inherited valid key",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: valid input with an unknown key",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search snapshot freshness key: extra"
+    },
+    {
+      "id": "freshness: valid input with an explicit undefined unknown key",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search snapshot freshness key: extra"
+    },
+    {
+      "id": "freshness: valid input with a constructor key",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search snapshot freshness key: constructor"
+    },
+    {
+      "id": "freshness: valid input with a toString key",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search snapshot freshness key: toString"
+    },
+    {
+      "id": "freshness: valid input with an answerMode key",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search snapshot freshness key: answerMode"
+    },
+    {
+      "id": "freshness: valid input with a requestId key",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search snapshot freshness key: requestId"
+    },
+    {
+      "id": "freshness: valid input with a case-different key",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search snapshot freshness key: Query"
+    },
+    {
+      "id": "freshness: query missing",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "freshness: retrievalMode missing",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: generatedAt missing",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot generated time"
+    },
+    {
+      "id": "freshness: sourcePaths missing",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot source paths"
+    },
+    {
+      "id": "freshness: only query",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: query explicit undefined key",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "freshness: retrievalMode explicit undefined key",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: generatedAt explicit undefined key",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot generated time"
+    },
+    {
+      "id": "freshness: sourcePaths explicit undefined key",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot source paths"
+    },
+    {
+      "id": "freshness: every key explicit undefined",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: query null key",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "freshness: retrievalMode null key",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: generatedAt null key",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot generated time"
+    },
+    {
+      "id": "freshness: sourcePaths null key",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot source paths"
+    },
+    {
+      "id": "freshness: retrievalMode auto",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "auto",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: retrievalMode keyword",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: retrievalMode hybrid",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "hybrid",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: retrievalMode upper-case auto",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: retrievalMode capitalized keyword",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: retrievalMode empty",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: retrievalMode leading space",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: retrievalMode trailing space",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: retrievalMode trailing newline",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: retrievalMode semantic",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: retrievalMode an answer mode",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: retrievalMode settings",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: retrievalMode number",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: retrievalMode boolean",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: retrievalMode null",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: retrievalMode explicit undefined",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: retrievalMode array",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: retrievalMode object",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: retrievalMode String object",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: generatedAt zero",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 0,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: generatedAt negative zero",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": {
+          "$negativeZero": true
+        },
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: generatedAt one",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 1,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: generatedAt a float",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 1.5,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: generatedAt a timestamp",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 1767312000000,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: generatedAt one past 2^53",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 9007199254740994,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: generatedAt Number.MAX_VALUE",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 1.7976931348623157e+308,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: generatedAt Number.MIN_VALUE",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 5e-324,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: generatedAt 1e21",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 1e+21,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: generatedAt negative one",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot generated time"
+    },
+    {
+      "id": "freshness: generatedAt negative fraction",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot generated time"
+    },
+    {
+      "id": "freshness: generatedAt negative MIN_VALUE",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot generated time"
+    },
+    {
+      "id": "freshness: generatedAt negative infinity",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot generated time"
+    },
+    {
+      "id": "freshness: generatedAt NaN",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot generated time"
+    },
+    {
+      "id": "freshness: generatedAt infinity",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot generated time"
+    },
+    {
+      "id": "freshness: generatedAt numeric string",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot generated time"
+    },
+    {
+      "id": "freshness: generatedAt empty string",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot generated time"
+    },
+    {
+      "id": "freshness: generatedAt null",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot generated time"
+    },
+    {
+      "id": "freshness: generatedAt explicit undefined",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot generated time"
+    },
+    {
+      "id": "freshness: generatedAt boolean",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot generated time"
+    },
+    {
+      "id": "freshness: generatedAt bigint",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot generated time"
+    },
+    {
+      "id": "freshness: generatedAt array",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot generated time"
+    },
+    {
+      "id": "freshness: generatedAt object",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot generated time"
+    },
+    {
+      "id": "freshness: generatedAt Number object",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot generated time"
+    },
+    {
+      "id": "freshness: sourcePaths no entries",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": []
+      }
+    },
+    {
+      "id": "freshness: sourcePaths one entry",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "a.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: sourcePaths 100 entries",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "n0.md",
+          "n1.md",
+          "n2.md",
+          "n3.md",
+          "n4.md",
+          "n5.md",
+          "n6.md",
+          "n7.md",
+          "n8.md",
+          "n9.md",
+          "n10.md",
+          "n11.md",
+          "n12.md",
+          "n13.md",
+          "n14.md",
+          "n15.md",
+          "n16.md",
+          "n17.md",
+          "n18.md",
+          "n19.md",
+          "n20.md",
+          "n21.md",
+          "n22.md",
+          "n23.md",
+          "n24.md",
+          "n25.md",
+          "n26.md",
+          "n27.md",
+          "n28.md",
+          "n29.md",
+          "n30.md",
+          "n31.md",
+          "n32.md",
+          "n33.md",
+          "n34.md",
+          "n35.md",
+          "n36.md",
+          "n37.md",
+          "n38.md",
+          "n39.md",
+          "n40.md",
+          "n41.md",
+          "n42.md",
+          "n43.md",
+          "n44.md",
+          "n45.md",
+          "n46.md",
+          "n47.md",
+          "n48.md",
+          "n49.md",
+          "n50.md",
+          "n51.md",
+          "n52.md",
+          "n53.md",
+          "n54.md",
+          "n55.md",
+          "n56.md",
+          "n57.md",
+          "n58.md",
+          "n59.md",
+          "n60.md",
+          "n61.md",
+          "n62.md",
+          "n63.md",
+          "n64.md",
+          "n65.md",
+          "n66.md",
+          "n67.md",
+          "n68.md",
+          "n69.md",
+          "n70.md",
+          "n71.md",
+          "n72.md",
+          "n73.md",
+          "n74.md",
+          "n75.md",
+          "n76.md",
+          "n77.md",
+          "n78.md",
+          "n79.md",
+          "n80.md",
+          "n81.md",
+          "n82.md",
+          "n83.md",
+          "n84.md",
+          "n85.md",
+          "n86.md",
+          "n87.md",
+          "n88.md",
+          "n89.md",
+          "n90.md",
+          "n91.md",
+          "n92.md",
+          "n93.md",
+          "n94.md",
+          "n95.md",
+          "n96.md",
+          "n97.md",
+          "n98.md",
+          "n99.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: sourcePaths 101 entries",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot source paths"
+    },
+    {
+      "id": "freshness: sourcePaths 100 copies of one path",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "a.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: sourcePaths 101 copies of one path",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot source paths"
+    },
+    {
+      "id": "freshness: sourcePaths duplicates keep the first occurrence order",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "b.md",
+          "a.md",
+          "c.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: sourcePaths adjacent duplicates",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "a.md",
+          "b.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: sourcePaths same file under two spellings",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "a.md",
+          "./a.md",
+          "docs//a.md",
+          "docs/a.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: sourcePaths absolute path is not normalized",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "/etc/a.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: sourcePaths parent traversal is not normalized",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "../a.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: sourcePaths NUL is not rejected",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "a\u0000.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: sourcePaths backslash",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "docs\\a.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: sourcePaths not markdown",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "docs/a.txt"
+        ]
+      }
+    },
+    {
+      "id": "freshness: sourcePaths empty entry",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot source paths"
+    },
+    {
+      "id": "freshness: sourcePaths valid entry then empty entry",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot source paths"
+    },
+    {
+      "id": "freshness: sourcePaths whitespace entry",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          " "
+        ]
+      }
+    },
+    {
+      "id": "freshness: sourcePaths entry of 4096 characters",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "ppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: sourcePaths entry of 4097 characters",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot source paths"
+    },
+    {
+      "id": "freshness: sourcePaths 4096 characters twice",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "ppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: sourcePaths number entry",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot source paths"
+    },
+    {
+      "id": "freshness: sourcePaths null entry",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot source paths"
+    },
+    {
+      "id": "freshness: sourcePaths explicit undefined entry",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot source paths"
+    },
+    {
+      "id": "freshness: sourcePaths array entry",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot source paths"
+    },
+    {
+      "id": "freshness: sourcePaths object entry",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot source paths"
+    },
+    {
+      "id": "freshness: sourcePaths String object entry",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot source paths"
+    },
+    {
+      "id": "freshness: sourcePaths sparse array with a hole",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          {
+            "$undefined": true
+          },
+          "a.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: sourcePaths sparse array with a trailing hole",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "a.md",
+          {
+            "$undefined": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "freshness: sourcePaths only holes",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          {
+            "$undefined": true
+          }
+        ]
+      }
+    },
+    {
+      "id": "freshness: sourcePaths array with an extra own property",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "a.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: sourcePaths Array subclass",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "a.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: sourcePaths string",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot source paths"
+    },
+    {
+      "id": "freshness: sourcePaths empty string",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot source paths"
+    },
+    {
+      "id": "freshness: sourcePaths null",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot source paths"
+    },
+    {
+      "id": "freshness: sourcePaths explicit undefined",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot source paths"
+    },
+    {
+      "id": "freshness: sourcePaths number",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot source paths"
+    },
+    {
+      "id": "freshness: sourcePaths array-like object",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot source paths"
+    },
+    {
+      "id": "freshness: sourcePaths Set",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot source paths"
+    },
+    {
+      "id": "freshness: sourcePaths object",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot source paths"
+    },
+    {
+      "id": "freshness: query typical",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: query empty",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "freshness: query one space",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "freshness: query whitespace only",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "freshness: query one character",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "a",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: query 2000 characters",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: query 2001 characters",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "freshness: query 2000 characters with leading space",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: query 2000 characters padded both sides to over 2000",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: query 2001 characters padded both sides",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "freshness: query trimmed to one character",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "z",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: query interior whitespace is kept",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "a  b\tc\nd",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: query unicode",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "café 日本語",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: query 1000 emoji (2000 units)",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀😀",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: query 1001 emoji (2002 units)",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "freshness: query no-break space is trimmed",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "x",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: query byte order mark is trimmed",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "x",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: query line separator is trimmed",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "x",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: query zero-width space is not trimmed",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "​",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: query zero-width space beside text",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "​x",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: query NUL",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "\u0000",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: query NUL beside text",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "a\u0000b",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "plans/jira.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: query number",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "freshness: query boolean",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "freshness: query null",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "freshness: query explicit undefined",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "freshness: query array",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "freshness: query object",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "freshness: query String object",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid search query"
+    },
+    {
+      "id": "freshness: invalid query and invalid retrievalMode",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid retrieval mode"
+    },
+    {
+      "id": "freshness: valid query and invalid generatedAt",
+      "op": "freshness",
+      "accepted": false,
+      "legacyMessage": "Invalid snapshot generated time"
+    },
+    {
+      "id": "freshness: trimmed query with duplicate paths",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "jira plans",
+        "retrievalMode": "keyword",
+        "generatedAt": 100,
+        "sourcePaths": [
+          "b.md",
+          "a.md"
+        ]
+      }
+    },
+    {
+      "id": "freshness: every value at its limit",
+      "op": "freshness",
+      "accepted": true,
+      "output": {
+        "query": "qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq",
+        "retrievalMode": "hybrid",
+        "generatedAt": 0,
+        "sourcePaths": [
+          "n0.md",
+          "n1.md",
+          "n2.md",
+          "n3.md",
+          "n4.md",
+          "n5.md",
+          "n6.md",
+          "n7.md",
+          "n8.md",
+          "n9.md",
+          "n10.md",
+          "n11.md",
+          "n12.md",
+          "n13.md",
+          "n14.md",
+          "n15.md",
+          "n16.md",
+          "n17.md",
+          "n18.md",
+          "n19.md",
+          "n20.md",
+          "n21.md",
+          "n22.md",
+          "n23.md",
+          "n24.md",
+          "n25.md",
+          "n26.md",
+          "n27.md",
+          "n28.md",
+          "n29.md",
+          "n30.md",
+          "n31.md",
+          "n32.md",
+          "n33.md",
+          "n34.md",
+          "n35.md",
+          "n36.md",
+          "n37.md",
+          "n38.md",
+          "n39.md",
+          "n40.md",
+          "n41.md",
+          "n42.md",
+          "n43.md",
+          "n44.md",
+          "n45.md",
+          "n46.md",
+          "n47.md",
+          "n48.md",
+          "n49.md",
+          "n50.md",
+          "n51.md",
+          "n52.md",
+          "n53.md",
+          "n54.md",
+          "n55.md",
+          "n56.md",
+          "n57.md",
+          "n58.md",
+          "n59.md",
+          "n60.md",
+          "n61.md",
+          "n62.md",
+          "n63.md",
+          "n64.md",
+          "n65.md",
+          "n66.md",
+          "n67.md",
+          "n68.md",
+          "n69.md",
+          "n70.md",
+          "n71.md",
+          "n72.md",
+          "n73.md",
+          "n74.md",
+          "n75.md",
+          "n76.md",
+          "n77.md",
+          "n78.md",
+          "n79.md",
+          "n80.md",
+          "n81.md",
+          "n82.md",
+          "n83.md",
+          "n84.md",
+          "n85.md",
+          "n86.md",
+          "n87.md",
+          "n88.md",
+          "n89.md",
+          "n90.md",
+          "n91.md",
+          "n92.md",
+          "n93.md",
+          "n94.md",
+          "n95.md",
+          "n96.md",
+          "n97.md",
+          "n98.md",
+          "n99.md"
+        ]
+      }
+    }
+  ]
+}
