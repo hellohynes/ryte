@@ -143,6 +143,19 @@ describe('contrast (WCAG)', () => {
       }
     )
 
+    it.each(['info-strong', 'success-strong', 'text-secondary'])(
+      '%s status text is at least 4.5:1 on the translucent shell',
+      (name) => {
+        // StatusBar's sunken surface sits on shell-tint, not surface-base. Bound the
+        // desktop/vibrancy backdrop with black and white, plus the ordinary base.
+        for (const desktop of [[0, 0, 0], [1, 1, 1], base] as Rgb[]) {
+          const shell = resolveColor(theme, 'shell-tint', desktop)
+          const surface = resolveColor(theme, 'surface-sunken', shell)
+          expect(on(name, surface), `${name} over ${toHex(desktop)}`).toBeGreaterThanOrEqual(4.5)
+        }
+      }
+    )
+
     it.each(['accent', 'focus'])('%s is at least 3:1 on the base surface (non-text)', (name) => {
       expect(on(name, base)).toBeGreaterThanOrEqual(3)
     })

@@ -163,8 +163,11 @@ const dark: Tokens = {
   focus: ref('blue-300'),
   danger: ref('red-300'),
   success: ref('green-500'),
+  // Small status text on translucent shell surfaces needs more contrast than base-surface text.
+  'success-strong': ref('green-300'),
   warning: ref('gold-200'),
   info: ref('blue-300'),
+  'info-strong': ref('blue-200'),
   // A dark tint of the neutral hue, darker than the surface it falls on.
   shadow: { oklch: [0.1, 0.035, COOL] }
 }
@@ -201,8 +204,10 @@ const light: Tokens = {
   focus: ref('blue-600'),
   danger: ref('red-600'),
   success: ref('green-700'),
+  'success-strong': ref('green-900'),
   warning: ref('gold-800'),
   info: ref('blue-600'),
+  'info-strong': ref('blue-900'),
   shadow: { oklch: [0.2, 0.03, COOL] }
 }
 
