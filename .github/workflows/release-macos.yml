@@ -14,7 +14,7 @@ permissions:
 jobs:
   release:
     name: Build, sign, notarize, and publish Apple Silicon DMG
-    runs-on: macos-14
+    runs-on: macos-15
     # Holds the signing secrets; the environment only allows v* tags.
     environment: release
     # Apple's notary service can take a long time on a first submission.
