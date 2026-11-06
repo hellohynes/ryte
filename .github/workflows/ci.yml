@@ -7,6 +7,9 @@ on:
   pull_request:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 # A newer push to the same pull request replaces the run still going for the older commit.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
