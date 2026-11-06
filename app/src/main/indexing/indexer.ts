@@ -162,10 +162,15 @@ export class Indexer {
     return { filesIndexed: filesDone - filesSkipped, chunksIndexed: chunksDone }
   }
 
-  async indexFile(absPath: string): Promise<{ chunkCount: number; skipped: boolean }> {
+  async indexFile(
+    absPath: string,
+    opts: Pick<IndexAllOptions, 'shouldStop'> = {}
+  ): Promise<{ chunkCount: number; skipped: boolean }> {
     const { notesRoot, vectorStore, indexState } = this.deps
     const relPath = relative(notesRoot, absPath)
     const stats = await stat(absPath)
+    // A restart can close the stores during stat. Stop before any store access; the rest of the write is synchronous.
+    if (opts.shouldStop?.()) return { chunkCount: 0, skipped: true }
     const mtimeMs = Math.floor(stats.mtimeMs)
     if (!indexState.shouldReindex(relPath, mtimeMs)) {
       return { chunkCount: 0, skipped: true }

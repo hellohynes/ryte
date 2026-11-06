@@ -1038,6 +1038,58 @@ describe('IndexerService when the indexer is closed under a running pass', () =>
     expect(svc.getStatus().error).toBeUndefined()
   })
 
+  describe.each([false, true])('single-file indexing with restart=%s', (reopen) => {
+    it.each(['failure', 'completion'])('ignores stale %s after close', async (outcome) => {
+      const { svc, statuses } = await started()
+      let shouldStop: (() => boolean) | undefined
+      let stoppedBeforeClose: boolean | undefined
+      mocks.indexerIndexFile.mockImplementationOnce(
+        async (_path: string, opts: { shouldStop: () => boolean }) => {
+          shouldStop = opts.shouldStop
+          stoppedBeforeClose = shouldStop()
+          svc.close()
+          if (reopen) expect(svc.init()).toBe(true)
+          if (outcome === 'failure') throw new Error('The database connection is not open')
+          return { chunkCount: 1, skipped: false }
+        }
+      )
+
+      const status = svc.getStatus()
+      const heard = statuses.length
+      await svc.notifyFileChanged('/tmp/notes/a.md')
+
+      expect(stoppedBeforeClose).toBe(false)
+      expect(shouldStop?.()).toBe(true)
+      expect(statuses.slice(heard)).toEqual([])
+      expect(svc.getStatus()).toEqual(status)
+      svc.close()
+    })
+  })
+
+  it.each(['disk full', 'database disk image is malformed'])(
+    'reports a current single-file failure after dropping a stale one: %s',
+    async (message) => {
+      const { svc, statuses } = await started()
+      mocks.indexerIndexFile
+        .mockImplementationOnce(async () => {
+          await Promise.resolve()
+          restart(svc)
+          // Queue an edit for the new indexer while the stale edit still owns the drain.
+          void svc.notifyFileChanged('/tmp/notes/b.md')
+          throw new Error('The database connection is not open')
+        })
+        .mockRejectedValueOnce(new Error(message))
+
+      await svc.notifyFileChanged('/tmp/notes/a.md')
+
+      expect(statuses.filter((status) => status.phase === 'error')).toEqual([
+        { phase: 'error', error: message }
+      ])
+      expect(svc.getStatus()).toMatchObject({ phase: 'error', error: message })
+      svc.close()
+    }
+  )
+
   it('tells the pass to stop once the indexer is closed, and passes on none of its progress', async () => {
     const { svc, statuses } = await started()
     holdNextPass()

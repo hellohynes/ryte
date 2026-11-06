@@ -399,6 +399,19 @@ describe('Indexer', () => {
     expect(state.unembeddedCount()).toBe(0)
   })
 
+  it('indexFile stops before touching stores closed while stat was pending', async () => {
+    const filePath = join(notesRoot, 'a.md')
+    writeFileSync(filePath, '# A\n\nbody A\n')
+    let stopped = false
+    const pending = makeIndexer().indexFile(filePath, { shouldStop: () => stopped })
+
+    // indexFile has yielded to stat, but has not read or written the stores yet.
+    stopped = true
+    store.close()
+
+    await expect(pending).resolves.toEqual({ chunkCount: 0, skipped: true })
+  })
+
   it('removeFile zeros chunks for that file', async () => {
     const filePath = join(notesRoot, 'a.md')
     writeFileSync(filePath, '# A\n\nbody\n')

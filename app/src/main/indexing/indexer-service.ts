@@ -57,7 +57,7 @@ export class IndexerService extends EventEmitter {
     lastIndexedAt: null
   }
   private running = false
-  // Bumped whenever the indexer is closed. A pass remembers the number it started under; if it has moved, the pass was working on
+  // Bumped whenever the indexer is closed. Work remembers the number it started under; if it has moved, it was working on
   // stores that are gone (the folder changed, the indexer was restarted, the app is quitting) and stops quietly.
   private generation = 0
   // Set when a start removed the old single index database and cleared when the person dismisses it; held here, not sent once,
@@ -377,7 +377,7 @@ export class IndexerService extends EventEmitter {
   }
 
   close(): void {
-    // A pass in flight is stale from here on.
+    // Full passes and single-file operations in flight are stale from here on.
     this.generation += 1
     // Before the store closes: a request still out must find the step stopped when it answers.
     this.backfill?.stop()
@@ -464,10 +464,11 @@ export class IndexerService extends EventEmitter {
       const [absPath, operation] = next
       this.pendingIncrementalOperations.delete(absPath)
 
+      const generation = this.generation
       try {
         await this.applyIncrementalOperation(absPath, operation)
       } catch (error) {
-        this.broadcastIndexingError(error)
+        if (this.generation === generation) this.broadcastIndexingError(error)
       }
     }
   }
@@ -477,12 +478,15 @@ export class IndexerService extends EventEmitter {
     operation: 'changed' | 'removed'
   ): Promise<void> {
     if (!this.indexer || !this.indexState) return
+    const generation = this.generation
+    const stale = (): boolean => this.generation !== generation
     if (operation === 'changed') {
-      const result = await this.indexer.indexFile(absPath)
-      if (result.skipped) return
+      const result = await this.indexer.indexFile(absPath, { shouldStop: stale })
+      if (stale() || result.skipped) return
       this.scheduleBackfillKick()
     } else {
       await this.indexer.removeFile(absPath)
+      if (stale()) return
     }
 
     const totals = this.indexState.totals()
