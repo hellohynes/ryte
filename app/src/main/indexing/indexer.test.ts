@@ -169,16 +169,34 @@ describe('Indexer', () => {
 
         expect(summary.filesIndexed).toBe(2)
         expect(store.fileCount()).toBe(2)
-        expect(events.at(-1)).toMatchObject({ phase: 'done', filesTotal: 3, filesDone: 3 })
+        expect(events.at(-1)).toMatchObject({
+          phase: 'done',
+          filesTotal: 2,
+          filesDone: 2,
+          chunksTotal: 2,
+          chunksDone: 2
+        })
+        expect(events.filter((event) => event.phase === 'indexing').at(-1)).toMatchObject({
+          filesTotal: 3,
+          filesDone: 3
+        })
         // It has no row, so it is not mistaken for indexed.
         expect(state.allSourcePaths().sort()).toEqual(['a.md', 'c.md'])
       } finally {
         chmodSync(locked, 0o644)
       }
 
-      const again = await makeIndexer().indexAll()
+      const events: IndexerProgress[] = []
+      const again = await makeIndexer().indexAll({ onProgress: (p) => events.push({ ...p }) })
       expect(again.filesIndexed).toBe(1)
       expect(store.fileCount()).toBe(3)
+      expect(events.at(-1)).toMatchObject({
+        phase: 'done',
+        filesTotal: 3,
+        filesDone: 3,
+        chunksTotal: 3,
+        chunksDone: 3
+      })
     }
   )
 
