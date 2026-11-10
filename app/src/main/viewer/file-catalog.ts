@@ -55,21 +55,21 @@ async function mapWithConcurrency<T, U>(
 }
 
 /**
- * Build one safe catalog entry for a note or a picture below the configured notes root. A picture gets a size
- * check only, no title read, and its file name as the title; a viewer tells the two apart by the extension
- * (`supportedKindOf`), so the entry has no kind field.
+ * Build one safe catalog entry for a listed file below the configured notes root. Only a note has its title read;
+ * a picture or code file gets a size check only and its file name as the title. A viewer tells the kinds apart
+ * by the extension (`supportedKindOf`), so the entry has no kind field.
  */
 export async function fileCatalogEntryFor(
   notesRoot: string,
   absolutePath: string
 ): Promise<FileCatalogEntry> {
-  const isPicture = supportedKindOf(absolutePath) === 'picture'
+  const isNote = supportedKindOf(absolutePath) === 'note'
   const [metadata, documentTitle] = await Promise.all([
     stat(absolutePath),
-    isPicture ? null : readMarkdownTitleFromFile(absolutePath)
+    isNote ? readMarkdownTitleFromFile(absolutePath) : null
   ])
   const sourcePath = sourcePathFor(notesRoot, absolutePath)
-  const fallbackTitle = isPicture ? basename(sourcePath) : titleFromSourcePath(sourcePath)
+  const fallbackTitle = isNote ? titleFromSourcePath(sourcePath) : basename(sourcePath)
   const title = documentTitle ?? fallbackTitle
   const directory = directoryFromSourcePath(sourcePath)
 

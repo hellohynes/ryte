@@ -53,7 +53,7 @@ interface Walked {
 }
 
 /**
- * Lists every listed file (notes and supported pictures, see `listedKindOf`) and directory under `top` (including `top`),
+ * Lists every listed file (notes, supported pictures and code files, see `listedKindOf`) and directory under `top` (including `top`),
  * without following symbolic links. `root` is the notes folder, which decides whether a picture's folder is skipped. A
  * directory that vanishes while the walk runs is skipped; any other unreadable directory below `top` is skipped and logged
  * by code. Resolves `null` if `top` itself is gone and rejects if it cannot be read.
@@ -615,7 +615,7 @@ export class Watcher {
     }
   }
 
-  // Only notes are indexed; a picture is listed and never indexed.
+  // Only notes are indexed; a picture or code file is listed and never indexed.
   private queueIndexOperation(path: string, operation: 'changed' | 'removed'): void {
     if (supportedKindOf(path) !== 'note') return
     this.pendingIndexOperations.set(path, operation)
