@@ -524,6 +524,18 @@ describe('forwarding the file changes', () => {
     ])
   })
 
+  it('sends the catalog change for a picture but leaves the tasks alone', async () => {
+    const { catalog, log, markTasksStale, fileCatalogEntryFor } = setup()
+
+    catalog({ type: 'upsert', path: '/notes/img/a.png', notesRoot: NOTES_ROOT })
+    await flush()
+
+    expect(markTasksStale).not.toHaveBeenCalled()
+    expect(log.some((line) => line.includes(TASKS))).toBe(false)
+    expect(fileCatalogEntryFor).toHaveBeenCalledWith(NOTES_ROOT, '/notes/img/a.png')
+    expect(log.some((line) => line.includes(CATALOG))).toBe(true)
+  })
+
   it('does the same for a removed file and for an unreadable one', async () => {
     const readable = setup()
     readable.catalog({ type: 'remove', path: '/notes/a.md', notesRoot: NOTES_ROOT })

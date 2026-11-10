@@ -28,7 +28,7 @@ export interface FilesHandlerDependencies<TWindow> extends WorkspaceTabFileDepen
     'fileRefForTab' | 'resolveFilePath' | 'renameFile' | 'removeFileRef' | 'publicState'
   >
   getNotesRoot: () => string
-  walkNotes: (notesRoot: string) => Promise<string[]>
+  walkLibrary: (notesRoot: string) => Promise<string[]>
   listFileCatalog: (notesRoot: string) => Promise<FileCatalogResponse>
   readTextFile: (path: string) => Promise<string>
   /** Reads a note, refusing a path that resolves outside the notes root. */
@@ -56,7 +56,7 @@ export interface FilesHandlerDependencies<TWindow> extends WorkspaceTabFileDepen
 export function createFilesHandlers<TWindow>({
   store,
   getNotesRoot,
-  walkNotes,
+  walkLibrary,
   listFileCatalog,
   readTextFile,
   readSourceFile,
@@ -71,7 +71,7 @@ export function createFilesHandlers<TWindow>({
   return {
     listTree: async () => {
       const notesRoot = getNotesRoot()
-      const absolutePaths = await walkNotes(notesRoot)
+      const absolutePaths = await walkLibrary(notesRoot)
       const paths = absolutePaths.map((p) => relative(notesRoot, p)).sort()
       return { notesRoot, paths }
     },

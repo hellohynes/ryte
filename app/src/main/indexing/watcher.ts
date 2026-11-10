@@ -1,8 +1,9 @@
 import { EventEmitter } from 'node:events'
 import { realpath as fsRealpath, watch, type FSWatcher } from 'node:fs'
 import { lstat, readdir, stat } from 'node:fs/promises'
-import { basename, dirname, join, sep } from 'node:path'
+import { basename, dirname, join, relative, sep } from 'node:path'
 
+import { listedKindOf, supportedKindOf } from '../../shared/supported-types'
 import { indexerService } from './indexer-service'
 
 const TREE_CHANGED_EVENT = 'tree-changed'
@@ -26,10 +27,6 @@ export interface CatalogChangeEvent {
   type: 'upsert' | 'remove'
   path: string
   notesRoot: string
-}
-
-function isMarkdownFile(path: string): boolean {
-  return path.toLowerCase().endsWith('.md')
 }
 
 // Logged instead of the error itself: an error message names the path, which is a note title.
@@ -56,11 +53,12 @@ interface Walked {
 }
 
 /**
- * Lists every markdown file and directory under `top` (including `top`), without following symbolic links. A directory that
- * vanishes while the walk runs is skipped; any other unreadable directory below `top` is skipped and logged by code. Resolves
- * `null` if `top` itself is gone and rejects if it cannot be read.
+ * Lists every listed file (notes and supported pictures, see `listedKindOf`) and directory under `top` (including `top`),
+ * without following symbolic links. `root` is the notes folder, which decides whether a picture's folder is skipped. A
+ * directory that vanishes while the walk runs is skipped; any other unreadable directory below `top` is skipped and logged
+ * by code. Resolves `null` if `top` itself is gone and rejects if it cannot be read.
  */
-function walkTree(top: string, cancelled: () => boolean): Promise<Walked | null> {
+function walkTree(top: string, root: string, cancelled: () => boolean): Promise<Walked | null> {
   return new Promise((resolve, reject) => {
     const files: string[] = []
     const dirs: string[] = []
@@ -80,7 +78,7 @@ function walkTree(top: string, cancelled: () => boolean): Promise<Walked | null>
             for (const entry of entries) {
               const path = join(dir, entry.name)
               if (entry.isDirectory()) queue.push(path)
-              else if (entry.isFile() && isMarkdownFile(entry.name)) files.push(path)
+              else if (entry.isFile() && listedKindOf(relative(root, path))) files.push(path)
             }
           })
           .catch((error: unknown) => {
@@ -120,7 +118,7 @@ async function classify(path: string): Promise<Kind> {
   const isDirectory = stats.isDirectory()
   if (!isDirectory && !stats.isFile()) return 'missing'
   const kind: Kind = isDirectory ? 'directory' : 'file'
-  if (kind === 'file' && !isMarkdownFile(path)) return kind
+  if (kind === 'file' && !supportedKindOf(path)) return kind
   try {
     return (await nativeRealpath(path)).endsWith(sep + basename(path)) ? kind : 'missing'
   } catch (error) {
@@ -354,7 +352,7 @@ export class Watcher {
   private async seed(session: Session): Promise<void> {
     let walked: Walked | null
     try {
-      walked = await walkTree(session.root, () => session.closed)
+      walked = await walkTree(session.root, session.root, () => session.closed)
     } catch (error) {
       walked = null
       console.error('Ryte could not read the notes folder.', errorCode(error))
@@ -437,7 +435,7 @@ export class Watcher {
       } else if (kind === 'file') {
         // A folder replaced by a file leaves nothing of the folder's notes.
         if (session.dirs.has(path)) this.removeSubtree(session, path, change)
-        if (isMarkdownFile(path)) {
+        if (listedKindOf(relative(session.root, path))) {
           if (this.addFile(session, path)) change.tree = true
           this.emitCatalogChanged({ type: 'upsert', path, notesRoot: session.root })
           this.queueIndexOperation(path, 'changed')
@@ -543,7 +541,7 @@ export class Watcher {
     knownFiles: string[],
     knownDirs: string[]
   ): Promise<void> {
-    const walked = await walkTree(path, () => session.closed)
+    const walked = await walkTree(path, session.root, () => session.closed)
     if (session.closed) return
     if (!walked) {
       this.dropKnown(session, path, change)
@@ -617,7 +615,9 @@ export class Watcher {
     }
   }
 
+  // Only notes are indexed; a picture is listed and never indexed.
   private queueIndexOperation(path: string, operation: 'changed' | 'removed'): void {
+    if (supportedKindOf(path) !== 'note') return
     this.pendingIndexOperations.set(path, operation)
     if (this.processingIndexOperations) return
     this.processingIndexOperations = true

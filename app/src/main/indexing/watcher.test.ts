@@ -273,6 +273,36 @@ describe('Watcher', () => {
       expect(h.notifyFileRemoved).not.toHaveBeenCalled()
     })
 
+    it('updates the tree and catalog for a picture and starts no index work', async () => {
+      fakeFs.file('/notes/old.PNG')
+      const { tree, catalog } = await boot()
+
+      fakeFs.file('/notes/img/new.png')
+      emit('img/new.png')
+      fakeFs.remove('/notes/old.PNG')
+      emit('old.PNG')
+      await advance(DEBOUNCE)
+
+      expect(tree).toHaveBeenCalled()
+      expect(catalogPaths(catalog, 'upsert')).toEqual(['/notes/img/new.png'])
+      expect(catalogPaths(catalog, 'remove')).toEqual(['/notes/old.PNG'])
+      expect(h.notifyFileChanged).not.toHaveBeenCalled()
+      expect(h.notifyFileRemoved).not.toHaveBeenCalled()
+    })
+
+    it('ignores a picture under node_modules or a dot folder', async () => {
+      const { tree, catalog } = await boot()
+
+      fakeFs.file('/notes/node_modules/pkg/logo.png')
+      emit('node_modules/pkg/logo.png')
+      fakeFs.file('/notes/.cache/thumb.png')
+      emit('.cache/thumb.png')
+      await advance(DEBOUNCE)
+
+      expect(tree).not.toHaveBeenCalled()
+      expect(catalog).not.toHaveBeenCalled()
+    })
+
     it('notifies the indexer and file tree subscribers when a markdown file is removed', async () => {
       fakeFs.file('/notes/old.md')
       const { tree, catalog } = await boot()
@@ -386,7 +416,7 @@ describe('Watcher', () => {
 
       fakeFs.file('/notes/z/b/n1.md')
       fakeFs.file('/notes/z/n2.md')
-      fakeFs.file('/notes/z/pic.png')
+      fakeFs.file('/notes/z/pic.bin')
       emit('z')
       await advance(DEBOUNCE)
 
@@ -396,7 +426,7 @@ describe('Watcher', () => {
 
     it('removes the notes of a folder that was deleted, from the one event for the folder', async () => {
       fakeFs.file('/notes/d/e/n.md')
-      fakeFs.file('/notes/d/p.png')
+      fakeFs.file('/notes/d/p.bin')
       const { tree, catalog } = await boot()
 
       fakeFs.remove('/notes/d')
@@ -832,16 +862,16 @@ describe('Watcher', () => {
     it('does not scan the known notes for a deleted path that held none', async () => {
       for (let i = 0; i < 2000; i += 1) fakeFs.file(`/notes/d${i % 50}/n${i}.md`)
       await boot()
-      fakeFs.file('/notes/d1/pic.png')
+      fakeFs.file('/notes/d1/pic.bin')
       fakeFs.file('/notes/d1/.n.tmp')
-      emit('d1/pic.png')
+      emit('d1/pic.bin')
       emit('d1/.n.tmp')
       await advance(DEBOUNCE)
 
-      fakeFs.remove('/notes/d1/pic.png')
+      fakeFs.remove('/notes/d1/pic.bin')
       fakeFs.remove('/notes/d1/.n.tmp')
       const startsWith = vi.spyOn(String.prototype, 'startsWith')
-      emit('d1/pic.png')
+      emit('d1/pic.bin')
       emit('d1/.n.tmp')
       emit('never/existed.md')
       await advance(DEBOUNCE)

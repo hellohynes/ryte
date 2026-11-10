@@ -62,7 +62,7 @@ function setup(options: SetupOptions = {}): {
     showItemInFolder: Mock<(path: string) => void>
     trashItem: Mock<(path: string) => Promise<void>>
   }
-  walkNotes: Mock<Deps['walkNotes']>
+  walkLibrary: Mock<Deps['walkLibrary']>
   listFileCatalog: Mock<Deps['listFileCatalog']>
   readTextFile: Mock<Deps['readTextFile']>
   readSourceFile: Mock<Deps['readSourceFile']>
@@ -102,7 +102,7 @@ function setup(options: SetupOptions = {}): {
     showItemInFolder: vi.fn((path: string) => void log.push(`finder:${path}`)),
     trashItem: vi.fn(async (path: string) => void log.push(`trash:${path}`))
   }
-  const walkNotes = vi.fn<Deps['walkNotes']>(async () => options.walked ?? [])
+  const walkLibrary = vi.fn<Deps['walkLibrary']>(async () => options.walked ?? [])
   const catalog = options.catalog ?? { notesRoot: NOTES_ROOT, files: [] }
   const listFileCatalog = vi.fn<Deps['listFileCatalog']>(async () => catalog)
   const readTextFile = vi.fn<Deps['readTextFile']>(async (path) => `text of ${path}`)
@@ -117,7 +117,7 @@ function setup(options: SetupOptions = {}): {
   const handlers = createFilesHandlers<FakeWindow>({
     store: typed,
     getNotesRoot: options.notesRoot ?? (() => NOTES_ROOT),
-    walkNotes,
+    walkLibrary,
     listFileCatalog,
     readTextFile,
     readSourceFile,
@@ -140,7 +140,7 @@ function setup(options: SetupOptions = {}): {
     windowFor,
     clipboard,
     shell,
-    walkNotes,
+    walkLibrary,
     listFileCatalog,
     readTextFile,
     readSourceFile,
@@ -154,7 +154,7 @@ const callsOf = (store: Store, method: StoreMethod): unknown[][] =>
 
 describe('list-tree and list-catalog', () => {
   it('returns the notes folder and the paths relative to it, sorted by code unit', async () => {
-    const { handlers, walkNotes } = setup({
+    const { handlers, walkLibrary } = setup({
       walked: [
         `${NOTES_ROOT}/b/z.md`,
         `${NOTES_ROOT}/a.md`,
@@ -167,12 +167,12 @@ describe('list-tree and list-catalog', () => {
       notesRoot: NOTES_ROOT,
       paths: ['B.md', 'a.md', 'b/a.md', 'b/z.md']
     })
-    expect(walkNotes).toHaveBeenCalledWith(NOTES_ROOT)
+    expect(walkLibrary).toHaveBeenCalledWith(NOTES_ROOT)
   })
 
   it('reads the notes folder when asked, not when the handlers were built', async () => {
     let root = '/first'
-    const { handlers, walkNotes, listFileCatalog } = setup({ notesRoot: () => root })
+    const { handlers, walkLibrary, listFileCatalog } = setup({ notesRoot: () => root })
 
     await handlers.listTree(undefined, ctx)
     await handlers.listCatalog(undefined, ctx)
@@ -180,7 +180,7 @@ describe('list-tree and list-catalog', () => {
     await handlers.listTree(undefined, ctx)
     await handlers.listCatalog(undefined, ctx)
 
-    expect(walkNotes.mock.calls.map((call) => call[0])).toEqual(['/first', '/second'])
+    expect(walkLibrary.mock.calls.map((call) => call[0])).toEqual(['/first', '/second'])
     expect(listFileCatalog.mock.calls.map((call) => call[0])).toEqual(['/first', '/second'])
   })
 

@@ -80,7 +80,7 @@ vi.mock('./indexing/indexer-service', () => ({
     }
   }
 }))
-vi.mock('./indexing/walker', () => ({ walkNotes: vi.fn() }))
+vi.mock('./indexing/walker', () => ({ walkNotes: vi.fn(), walkLibrary: vi.fn() }))
 vi.mock('./indexing/watcher', () => ({
   watcher: {
     onCatalogChanged: vi.fn((callback) => {

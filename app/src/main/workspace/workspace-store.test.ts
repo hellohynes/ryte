@@ -457,6 +457,31 @@ describe('WorkspaceStore', () => {
     expect(state.outlineCollapsedByPath).toEqual({ 'keep.md': false })
   })
 
+  it('keeps a tab for a picture that exists and prunes one that is gone', async () => {
+    writeNote('keep.md')
+    mkdirSync(join(notesRoot, 'img'), { recursive: true })
+    writeFileSync(join(notesRoot, 'img', 'Shot.PNG'), '')
+    writeFileSync(
+      join(tempDir, 'workspace.json'),
+      JSON.stringify({
+        schemaVersion: 1,
+        tabs: [
+          { id: 'picture-tab', sourcePath: 'img/Shot.PNG', title: 'Shot.PNG', viewMode: 'preview' },
+          { id: 'gone-tab', sourcePath: 'img/gone.png', title: 'gone.png', viewMode: 'preview' }
+        ],
+        activeTabId: 'picture-tab',
+        recents: [],
+        outlineCollapsedByPath: {}
+      }),
+      'utf-8'
+    )
+
+    const state = await store().pruneMissingFileRefs()
+
+    expect(state.tabs.map((tab) => tab.id)).toEqual(['picture-tab'])
+    expect(state.activeTabId).toBe('picture-tab')
+  })
+
   it('migrates retired and malformed sidebar modes back to the Library', () => {
     writeFileSync(
       join(tempDir, 'workspace.json'),
