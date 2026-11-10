@@ -9,6 +9,7 @@ import { locateNoteFile } from '../viewer/note-files'
 import { createBlockedLog, type BlockedLog } from './page-blocked'
 import { createPageLinkOpener, createRealInputGate, isOpenablePageLink } from './page-links'
 import { appKeyFor } from './page-keys'
+import { isOwnPageAddress, isOwnPageMove } from './page-moves'
 import { createPageFolderHandler, type PageFolders } from './page-scheme'
 
 export interface PageBounds {
@@ -42,11 +43,6 @@ interface OpenPage {
   host: BrowserWindow
   ses: Session
   onHostClosed: () => void
-}
-
-/** Whether a request is for a file of this page's own folder. Anything else the session cancels. */
-export function isOwnPageAddress(url: string, id: string): boolean {
-  return url.toLowerCase().startsWith(`${PAGE_SCHEME}://${id}/`)
 }
 
 const rounded = (bounds: PageBounds): PageBounds => ({
@@ -161,8 +157,9 @@ export function createPageBox({
       return { action: 'deny' }
     })
     contents.on('will-frame-navigate', (event) => {
-      // A frame inside the page may load the page's own files; the page itself never leaves the one it opened.
-      if (!event.isMainFrame && isOwnPageAddress(event.url, id)) return
+      // A frame inside the page may load the page's own files, and the page may move to another page of its
+      // folder. Everything else is a link (opened only on a real click) or blocked.
+      if (event.isMainFrame ? isOwnPageMove(event.url, id) : isOwnPageAddress(event.url, id)) return
       event.preventDefault()
       if (!event.isMainFrame || !isOpenablePageLink(event.url) || !openLink(event.url)) {
         log.add(event.url)
