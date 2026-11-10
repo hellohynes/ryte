@@ -248,6 +248,35 @@ describe('useViewerStore', () => {
     expect(watchWorkspaceTab).not.toHaveBeenCalled()
   })
 
+  it('shows an HTML tab without reading it as a note or watching it', async () => {
+    const active = tab({ id: 'tab-page', sourcePath: 'review/Index.HTML', title: 'Index.HTML' })
+    const readWorkspaceTab = vi.fn().mockResolvedValue('<h1>not a note</h1>')
+    const watchWorkspaceTab = vi.fn().mockResolvedValue(undefined)
+
+    installRyteApi({
+      files: {
+        listTree: vi.fn().mockResolvedValue({ notesRoot: '/notes', paths: ['review/Index.HTML'] }),
+        readWorkspaceTab,
+        watchWorkspaceTab
+      },
+      workspace: {
+        getState: vi
+          .fn()
+          .mockResolvedValue(workspaceState({ tabs: [active], activeTabId: active.id }))
+      }
+    })
+
+    const workspace = useWorkspaceStore()
+    await workspace.hydrate()
+    const viewer = useViewerStore()
+    await viewer.hydrate()
+
+    expect(viewer.pagePath).toBe('review/Index.HTML')
+    expect(viewer.loading).toBe(false)
+    expect(readWorkspaceTab).not.toHaveBeenCalled()
+    expect(watchWorkspaceTab).not.toHaveBeenCalled()
+  })
+
   it('shows a code tab through code:read, without reading it as a note or watching it', async () => {
     const active = tab({ id: 'tab-code', sourcePath: 'src/Build.TS', title: 'Build.TS' })
     const readWorkspaceTab = vi.fn().mockResolvedValue('not a note')

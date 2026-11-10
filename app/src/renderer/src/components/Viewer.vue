@@ -21,6 +21,7 @@ import StProse from '../stencil/components/StProse.vue'
 import NoteLightbox from './NoteLightbox.vue'
 import { buildLightboxList, type LightboxPicture, type PagePicture } from './lightbox-model'
 import CodeViewer from './CodeViewer.vue'
+import PageViewer from './PageViewer.vue'
 import PictureViewer from './PictureViewer.vue'
 import VideoViewer from './VideoViewer.vue'
 import { buildVideoProblemNotice, noteVideoPathOf, openVideoInDefaultApp } from './video-problems'
@@ -182,8 +183,8 @@ async function togglePreservingScroll(): Promise<void> {
 }
 
 function onToggleSourceMode(): void {
-  // A picture, a video or a code file has no source to switch to.
-  if (viewer.picturePath || viewer.videoPath || viewer.codePath) return
+  // A picture, a video, a page or a code file has no source to switch to.
+  if (viewer.picturePath || viewer.videoPath || viewer.pagePath || viewer.codePath) return
   void togglePreservingScroll()
 }
 
@@ -421,6 +422,7 @@ onUnmounted(() => {
   >
     <PictureViewer v-if="viewer.picturePath" :key="viewer.picturePath" :path="viewer.picturePath" />
     <VideoViewer v-else-if="viewer.videoPath" :key="viewer.videoPath" :path="viewer.videoPath" />
+    <PageViewer v-else-if="viewer.pagePath" :key="viewer.pagePath" :path="viewer.pagePath" />
     <CodeViewer v-else-if="viewer.codePath" :key="viewer.codePath" :path="viewer.codePath" />
     <div v-else-if="viewer.error" class="error">
       <p>

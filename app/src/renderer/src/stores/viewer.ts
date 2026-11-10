@@ -129,6 +129,14 @@ export const useViewerStore = defineStore('viewer', () => {
       ? sourcePath.value
       : null
   )
+  // An HTML tab shows the page in a locked view over the tab; it is never read as text or watched here.
+  const pagePath = computed(() =>
+    sourcePath.value !== null && supportedKindOf(sourcePath.value) === 'html'
+      ? sourcePath.value
+      : null
+  )
+  // Goes up when the open page's file changed on disk, so its view loads the page again.
+  const pageVersion = ref(0)
   const codeFile = ref<CodeReadResult | null>(null)
   const displayPath = computed(() =>
     activeTab.value ? workspaceFileDisplayPath(activeTab.value) : null
@@ -193,7 +201,7 @@ export const useViewerStore = defineStore('viewer', () => {
       return
     }
 
-    if (picturePath.value !== null || videoPath.value !== null) {
+    if (picturePath.value !== null || videoPath.value !== null || pagePath.value !== null) {
       loading.value = false
       content.value = ''
       error.value = null
@@ -297,6 +305,7 @@ export const useViewerStore = defineStore('viewer', () => {
       isOptimisticWorkspaceTabId(tab.id) ||
       picturePath.value !== null ||
       videoPath.value !== null ||
+      pagePath.value !== null ||
       codePath.value !== null
     ) {
       return
@@ -344,6 +353,16 @@ export const useViewerStore = defineStore('viewer', () => {
 
     // A code tab has no note watch; the catalog says when its file changed. No event means the whole catalog changed.
     unsubscribeCatalogChange = window.ryte.files.onCatalogChanged((event) => {
+      const page = pagePath.value
+      if (page !== null) {
+        const changedPath = event
+          ? event.type === 'upsert'
+            ? event.file.sourcePath
+            : event.sourcePath
+          : page
+        if (changedPath === page) pageVersion.value += 1
+        return
+      }
       const path = codePath.value
       if (path === null) return
       if (event) {
@@ -443,6 +462,8 @@ export const useViewerStore = defineStore('viewer', () => {
     sourcePath,
     picturePath,
     videoPath,
+    pagePath,
+    pageVersion,
     codePath,
     codeFile,
     displayPath,
