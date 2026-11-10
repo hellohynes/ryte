@@ -268,7 +268,9 @@ export function buildHomeSidebarModel(input: HomeSidebarModelInput): HomeSidebar
   const activeTab = input.tabs.find((tab) => tab.id === input.activeTabId) ?? null
   const activeSourcePath =
     activeTab && isWorkspaceSourceFileRef(activeTab) ? activeTab.sourcePath : null
-  const sourceRecents = input.recents.filter(isSourceWorkspaceRecentFile)
+  const sourceRecents = input.recents
+    .filter(isSourceWorkspaceRecentFile)
+    .filter((recent) => supportedKindOf(recent.sourcePath) === 'note')
   const context: HomeSidebarModelContext = {
     ...input,
     // Home's groups are about notes; pictures are in the catalog for the tree and quick open.

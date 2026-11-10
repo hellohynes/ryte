@@ -244,20 +244,6 @@ describe('useWorkspaceStore', () => {
     expect(store.activeTabId).toBe(tabA2.id)
   })
 
-  it('does not open a tab for a picture, from the tree or from quick open', async () => {
-    const openFile = vi.fn()
-    installWorkspaceApi({ getState: vi.fn().mockResolvedValue(workspaceState()), openFile })
-
-    const store = useWorkspaceStore()
-    await store.hydrate()
-
-    await store.openOrFocusFile({ sourcePath: 'img/Shot.PNG' })
-    await store.openExplicitFile({ sourcePath: 'img/Shot.PNG' })
-
-    expect(openFile).not.toHaveBeenCalled()
-    expect(store.tabs).toEqual([])
-  })
-
   it('focuses the latest matching tab and records recency for openExplicitFile', async () => {
     const tabA = { id: 'tab-a', sourcePath: 'a.md', title: 'a.md', viewMode: 'preview' as const }
     const tabB = { id: 'tab-b', sourcePath: 'b.md', title: 'b.md', viewMode: 'preview' as const }

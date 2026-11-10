@@ -177,6 +177,35 @@ describe('useViewerStore', () => {
     expect(viewer.content).toBe('# A\n')
   })
 
+  it('shows a picture tab without reading it as text or watching it', async () => {
+    const active = tab({ id: 'tab-pic', sourcePath: 'img/Shot.PNG', title: 'Shot.PNG' })
+    const readWorkspaceTab = vi.fn().mockResolvedValue('not text')
+    const watchWorkspaceTab = vi.fn().mockResolvedValue(undefined)
+
+    installRyteApi({
+      files: {
+        listTree: vi.fn().mockResolvedValue({ notesRoot: '/notes', paths: ['img/Shot.PNG'] }),
+        readWorkspaceTab,
+        watchWorkspaceTab
+      },
+      workspace: {
+        getState: vi
+          .fn()
+          .mockResolvedValue(workspaceState({ tabs: [active], activeTabId: active.id }))
+      }
+    })
+
+    const workspace = useWorkspaceStore()
+    await workspace.hydrate()
+    const viewer = useViewerStore()
+    await viewer.hydrate()
+
+    expect(viewer.picturePath).toBe('img/Shot.PNG')
+    expect(viewer.loading).toBe(false)
+    expect(readWorkspaceTab).not.toHaveBeenCalled()
+    expect(watchWorkspaceTab).not.toHaveBeenCalled()
+  })
+
   it('hydrates an external workspace tab through tab-scoped file APIs', async () => {
     const active = tab({
       id: 'tab-external',

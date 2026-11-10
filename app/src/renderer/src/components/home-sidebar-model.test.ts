@@ -350,7 +350,13 @@ describe('buildHomeSidebarModel', () => {
         catalogEntry({ sourcePath: 'plans/real-plan.md', title: 'real-plan' }),
         catalogEntry({ sourcePath: 'plans/diagram.png', title: 'diagram.png' })
       ],
-      recents: [],
+      recents: [
+        {
+          sourcePath: 'plans/diagram.png',
+          title: 'diagram.png',
+          openedAt: '2026-05-26T12:00:00.000Z'
+        }
+      ],
       tabs: []
     })
 

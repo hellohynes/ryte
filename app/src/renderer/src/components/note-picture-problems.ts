@@ -40,6 +40,20 @@ export function describePictureProblem(problem: PictureProblem, path: string): P
   }
 }
 
+/** Opens a picture in its default app; the button is disabled meanwhile and says so when it could not open. */
+export async function openPictureInDefaultApp(
+  button: HTMLButtonElement,
+  path: string
+): Promise<void> {
+  button.disabled = true
+  try {
+    const { opened } = await window.ryte.pictures.openInDefaultApp({ path })
+    if (!opened) button.textContent = "Couldn't open it"
+  } finally {
+    button.disabled = false
+  }
+}
+
 /** The notes-relative path of a picture that loads through `ryte-file`, or null for any other picture. */
 export function notePicturePathOf(img: HTMLImageElement): string | null {
   const src = img.getAttribute('src') ?? ''
