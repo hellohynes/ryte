@@ -16,6 +16,13 @@ change or remove one.
 | --- | --- | --- | --- |
 | `app.menuCommand` | `app:menu-command` | A menu item was chosen. Sent to the focused window only, or the first window when none is focused. | `see schema` |
 
+## code
+
+| Operation | Channel | What it does | Input |
+| --- | --- | --- | --- |
+| `code.read` | `code:read` | Read a code file (JSON, JavaScript, TypeScript, CSS, YAML or shell) from the notes folder as UTF-8 text with any leading byte order mark dropped. Returns `too-large` with the size when it is over the 10 MB cap (the contents are not read), `missing` when it is gone, and `blocked` when it is outside the notes folder, not a regular file, or not a code type Ryte shows. Notes and every other type are refused. | `{ path: string }` |
+| `code.openInDefaultApp` | `code:open-in-default-app` | Open a code file from the notes folder in its default app, after checking again that it is inside the notes folder and of a code type. Shell scripts are refused, so a script is never run by opening it. Returns whether it opened. | `{ path: string }` |
+
 ## dialog
 
 | Operation | Channel | What it does | Input |

@@ -7,6 +7,7 @@ import { refreshAppMenu } from './app-menu'
 import { applyColorMode } from './appearance'
 import { createAppHandlers } from './contract/app-handlers'
 import { createDialogHandlers } from './contract/dialog-handlers'
+import { createCodeHandlers } from './contract/code-handlers'
 import { createFilesHandlers } from './contract/files-handlers'
 import { createViewerWatch, forwardFileChanges } from './contract/files-watch'
 import {
@@ -136,6 +137,10 @@ export function registerIpc(): void {
       }),
       ...viewerWatch
     },
+    code: createCodeHandlers({
+      getNotesRoot: () => settingsStore.load().notesRoot,
+      openPath: (path) => shell.openPath(path)
+    }),
     indexer: createIndexerHandlers({
       service: indexerService,
       beforeClear: stopSearchesBeforeClear

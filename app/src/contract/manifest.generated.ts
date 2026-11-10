@@ -9,6 +9,13 @@ export const manifest = {
       menuCommand: 'app:menu-command'
     }
   },
+  code: {
+    operations: {
+      read: 'code:read',
+      openInDefaultApp: 'code:open-in-default-app'
+    },
+    events: {}
+  },
   dialog: {
     operations: {
       openFolder: 'dialog:open-folder'
