@@ -44,6 +44,7 @@ const EXPECTED = [
   'moon',
   'more-vertical',
   'openai',
+  'page',
   'plus',
   'quote',
   'redo',

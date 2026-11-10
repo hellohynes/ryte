@@ -329,6 +329,7 @@ export const ICON_SPEC: Record<string, IconSpec> = {
       line([7, 6.5], [7, 13])
     ]
   },
+  page: { strokes: [rect(2, 2.5, 12, 11, 1.5), line([2, 6], [14, 6])] },
   type: { strokes: [line([3, 13], [8, 3], [13, 13]), line([4.9, 9.5], [11.1, 9.5])] },
   video: {
     strokes: [rect(2, 4, 8.5, 8, 1.5), line([10.5, 7], [13.5, 5.25], [13.5, 10.75], [10.5, 9])]
