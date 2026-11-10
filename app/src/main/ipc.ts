@@ -15,6 +15,7 @@ import {
   forwardIndexerStatus,
   forwardRebuildNotice
 } from './contract/indexer-handlers'
+import { createPicturesHandlers } from './contract/pictures-handlers'
 import { createEmitter, registerOperations } from './contract/register'
 import { createSearch } from './contract/search-handlers'
 import { createSettingsHandlers } from './contract/settings-handlers'
@@ -138,6 +139,10 @@ export function registerIpc(): void {
     indexer: createIndexerHandlers({
       service: indexerService,
       beforeClear: stopSearchesBeforeClear
+    }),
+    pictures: createPicturesHandlers({
+      getNotesRoot: () => settingsStore.load().notesRoot,
+      openPath: (path) => shell.openPath(path)
     }),
     search: search.handlers,
     settings: createSettingsHandlers({

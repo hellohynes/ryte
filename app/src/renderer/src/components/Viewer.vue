@@ -18,6 +18,9 @@ import {
 } from '../../../shared/workspace'
 import StIconButton from '../stencil/components/StIconButton.vue'
 import StProse from '../stencil/components/StProse.vue'
+import NoteLightbox from './NoteLightbox.vue'
+import { buildLightboxList, type LightboxPicture, type PagePicture } from './lightbox-model'
+import { buildPictureProblemNotice, notePicturePathOf } from './note-picture-problems'
 import { WORKSPACE_TABPANEL_ID, getWorkspaceTabDomId } from './workspace-tab-keyboard'
 
 const viewer = useViewerStore()
@@ -33,6 +36,7 @@ const sourceEl = ref<HTMLElement | null>(null)
 const fallbackOutlineCollapsed = ref(false)
 const dragOutlineWidth = ref<number | null>(null)
 const activeOutlineId = ref('overview')
+const lightbox = ref<{ pictures: LightboxPicture[]; start: number } | null>(null)
 
 let _stopOutlineResize: (() => void) | undefined
 
@@ -146,6 +150,7 @@ watch(
 watch(
   [renderedHtml, () => viewer.sourceMode],
   () => {
+    lightbox.value = null
     hydrateRenderedContent().catch((err) => {
       renderError.value = err instanceof Error ? err.message : String(err)
     })
@@ -172,9 +177,74 @@ function onToggleSourceMode(): void {
   void togglePreservingScroll()
 }
 
+async function explainFailedPicture(img: HTMLImageElement): Promise<void> {
+  const path = notePicturePathOf(img)
+  if (path === null || img.dataset.notePictureFailed) return
+  img.dataset.notePictureFailed = 'true'
+  const problem = await window.ryte.pictures.explain({ path })
+  if (!img.isConnected) return
+  const host = img.closest('.note-picture-button') ?? img
+  host.replaceWith(buildPictureProblemNotice(document, problem, path, img.alt))
+}
+
+// `error` does not bubble, so the prose listens for it in the capture phase.
+function onRenderedError(event: Event): void {
+  if (!(event.target instanceof HTMLImageElement)) return
+  explainFailedPicture(event.target).catch(() => {
+    // The picture keeps its broken state; nothing about the file is shown.
+  })
+}
+
+async function openPictureInDefaultApp(button: HTMLButtonElement, path: string): Promise<void> {
+  button.disabled = true
+  try {
+    const { opened } = await window.ryte.pictures.openInDefaultApp({ path })
+    if (!opened) button.textContent = "Couldn't open it"
+  } finally {
+    button.disabled = false
+  }
+}
+
+function pagePictures(): PagePicture[] {
+  const buttons = proseEl.value?.querySelectorAll<HTMLButtonElement>('.note-picture-button') ?? []
+  return [...buttons].flatMap((button) => {
+    const img = button.querySelector('img')
+    const index = Number(button.dataset.notePictureIndex)
+    if (!img || !Number.isInteger(index)) return []
+    return [
+      {
+        index,
+        src: img.src,
+        alt: img.alt,
+        origin: notePicturePathOf(img) ?? '',
+        // A lazy picture still waiting to load counts; one that finished with no size failed.
+        loaded: !(img.complete && img.naturalWidth === 0)
+      }
+    ]
+  })
+}
+
+function openLightbox(clickedIndex: number): void {
+  if (!Number.isInteger(clickedIndex)) return
+  lightbox.value = buildLightboxList(pagePictures(), clickedIndex)
+}
+
 function onRenderedClick(event: MouseEvent): void {
   const target = event.target instanceof Element ? event.target : null
+  const openButton = target?.closest<HTMLButtonElement>('[data-note-picture-open]')
+  if (openButton?.dataset.notePictureOpen && proseEl.value?.contains(openButton)) {
+    event.preventDefault()
+    void openPictureInDefaultApp(openButton, openButton.dataset.notePictureOpen)
+    return
+  }
   if (target?.closest('a')) return
+
+  const pictureButton = target?.closest<HTMLButtonElement>('.note-picture-button')
+  if (pictureButton && proseEl.value?.contains(pictureButton)) {
+    event.preventDefault()
+    openLightbox(Number(pictureButton.dataset.notePictureIndex))
+    return
+  }
 
   const taskLine = target?.closest<HTMLElement>('.markdown-task-line')
   const button =
@@ -422,9 +492,16 @@ onUnmounted(() => {
         class="viewer-prose ryte-scrollbar ryte-scrollbar--y"
         :html="renderedHtml"
         @click="onRenderedClick"
+        @error.capture="onRenderedError"
         @scroll.passive="onRenderedScroll"
       />
     </div>
+    <NoteLightbox
+      v-if="lightbox"
+      :pictures="lightbox.pictures"
+      :start="lightbox.start"
+      @close="lightbox = null"
+    />
   </section>
 </template>
 

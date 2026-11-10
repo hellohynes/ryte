@@ -62,6 +62,13 @@ change or remove one.
 | `indexer.rebuildNotice` | `indexer:rebuild-notice-event` | The rebuild notice appeared or was dismissed (null); sent to every open window, so a window that opened before the notice existed still shows it. | `see schema` |
 | `indexer.embeddingStatus` | `indexer:embedding-status-event` | What smart search is doing changed; sent to every open window at once when its state changes and at most a few times a second while it makes progress. | `{ state: 'off' \| 'idle' \| 'running' \| 'paused', total: integer, done: integer, pending: integer, reason?: 'no-key' \| 'no-agreement' \| 'offline' \| 'rate-limit' \| 'service' \| 'auth', retryAt?: string }` |
 
+## pictures
+
+| Operation | Channel | What it does | Input |
+| --- | --- | --- | --- |
+| `pictures.explain` | `pictures:explain` | Why a picture from the notes folder did not show: `too-large` (over the 50 MB cap), `missing`, `blocked` (outside the notes folder, or not a type Ryte shows), or `unreadable` (it passes every check but did not load). Carries the size in bytes when the file was found. | `{ path: string }` |
+| `pictures.openInDefaultApp` | `pictures:open-in-default-app` | Open a PNG, JPEG, GIF, WebP or AVIF picture from the notes folder in its default app, after checking again that it is inside the notes folder and of that type. SVG and every other type are refused. Returns whether it opened. | `{ path: string }` |
+
 ## search
 
 | Operation | Channel | What it does | Input |

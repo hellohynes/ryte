@@ -92,3 +92,12 @@ export function renderNotePicture(picturePath: string, alt: string, title: strin
   const titleAttribute = title ? ` title="${escapeHtml(title)}"` : ''
   return `<img src="${escapeHtml(noteFileUrl(picturePath))}" alt="${escapeHtml(alt)}"${titleAttribute} loading="lazy" decoding="async">`
 }
+
+/**
+ * Wraps a shown picture in a button that opens the lightbox. The button carries the picture's position in
+ * reading order, the same way task buttons carry their source line.
+ */
+export function renderPictureButton(pictureHtml: string, index: number, alt: string): string {
+  const label = alt ? `Open picture: ${alt}` : 'Open picture'
+  return `<button type="button" class="note-picture-button" aria-label="${escapeHtml(label)}" data-note-picture-index="${index}">${pictureHtml}</button>`
+}

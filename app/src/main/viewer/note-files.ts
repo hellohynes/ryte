@@ -25,14 +25,18 @@ function isInside(root: string, target: string): boolean {
   return target.startsWith(root + sep)
 }
 
+type LocatedPicture =
+  | { ok: true; realPath: string; extension: string; size: number; dev: number; ino: number }
+  | { ok: false; reason: 'blocked' | 'missing' }
+
 /**
- * Checks a notes-relative picture path against the notes folder: an allowed picture type (before and
- * after following links), inside the folder after following links, a file, and under the size cap.
+ * Finds a notes-relative picture: an allowed picture type (before and after following links), inside the
+ * notes folder after following links, and a file. The size is not checked here.
  */
-export async function checkNotePicture(
+export async function locateNotePicture(
   notesRelativePath: string,
   notesRoot: string
-): Promise<NotePictureCheck> {
+): Promise<LocatedPicture> {
   if (!Object.hasOwn(NOTE_PICTURE_CONTENT_TYPES, notePictureExtension(notesRelativePath))) {
     return { ok: false, reason: 'blocked' }
   }
@@ -54,17 +58,26 @@ export async function checkNotePicture(
   const stats = await lstat(target).catch(() => null)
   if (!stats) return { ok: false, reason: 'missing' }
   if (!stats.isFile()) return { ok: false, reason: 'blocked' }
-  if (stats.size > MAX_NOTE_PICTURE_BYTES) {
-    return { ok: false, reason: 'too-large', size: stats.size }
-  }
+  return { ok: true, realPath: target, extension, size: stats.size, dev: stats.dev, ino: stats.ino }
+}
 
+/** `locateNotePicture`, plus the size cap for showing it inline. */
+export async function checkNotePicture(
+  notesRelativePath: string,
+  notesRoot: string
+): Promise<NotePictureCheck> {
+  const located = await locateNotePicture(notesRelativePath, notesRoot)
+  if (!located.ok) return located
+  if (located.size > MAX_NOTE_PICTURE_BYTES) {
+    return { ok: false, reason: 'too-large', size: located.size }
+  }
   return {
     ok: true,
-    realPath: target,
-    size: stats.size,
-    contentType: NOTE_PICTURE_CONTENT_TYPES[extension]!,
-    dev: stats.dev,
-    ino: stats.ino
+    realPath: located.realPath,
+    size: located.size,
+    contentType: NOTE_PICTURE_CONTENT_TYPES[located.extension]!,
+    dev: located.dev,
+    ino: located.ino
   }
 }
 
