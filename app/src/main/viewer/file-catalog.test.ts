@@ -67,4 +67,21 @@ describe('listFileCatalog', () => {
       pathDate: '2026-06-23'
     })
   })
+
+  it('lists a picture with its file name as the title, without reading it as text', async () => {
+    mkdirSync(join(tempDir, 'img'), { recursive: true })
+    writeFileSync(join(tempDir, 'img', 'Shot.PNG'), '# Not a title\n')
+    writeFileSync(join(tempDir, 'note.md'), '# Real title\n')
+
+    const catalog = await listFileCatalog(tempDir)
+
+    expect(catalog.files.map((file) => [file.sourcePath, file.title])).toEqual([
+      ['img/Shot.PNG', 'Shot.PNG'],
+      ['note.md', 'Real title']
+    ])
+    expect(catalog.files[0]).toMatchObject({
+      directory: 'img',
+      sizeBytes: '# Not a title\n'.length
+    })
+  })
 })

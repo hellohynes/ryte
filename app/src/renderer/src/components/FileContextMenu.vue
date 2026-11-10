@@ -10,6 +10,8 @@ const props = defineProps<{
   x: number
   y: number
   fileName: string
+  /** False for a picture: it cannot be renamed or copied as text. */
+  isNote: boolean
   canClose?: boolean
 }>()
 
@@ -24,9 +26,11 @@ const anchor = computed(() => ({ x: props.x, y: props.y, width: 0, height: 0 }))
 
 <template>
   <StMenu open :anchor="anchor" :label="`File actions for ${fileName}`" @dismiss="emit('dismiss')">
-    <StMenuItem @click="emit('action', 'copy-file')">Copy file</StMenuItem>
-    <StMenuItem @click="emit('action', 'rename')">Rename</StMenuItem>
-    <StMenuSeparator />
+    <template v-if="isNote">
+      <StMenuItem @click="emit('action', 'copy-file')">Copy file</StMenuItem>
+      <StMenuItem @click="emit('action', 'rename')">Rename</StMenuItem>
+      <StMenuSeparator />
+    </template>
     <StMenuItem @click="emit('action', 'show-in-finder')">Show in Finder</StMenuItem>
     <StMenuItem @click="emit('action', 'copy-file-path')">Copy file path</StMenuItem>
     <template v-if="canClose">

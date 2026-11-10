@@ -2,6 +2,7 @@ import { relative, sep } from 'node:path'
 
 import { contract, type Contract } from '../../contract'
 import type { FileCatalogChange, FileCatalogEntry } from '../../contract/files'
+import { supportedKindOf } from '../../shared/supported-types'
 import { isWorkspaceSourceFileRef, type WorkspaceFileRef } from '../../shared/workspace'
 import type { CatalogChangeEvent } from '../indexing/watcher'
 import type { Emit, Handlers } from './register'
@@ -118,8 +119,11 @@ export function forwardFileChanges({
     // final old-root event against the new root.
     if (event.notesRoot !== notesRoot) return
 
-    markTasksStale()
-    emit(contract.tasks.events.changed)
+    // Tasks come from notes only; a picture changes the catalog and nothing else.
+    if (supportedKindOf(event.path) === 'note') {
+      markTasksStale()
+      emit(contract.tasks.events.changed)
+    }
 
     void (async () => {
       let change: FileCatalogChange | undefined

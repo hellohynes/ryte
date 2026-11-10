@@ -16,6 +16,7 @@ import {
   type WorkspaceFileRef,
   type WorkspaceFileTab
 } from '../../../shared/workspace'
+import { supportedKindOf } from '../../../shared/supported-types'
 import StIconButton from '../stencil/components/StIconButton.vue'
 import FileContextMenu from './FileContextMenu.vue'
 import type { FileContextMenuAction } from './file-context-menu-model'
@@ -35,6 +36,7 @@ const TAB_SCROLL_MARGIN = 8
 interface TabFileContextMenu {
   tabId: string
   fileName: string
+  isNote: boolean
   x: number
   y: number
 }
@@ -204,6 +206,8 @@ function openTabContextMenu(event: MouseEvent, tab: WorkspaceFileTab): void {
   fileContextMenu.value = {
     tabId: tab.id,
     fileName: tab.title,
+    isNote:
+      supportedKindOf(isWorkspaceSourceFileRef(tab) ? tab.sourcePath : tab.externalPath) === 'note',
     x: event.clientX,
     y: event.clientY
   }
@@ -483,6 +487,7 @@ function onGlobalKeydown(event: KeyboardEvent): void {
     :x="fileContextMenu.x"
     :y="fileContextMenu.y"
     :file-name="fileContextMenu.fileName"
+    :is-note="fileContextMenu.isNote"
     can-close
     @action="handleFileContextAction"
     @dismiss="fileContextMenu = null"

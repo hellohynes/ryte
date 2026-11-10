@@ -15,7 +15,7 @@ import {
 import { randomUUID } from 'node:crypto'
 
 import type { FileRenameInput, FileRenameResult } from '../../shared/files'
-import { walkNotes } from '../indexing/walker'
+import { walkLibrary } from '../indexing/walker'
 import { workspaceFilePath } from '../paths'
 import { settingsStore } from '../settings/settings-store'
 import { renameWorkspaceFile, resolveWorkspaceFilePath } from './workspace-file-actions'
@@ -924,7 +924,7 @@ export class WorkspaceStore {
 
   private async currentSourcePathSet(): Promise<Set<string>> {
     const root = await realpath(resolve(this.notesRootProvider()))
-    const absolutePaths = await walkNotes(root)
+    const absolutePaths = await walkLibrary(root)
     const sourcePaths = absolutePaths
       .map((path) => normalizeSourcePath(relative(root, path)))
       .filter((path): path is string => !!path)

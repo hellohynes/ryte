@@ -25,7 +25,7 @@ import { contract } from '../contract'
 import { taskFactsService } from './facts/task-facts-service'
 import { createIndexerRestarter } from './indexer-restart'
 import { indexerService } from './indexing/indexer-service'
-import { walkNotes } from './indexing/walker'
+import { walkLibrary } from './indexing/walker'
 import { watcher } from './indexing/watcher'
 import { fileRefForPickedMarkdownFile, resolveExternalMarkdownFile } from './picked-file'
 import { SearchService } from './search/search-service'
@@ -121,7 +121,7 @@ export function registerIpc(): void {
       ...createFilesHandlers({
         store: workspaceStore,
         getNotesRoot: () => settingsStore.load().notesRoot,
-        walkNotes,
+        walkLibrary,
         listFileCatalog,
         readTextFile: (path) => readFile(path, 'utf8'),
         readSourceFile: readSourceFileSafe,

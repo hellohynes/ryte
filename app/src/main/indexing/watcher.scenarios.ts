@@ -95,7 +95,7 @@ add({
   id: 'create-non-markdown',
   description: 'non-markdown files, which are ignored',
   act: (root) => {
-    write(join(root, 'pic.png'), 'x')
+    write(join(root, 'pic.bin'), 'x')
     write(join(root, 'b.txt'), 'x')
   }
 })
@@ -105,7 +105,7 @@ add({
   act: (root) => {
     write(join(root, 'f', 'g', 'n1.md'))
     write(join(root, 'f', 'g', 'n2.md'))
-    write(join(root, 'f', 'g', 'pic.png'), 'x')
+    write(join(root, 'f', 'g', 'pic.bin'), 'x')
   }
 })
 add({
@@ -195,7 +195,7 @@ add({
   description: 'a folder holding notes and an image deleted',
   setup: (root) => {
     write(join(root, 'd', 'e', 'n.md'))
-    write(join(root, 'd', 'p.png'), 'x')
+    write(join(root, 'd', 'p.bin'), 'x')
   },
   act: (root) => rmSync(join(root, 'd'), { recursive: true })
 })

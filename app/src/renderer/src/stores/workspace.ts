@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
 import type { FileRenameInput } from '../../../shared/files'
+import { supportedKindOf } from '../../../shared/supported-types'
 import {
   SIDEBAR_DEFAULT_WIDTH,
   SIDEBAR_MIN_WIDTH,
@@ -257,7 +258,13 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     )
   }
 
+  // Pictures are listed but have no viewer yet: opening one must not make a tab, which would be read as text.
+  function isPicturePath(sourcePath: string): boolean {
+    return supportedKindOf(sourcePath) === 'picture'
+  }
+
   async function openOrFocusFile(input: WorkspaceOpenFileInput): Promise<void> {
+    if (isPicturePath(input.sourcePath)) return
     const existingTab = tabs.value.findLast(
       (tab) => isWorkspaceSourceFileRef(tab) && tab.sourcePath === input.sourcePath
     )
@@ -269,6 +276,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   }
 
   async function openExplicitFile(input: WorkspaceOpenFileInput): Promise<void> {
+    if (isPicturePath(input.sourcePath)) return
     const existingTab = tabs.value.findLast(
       (tab) => isWorkspaceSourceFileRef(tab) && tab.sourcePath === input.sourcePath
     )

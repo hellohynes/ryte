@@ -1,7 +1,8 @@
-export type FileIconName = 'file'
+import { supportedKindOf } from '../../../shared/supported-types'
+
+export type FileIconName = 'file' | 'image'
 
 const FALLBACK_FILE_ICON: FileIconName = 'file'
-const FILE_ICON_BY_EXTENSION: Partial<Record<string, FileIconName>> = {}
 
 export function fileExtension(fileName: string): string {
   const baseName = fileName.split('/').pop() ?? fileName
@@ -15,5 +16,5 @@ export function fileExtension(fileName: string): string {
 }
 
 export function resolveFileIconName(fileName: string): FileIconName {
-  return FILE_ICON_BY_EXTENSION[fileExtension(fileName)] ?? FALLBACK_FILE_ICON
+  return supportedKindOf(fileName) === 'picture' ? 'image' : FALLBACK_FILE_ICON
 }

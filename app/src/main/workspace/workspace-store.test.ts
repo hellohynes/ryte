@@ -306,6 +306,18 @@ describe('WorkspaceStore', () => {
     await expect(workspace.resolveFilePath({ externalPath })).resolves.toBe(externalPath)
   })
 
+  it('refuses to rename a picture and leaves it unchanged', async () => {
+    const path = join(notesRoot, 'shot.png')
+    writeFileSync(path, 'synthetic picture bytes', 'utf-8')
+
+    await expect(store().renameFile({ sourcePath: 'shot.png', name: 'shot.md' })).rejects.toThrow(
+      'Only notes can be renamed'
+    )
+
+    expect(readFileSync(path, 'utf-8')).toBe('synthetic picture bytes')
+    expect(existsSync(join(notesRoot, 'shot.md'))).toBe(false)
+  })
+
   it('refuses to overwrite an existing file during rename', async () => {
     writeNote('original.md')
     writeNote('existing.md')
@@ -455,6 +467,31 @@ describe('WorkspaceStore', () => {
       { externalPath, title: 'external.md', openedAt: '2026-05-21T12:02:00.000Z' }
     ])
     expect(state.outlineCollapsedByPath).toEqual({ 'keep.md': false })
+  })
+
+  it('keeps a tab for a picture that exists and prunes one that is gone', async () => {
+    writeNote('keep.md')
+    mkdirSync(join(notesRoot, 'img'), { recursive: true })
+    writeFileSync(join(notesRoot, 'img', 'Shot.PNG'), '')
+    writeFileSync(
+      join(tempDir, 'workspace.json'),
+      JSON.stringify({
+        schemaVersion: 1,
+        tabs: [
+          { id: 'picture-tab', sourcePath: 'img/Shot.PNG', title: 'Shot.PNG', viewMode: 'preview' },
+          { id: 'gone-tab', sourcePath: 'img/gone.png', title: 'gone.png', viewMode: 'preview' }
+        ],
+        activeTabId: 'picture-tab',
+        recents: [],
+        outlineCollapsedByPath: {}
+      }),
+      'utf-8'
+    )
+
+    const state = await store().pruneMissingFileRefs()
+
+    expect(state.tabs.map((tab) => tab.id)).toEqual(['picture-tab'])
+    expect(state.activeTabId).toBe('picture-tab')
   })
 
   it('migrates retired and malformed sidebar modes back to the Library', () => {

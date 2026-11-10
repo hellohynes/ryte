@@ -4,6 +4,7 @@ import type { WebContents } from 'electron'
 
 import type { Contract } from '../../contract'
 import type { FileCatalogResponse } from '../../shared/files'
+import { supportedKindOf } from '../../shared/supported-types'
 import { isWorkspaceSourceFileRef } from '../../shared/workspace'
 import type { WorkspaceTabFileDependencies } from '../workspace-tab-file'
 import { fileRefForWorkspaceTab } from '../workspace-tab-file'
@@ -28,7 +29,7 @@ export interface FilesHandlerDependencies<TWindow> extends WorkspaceTabFileDepen
     'fileRefForTab' | 'resolveFilePath' | 'renameFile' | 'removeFileRef' | 'publicState'
   >
   getNotesRoot: () => string
-  walkNotes: (notesRoot: string) => Promise<string[]>
+  walkLibrary: (notesRoot: string) => Promise<string[]>
   listFileCatalog: (notesRoot: string) => Promise<FileCatalogResponse>
   readTextFile: (path: string) => Promise<string>
   /** Reads a note, refusing a path that resolves outside the notes root. */
@@ -56,7 +57,7 @@ export interface FilesHandlerDependencies<TWindow> extends WorkspaceTabFileDepen
 export function createFilesHandlers<TWindow>({
   store,
   getNotesRoot,
-  walkNotes,
+  walkLibrary,
   listFileCatalog,
   readTextFile,
   readSourceFile,
@@ -71,7 +72,7 @@ export function createFilesHandlers<TWindow>({
   return {
     listTree: async () => {
       const notesRoot = getNotesRoot()
-      const absolutePaths = await walkNotes(notesRoot)
+      const absolutePaths = await walkLibrary(notesRoot)
       const paths = absolutePaths.map((p) => relative(notesRoot, p)).sort()
       return { notesRoot, paths }
     },
@@ -85,6 +86,7 @@ export function createFilesHandlers<TWindow>({
     },
     copyContent: async (file) => {
       const path = await store.resolveFilePath(file)
+      if (supportedKindOf(path) !== 'note') throw new Error('Only notes can be copied as text')
       clipboard.writeText(await readTextFile(path))
     },
     copyPath: async (file) => {

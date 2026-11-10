@@ -7,6 +7,10 @@ describe('file icon resolver', () => {
     expect(resolveFileIconName('notes/briefing.unknown')).toBe('file')
   })
 
+  it('returns the image icon for a supported picture in any letter case', () => {
+    expect(resolveFileIconName('img/Shot.PNG')).toBe('image')
+  })
+
   it('normalizes extensions for future file-type mappings', () => {
     expect(fileExtension('docs/OVERVIEW.MD')).toBe('md')
     expect(fileExtension('.notes-config')).toBe('')
