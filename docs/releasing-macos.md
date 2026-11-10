@@ -4,6 +4,35 @@ Ryte publishes an Apple Silicon (`arm64`) DMG through GitHub Releases. The app i
 
 The release workflow reads the signing credentials from the `release` environment of this repository. The sections below cover the one-time setup, a local trial, and the publishing steps.
 
+## When to release
+
+A release is a decision, not a schedule. Release when something a person using Ryte would notice has merged, and the checks below pass.
+
+**Trigger** (any one):
+
+- A `feat`, or a `fix` for something that goes wrong in real use.
+- A privacy or data-safety fix: release it as soon as it merges.
+
+Changes that only touch internals (refactors, dependencies, tests, docs, CI, the site) never trigger a release on their own. They ride along with the next one.
+
+The owner may hold a release to finish a related set of changes first.
+
+**Checks before tagging**
+
+- [ ] The last pull request's CI run passed on its final commit, and `pnpm validate` and `pnpm smoke:indexer` pass on the commit being tagged.
+- [ ] No open bug that can lose a note or leak note text or a key.
+- [ ] The version in `app/package.json` follows the Conventional Commits since the last tag (see the Versioning Policy in `CHANGELOG.md`): a `fix` is a patch, a `feat` is a minor.
+- [ ] `CHANGELOG.md` has the entry, written in plain language for a person using Ryte, with its Validation list.
+- [ ] A release-candidate tag (for example `v0.2.0-rc.1`) built, signed, notarized and verified with `scripts/verify-mac-release.mjs`. It publishes nothing.
+- [ ] A short manual pass on the DMG that candidate produced, on a clean Apple Silicon Mac (step 4 of Publishing a release): it opens without a warning, launches, indexes a folder of synthetic notes, search works with and without an OpenAI key, and Preferences open. When the release touches smart search, repeat a rebuild with a real key on made-up notes, online and offline.
+
+**After tagging**
+
+- [ ] Download the published DMG on a clean Apple Silicon Mac and run the checks in step 7 of Publishing a release.
+- [ ] Compare `shasum -a 256` of the download with the hash in the published `.sha256` file by eye. That file names the DMG by its build path (`dist/...`), so `shasum -c` does not work on a downloaded copy.
+- [ ] The **Deploy landing page** run that follows the release succeeded, and the live site shows the new version and download links. The site fills them in from the latest published release; nothing is edited by hand.
+- [ ] A published tag is never moved or reused; a bad release is fixed by the next patch version.
+
 ## One-time setup
 
 ### Apple
@@ -120,6 +149,8 @@ Never retag a published release. Fix a bad release with the next patch version.
 
 ## When a release build fails
 
+- **The run is cancelled within seconds with "The configuration '…' is not supported"**: GitHub no longer offers the runner named in `runs-on` in `.github/workflows/release-macos.yml`. Change it to a supported macOS label (it is `macos-15` now) in a pull request, then push a new dry-run tag.
+- **Stapling fails with a network error (for example `NSURLErrorDomain -1005`)**: Apple's service had a short outage. Re-run the failed job once before investigating.
 - **"A notarized Ryte release requires: …"**: a secret is missing or empty in the `release` environment. Check the five names in the table above.
 - **0 valid identities, or "not trusted"**: Apple's Developer ID G2 intermediate is missing from the keychain. Install it as described under One-time setup.
 - **Notarization status "Invalid"**: run `xcrun notarytool log <submission-id> --key … --key-id … --issuer …` to see which file Apple rejected. A native library that is not signed is the usual cause.
