@@ -208,6 +208,34 @@ describe('render', () => {
     expect(html).toContain('&lt;img')
   })
 
+  it.each([
+    [
+      'inline code',
+      'Before `<img src="a.png">` after',
+      '<p>Before <code>&lt;img src=&quot;a.png&quot;&gt;</code> after</p>\n'
+    ],
+    [
+      'an indented block',
+      '    indented src="x" onclick="y" code',
+      '<pre><code>indented src=&quot;x&quot; onclick=&quot;y&quot; code\n</code></pre>\n'
+    ],
+    [
+      'link titles',
+      '[docs](https://example.com "see src=x onclick=y")',
+      '<p><a href="https://example.com" title="see src=x onclick=y" target="_blank" rel="noreferrer noopener">docs</a></p>\n'
+    ]
+  ])('should leave attribute-like text in %s untouched', async (_name, text, expected) => {
+    expect(await render(text)).toBe(expected)
+  })
+
+  it('should leave attribute-like text in a plain fenced block untouched', async () => {
+    const html = await render('```text\nsee src=foo.png and href=bar\n```')
+    // Unknown languages are highlighted as one plain span per line.
+    expect(html).toMatch(
+      /<span class="line"><span [^>]*>see src=foo\.png and href=bar<\/span><\/span>/
+    )
+  })
+
   it('should strip unsafe markdown link targets', async () => {
     const html = await render('[bad](javascript:alert(1)) [file](file:///tmp/private.md)')
     expect(html).not.toContain('href="javascript:')

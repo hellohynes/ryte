@@ -1,7 +1,10 @@
 const SAFE_LINK_PROTOCOLS = new Set(['https:', 'mailto:'])
 
-const UNSAFE_ATTRIBUTE_RE = /\s(?:on[a-z]+|srcdoc)\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi
-const URL_ATTRIBUTE_RE = /\s(href|src)\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi
+// A start tag, with quoted values allowed to contain `>`. Text between tags is
+// already escaped by markdown-it and Shiki, so every `<` here opens a real tag.
+// Closing tags and comments carry no attributes and are left alone.
+const START_TAG_RE = /<([A-Za-z][A-Za-z0-9-]*)((?:[^>"']|"[^"]*"|'[^']*')*)>/g
+const ATTRIBUTE_RE = /(\s+)([^\s"'>/=]+)(?:(\s*=\s*)("[^"]*"|'[^']*'|[^\s"'=<>`]+))?/g
 
 function decodeHtmlAttribute(value: string): string {
   return value
@@ -20,6 +23,11 @@ function encodeHtmlAttribute(value: string): string {
     .replace(/>/g, '&gt;')
 }
 
+function unquote(value: string): string {
+  const first = value[0]
+  return first === '"' || first === "'" ? value.slice(1, -1) : value
+}
+
 export function isSafeLinkTarget(rawTarget: string): boolean {
   const target = decodeHtmlAttribute(rawTarget).trim()
   if (!target) return false
@@ -33,12 +41,25 @@ export function isSafeLinkTarget(rawTarget: string): boolean {
   }
 }
 
+function sanitizeAttributes(attributes: string): string {
+  return attributes.replace(
+    ATTRIBUTE_RE,
+    (match, space: string, rawName: string, _equals?: string, rawValue?: string) => {
+      const name = rawName.toLowerCase()
+      if (name.startsWith('on') || name === 'srcdoc') return ''
+      if (name !== 'href' && name !== 'src') return match
+      if (rawValue === undefined) return ''
+
+      const target = unquote(rawValue)
+      if (!isSafeLinkTarget(target)) return ''
+      return `${space}${name}="${encodeHtmlAttribute(decodeHtmlAttribute(target).trim())}"`
+    }
+  )
+}
+
 export function sanitizeRenderedHtml(html: string): string {
-  return html
-    .replace(UNSAFE_ATTRIBUTE_RE, '')
-    .replace(URL_ATTRIBUTE_RE, (_match, attr: string, quoted: string) => {
-      const rawTarget = quoted.slice(0, 1).match(/['"]/) ? quoted.slice(1, -1) : quoted
-      if (!isSafeLinkTarget(rawTarget)) return ''
-      return ` ${attr}="${encodeHtmlAttribute(decodeHtmlAttribute(rawTarget).trim())}"`
-    })
+  return html.replace(
+    START_TAG_RE,
+    (_match, tagName: string, attributes: string) => `<${tagName}${sanitizeAttributes(attributes)}>`
+  )
 }
