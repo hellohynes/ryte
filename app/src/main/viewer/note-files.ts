@@ -95,15 +95,17 @@ export async function checkNotePicture(
 
 /**
  * Reads the file that was located, refusing it if a link or another file has taken its place since, or if it
- * has grown past `maxBytes`. Null means refused or gone.
+ * is over `maxBytes`. It reads no more than the size it checked, so a file that grows meanwhile is cut at that
+ * size, and it opens without blocking, so a pipe swapped in since can't hold it up. Null means refused or gone.
  */
 export async function readLocatedNoteFile(
   located: { realPath: string; dev: number; ino: number },
   maxBytes: number
 ): Promise<Buffer | null> {
-  const handle = await open(located.realPath, constants.O_RDONLY | constants.O_NOFOLLOW).catch(
-    () => null
-  )
+  const handle = await open(
+    located.realPath,
+    constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK
+  ).catch(() => null)
   if (!handle) return null
   try {
     const stats = await handle.stat()
@@ -115,7 +117,9 @@ export async function readLocatedNoteFile(
     ) {
       return null
     }
-    return await handle.readFile()
+    const buffer = Buffer.alloc(stats.size)
+    const { bytesRead } = await handle.read(buffer, 0, stats.size, 0)
+    return buffer.subarray(0, bytesRead)
   } finally {
     await handle.close()
   }
