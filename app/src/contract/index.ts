@@ -7,6 +7,7 @@ import { pictures } from './pictures'
 import { search } from './search'
 import { settings } from './settings'
 import { tasks } from './tasks'
+import { video } from './video'
 import { workspace } from './workspace'
 
 /** Every operation and event Ryte exposes across the main/preload boundary, by area. */
@@ -20,6 +21,7 @@ export const contract = {
   search,
   settings,
   tasks,
+  video,
   workspace
 } as const
 
