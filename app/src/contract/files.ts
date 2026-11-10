@@ -96,7 +96,7 @@ const fileTrashResult = z.object({ trashed: z.boolean(), workspace: workspaceSta
 export const listTree = defineOperation({
   channel: 'files:list-tree',
   description:
-    'Every Markdown file under the notes folder as a path relative to it, sorted, with the notes folder.',
+    'Every note and supported picture under the notes folder as a path relative to it, sorted, with the notes folder.',
   input: z.undefined(),
   output: fileTreeResponse,
   example: {
@@ -108,7 +108,7 @@ export const listTree = defineOperation({
 export const listCatalog = defineOperation({
   channel: 'files:list-catalog',
   description:
-    'Every Markdown file under the notes folder with its title, folder, dates and size, sorted by path.',
+    "Every note and supported picture under the notes folder with its title, folder, dates and size, sorted by path. A picture's title is its file name.",
   input: z.undefined(),
   output: fileCatalogResponse,
   example: {
@@ -222,7 +222,7 @@ export const unwatch = defineOperation({
 export const treeChanged = defineEvent({
   channel: 'files:tree-changed',
   description:
-    'A Markdown file was added, removed or renamed under the notes folder. Sent to every window.'
+    'A note or supported picture was added, removed or renamed under the notes folder. Sent to every window.'
 })
 
 export const catalogChanged = defineEvent({

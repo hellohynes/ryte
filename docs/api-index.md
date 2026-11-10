@@ -26,8 +26,8 @@ change or remove one.
 
 | Operation | Channel | What it does | Input |
 | --- | --- | --- | --- |
-| `files.listTree` | `files:list-tree` | Every Markdown file under the notes folder as a path relative to it, sorted, with the notes folder. | `none` |
-| `files.listCatalog` | `files:list-catalog` | Every Markdown file under the notes folder with its title, folder, dates and size, sorted by path. | `none` |
+| `files.listTree` | `files:list-tree` | Every note and supported picture under the notes folder as a path relative to it, sorted, with the notes folder. | `none` |
+| `files.listCatalog` | `files:list-catalog` | Every note and supported picture under the notes folder with its title, folder, dates and size, sorted by path. A picture's title is its file name. | `none` |
 | `files.readSourceTitle` | `files:read-source-title` | The title of a note in the notes folder, or null when it has none. Fails when the path is outside the notes folder. | `{ sourcePath: string, externalPath?: unknown }` |
 | `files.readWorkspaceTab` | `files:read-workspace-tab` | The text of the file an open tab shows. A note must be inside the notes folder; a file opened from outside it is read as is. Fails when no tab has that id. | `{ tabId: string }` |
 | `files.copyContent` | `files:copy-content` | Put the text of a file on the clipboard. | `see schema` |
@@ -40,7 +40,7 @@ change or remove one.
 
 | Event | Channel | What it means | Payload |
 | --- | --- | --- | --- |
-| `files.treeChanged` | `files:tree-changed` | A Markdown file was added, removed or renamed under the notes folder. Sent to every window. | `none` |
+| `files.treeChanged` | `files:tree-changed` | A note or supported picture was added, removed or renamed under the notes folder. Sent to every window. | `none` |
 | `files.catalogChanged` | `files:catalog-changed` | One file under the notes folder changed: its new catalog entry (`upsert`) or its path (`remove`). The payload is absent when the change could not be described, which means refresh the whole catalog. Sent to every window. | `see schema` |
 | `files.sourceChange` | `viewer:source-changed` | The watched file changed on disk. Carries its notes-relative path. Sent to every window, and only when the path can be told. | `string` |
 | `files.workspaceTabChange` | `viewer:workspace-tab-changed` | The file of the watched tab changed on disk. Carries the id of the tab. Sent to every window, after `sourceChange`. | `string` |
