@@ -1,4 +1,4 @@
-import { app, BrowserWindow, Notification, screen } from 'electron'
+import { app, BrowserWindow, Notification, protocol, screen } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 
@@ -14,8 +14,10 @@ import { createMenuCommandSender } from './menu-command'
 import { installNavigationGuards, originForUrl } from './navigation'
 import { settingsStore } from './settings/settings-store'
 import { workspaceStore } from './workspace/workspace-store'
+import { createNoteFileHandler } from './viewer/note-files'
 import { safeWindowBounds, workAreasFromDisplays } from './window-state'
 import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH } from '../shared/workspace'
+import { NOTE_FILE_SCHEME } from '../shared/note-pictures'
 
 const macOSVibrancyMaterial = 'hud' as const
 let hasInitializedIndexing = false
@@ -30,6 +32,11 @@ if (userDataDirOverride) app.setPath('userData', userDataDirOverride)
 // Set early so macOS notifications show "Ryte" as the source instead of
 // "Electron" (only relevant in dev — packaged builds use CFBundleName).
 app.setName('Ryte')
+
+// Pictures in notes load through this scheme. Privileges can only be granted before `ready`.
+protocol.registerSchemesAsPrivileged([
+  { scheme: NOTE_FILE_SCHEME, privileges: { standard: true, secure: true } }
+])
 
 function createWindow(): BrowserWindow {
   const rendererUrl = is.dev ? process.env['ELECTRON_RENDERER_URL'] : undefined
@@ -149,6 +156,10 @@ function startApp(): void {
     optimizer.watchWindowShortcuts(window)
   })
 
+  protocol.handle(
+    NOTE_FILE_SCHEME,
+    createNoteFileHandler(() => settingsStore.load().notesRoot)
+  )
   registerIpc()
   installAppMenu(
     createMenuCommandSender({
