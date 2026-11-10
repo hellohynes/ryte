@@ -7,6 +7,15 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { useViewerStore } from '../stores/viewer'
+import StButton from '../stencil/components/StButton.vue'
+import StNotice from '../stencil/components/StNotice.vue'
+import {
+  bannerText,
+  dismissBanner,
+  emptyBannerState,
+  receiveReport,
+  visibleBanner
+} from './page-blocked-model'
 import {
   describePageProblem,
   isOverlayOpen,
@@ -25,6 +34,18 @@ const name = computed(() => props.path.slice(props.path.lastIndexOf('/') + 1))
 const stage = ref<HTMLElement | null>(null)
 const problem = ref<PageProblem | null>(null)
 const still = ref<string | null>(null)
+const banner = ref(emptyBannerState())
+const bannerView = computed(() => visibleBanner(banner.value))
+const showAddresses = ref(false)
+
+const stopBlocked = window.ryte.page.onBlocked((report) => {
+  banner.value = receiveReport(banner.value, report)
+})
+
+function dismiss(): void {
+  banner.value = dismissBanner(banner.value)
+  showAddresses.value = false
+}
 
 let covered = false
 let opened = false
@@ -120,6 +141,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   alive = false
+  stopBlocked()
   resizeObserver?.disconnect()
   mutationObserver?.disconnect()
   window.removeEventListener('resize', syncBounds)
@@ -136,6 +158,24 @@ watch(() => viewer.pageVersion, reload)
     <header class="page-caption">
       <span class="page-name">{{ name }}</span>
     </header>
+    <StNotice
+      v-if="bannerView"
+      tone="warning"
+      dismissible
+      class="page-banner"
+      data-page-banner
+      @dismiss="dismiss"
+    >
+      {{ bannerText(bannerView.count) }}
+      <template #actions>
+        <StButton variant="secondary" size="sm" @click="showAddresses = !showAddresses">
+          {{ showAddresses ? 'Hide addresses' : 'Show addresses' }}
+        </StButton>
+      </template>
+    </StNotice>
+    <ul v-if="bannerView && showAddresses" class="page-banner-list" data-page-banner-list>
+      <li v-for="(address, index) in bannerView.addresses" :key="index">{{ address }}</li>
+    </ul>
     <p v-if="problem" class="page-problem">{{ describePageProblem(problem, path) }}</p>
     <div v-show="!problem" ref="stage" class="page-stage" data-page-stage>
       <img v-if="still" class="page-still" :src="still" alt="" />
@@ -164,6 +204,20 @@ watch(() => viewer.pageVersion, reload)
 .page-name {
   font: var(--st-type-label-md);
   color: var(--st-color-text-primary);
+  overflow-wrap: anywhere;
+}
+
+.page-banner {
+  margin: 0 var(--st-space-400);
+}
+
+.page-banner-list {
+  margin: 0 var(--st-space-400);
+  padding: var(--st-space-100) var(--st-space-200) var(--st-space-100) var(--st-space-400);
+  max-height: calc(var(--st-block-base) * 8);
+  overflow: auto;
+  font: var(--st-type-body-sm);
+  color: var(--st-color-text-muted);
   overflow-wrap: anywhere;
 }
 

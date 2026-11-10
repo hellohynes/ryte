@@ -42,6 +42,7 @@ interface OpenPage {
   view: WebContentsView
   host: BrowserWindow
   ses: Session
+  log: BlockedLog
   onHostClosed: () => void
 }
 
@@ -78,7 +79,8 @@ export function createPageBox({
     if (!page) return
     open.delete(senderId)
     folders.close(page.id)
-    const { view, host, ses } = page
+    const { view, host, ses, log } = page
+    log.stop()
     host.removeListener('closed', page.onHostClosed)
     if (!host.isDestroyed()) host.contentView.removeChildView(view)
     if (!view.webContents.isDestroyed()) view.webContents.close()
@@ -188,7 +190,7 @@ export function createPageBox({
       latest.delete(sender.id)
     }
     host.once('closed', onHostClosed)
-    return { id, realPath, view, host, ses, onHostClosed }
+    return { id, realPath, view, host, ses, log, onHostClosed }
   }
 
   return {
