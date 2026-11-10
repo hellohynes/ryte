@@ -1,5 +1,5 @@
 import { constants } from 'node:fs'
-import { lstat, open, realpath } from 'node:fs/promises'
+import { type FileHandle, lstat, open, realpath } from 'node:fs/promises'
 import { join, sep } from 'node:path'
 
 import {
@@ -8,6 +8,8 @@ import {
   notePictureExtension,
   parseNoteFileUrl
 } from '../../shared/note-pictures'
+import { isSupportedNoteVideo, noteVideoContentType } from '../../shared/note-videos'
+import { parseByteRange } from './byte-range'
 
 export type NotePictureProblem = 'blocked' | 'missing' | 'too-large'
 
@@ -101,7 +103,7 @@ export async function checkNotePicture(
 export async function readLocatedNoteFile(
   located: { realPath: string; dev: number; ino: number },
   maxBytes: number
-): Promise<Buffer | null> {
+): Promise<Buffer<ArrayBuffer> | null> {
   const handle = await open(
     located.realPath,
     constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK
@@ -141,9 +143,138 @@ function emptyResponse(status: number, extra: Record<string, string> = {}): Resp
   return new Response(null, { status, headers: { ...SECURITY_HEADERS, ...extra } })
 }
 
+const isVideoExtension = (extension: string): boolean =>
+  noteVideoContentType(extension) !== undefined
+
+/** How much of a video is read from disk per pull of the response stream. */
+const VIDEO_CHUNK_BYTES = 256 * 1024
+
+/** Opens a located file the way `readLocatedNoteFile` does, refusing a link or another file in its place. */
+async function openCheckedNoteFile(located: {
+  realPath: string
+  dev: number
+  ino: number
+}): Promise<FileHandle | null> {
+  const handle = await open(
+    located.realPath,
+    constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK
+  ).catch(() => null)
+  if (!handle) return null
+  const stats = await handle.stat().catch(() => null)
+  if (!stats || !stats.isFile() || stats.dev !== located.dev || stats.ino !== located.ino) {
+    await handle.close().catch(() => undefined)
+    return null
+  }
+  return handle
+}
+
+/**
+ * The bytes `start` to `end` (inclusive) of a located file, read a piece at a time as the player asks. The
+ * file is opened on the first read, checked again, and closed when the range is done, the player stops, or a
+ * read fails. Nothing past `end` is ever read, and a file that shrank meanwhile ends the stream with an error.
+ */
+function streamNoteFileRange(
+  located: { realPath: string; dev: number; ino: number },
+  start: number,
+  end: number
+): ReadableStream<Uint8Array> {
+  let handle: FileHandle | null = null
+  let next = start
+  let finished = false
+
+  const finish = async (): Promise<void> => {
+    finished = true
+    const open = handle
+    handle = null
+    await open?.close().catch(() => undefined)
+  }
+
+  return new ReadableStream<Uint8Array>(
+    {
+      async pull(controller) {
+        if (finished) return
+        try {
+          if (!handle) {
+            const opened = await openCheckedNoteFile(located)
+            if (!opened) throw new Error('The video changed or is gone')
+            if (finished) {
+              await opened.close().catch(() => undefined)
+              return
+            }
+            handle = opened
+          }
+          const length = Math.min(VIDEO_CHUNK_BYTES, end - next + 1)
+          const buffer = Buffer.allocUnsafe(length)
+          const { bytesRead } = await handle.read(buffer, 0, length, next)
+          if (finished) return
+          if (bytesRead === 0) throw new Error('The video ended early')
+          next += bytesRead
+          controller.enqueue(new Uint8Array(buffer.buffer, buffer.byteOffset, bytesRead))
+          if (next > end) {
+            await finish()
+            controller.close()
+          }
+        } catch (error) {
+          await finish()
+          controller.error(error)
+        }
+      },
+      cancel: finish
+    },
+    // Nothing is read until the player asks for it.
+    { highWaterMark: 0 }
+  )
+}
+
+/** Answers a request for a video, whole or by byte range, so the player can seek. */
+async function respondToVideoRequest(
+  request: NoteFileRequest,
+  method: string,
+  notesRelativePath: string,
+  notesRoot: string
+): Promise<Response> {
+  const located = await locateNoteFile(notesRelativePath, notesRoot, isVideoExtension)
+  if (!located.ok) return emptyResponse(PROBLEM_STATUS[located.reason])
+
+  const { size } = located
+  const baseHeaders = {
+    ...SECURITY_HEADERS,
+    'Accept-Ranges': 'bytes',
+    'Content-Type': noteVideoContentType(located.extension)!
+  }
+  if (method === 'HEAD') {
+    return new Response(null, {
+      status: 200,
+      headers: { ...baseHeaders, 'Content-Length': String(size) }
+    })
+  }
+
+  const range = parseByteRange(request.headers?.get('range'), size)
+  if (range.kind === 'malformed' || range.kind === 'unsatisfiable') {
+    return emptyResponse(416, { 'Accept-Ranges': 'bytes', 'Content-Range': `bytes */${size}` })
+  }
+
+  if (range.kind === 'whole') {
+    const headers = { ...baseHeaders, 'Content-Length': String(size) }
+    if (size === 0) return new Response(null, { status: 200, headers })
+    return new Response(streamNoteFileRange(located, 0, size - 1), { status: 200, headers })
+  }
+
+  return new Response(streamNoteFileRange(located, range.start, range.end), {
+    status: 206,
+    headers: {
+      ...baseHeaders,
+      'Content-Length': String(range.end - range.start + 1),
+      'Content-Range': `bytes ${range.start}-${range.end}/${size}`
+    }
+  })
+}
+
 export interface NoteFileRequest {
   method: string
   url: string
+  /** The request headers; only `Range` is read, and only for videos. */
+  headers?: { get(name: string): string | null }
 }
 
 /** Answers one `ryte-file://notes/...` request. The notes folder is passed in fresh for every request. */
@@ -157,6 +288,10 @@ export async function respondToNoteFileRequest(
   const notesRelativePath = parseNoteFileUrl(request.url)
   if (notesRelativePath === null) return emptyResponse(400)
 
+  if (isSupportedNoteVideo(notesRelativePath)) {
+    return respondToVideoRequest(request, method, notesRelativePath, notesRoot)
+  }
+
   const check = await checkNotePicture(notesRelativePath, notesRoot)
   if (!check.ok) return emptyResponse(PROBLEM_STATUS[check.reason])
 
@@ -169,7 +304,8 @@ export async function respondToNoteFileRequest(
 
   const body = await readLocatedNoteFile(check, MAX_NOTE_PICTURE_BYTES)
   if (!body) return emptyResponse(404)
-  return new Response(new Uint8Array(body), {
+  // A view over the buffer already read; `new Uint8Array(body)` would copy the whole picture again.
+  return new Response(new Uint8Array(body.buffer, body.byteOffset, body.byteLength), {
     status: 200,
     headers: { ...headers, 'Content-Length': String(body.byteLength) }
   })

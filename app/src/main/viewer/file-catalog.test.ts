@@ -68,20 +68,22 @@ describe('listFileCatalog', () => {
     })
   })
 
-  it('lists a picture or code file with its file name as the title, without reading it as text', async () => {
+  it('lists a picture, video or code file with its file name as the title, without reading it as text', async () => {
     mkdirSync(join(tempDir, 'img'), { recursive: true })
     writeFileSync(join(tempDir, 'img', 'Shot.PNG'), '# Not a title\n')
     writeFileSync(join(tempDir, 'build.ts'), '# Not a title either\n')
+    writeFileSync(join(tempDir, 'Clip.MP4'), '# Nor this\n')
     writeFileSync(join(tempDir, 'note.md'), '# Real title\n')
 
     const catalog = await listFileCatalog(tempDir)
 
     expect(catalog.files.map((file) => [file.sourcePath, file.title])).toEqual([
       ['build.ts', 'build.ts'],
+      ['Clip.MP4', 'Clip.MP4'],
       ['img/Shot.PNG', 'Shot.PNG'],
       ['note.md', 'Real title']
     ])
-    expect(catalog.files[1]).toMatchObject({
+    expect(catalog.files[2]).toMatchObject({
       directory: 'img',
       sizeBytes: '# Not a title\n'.length
     })

@@ -290,13 +290,15 @@ describe('Watcher', () => {
       expect(h.notifyFileRemoved).not.toHaveBeenCalled()
     })
 
-    it('ignores a picture under node_modules or a dot folder', async () => {
+    it('ignores a picture or video under node_modules or a dot folder', async () => {
       const { tree, catalog } = await boot()
 
       fakeFs.file('/notes/node_modules/pkg/logo.png')
       emit('node_modules/pkg/logo.png')
       fakeFs.file('/notes/.cache/thumb.png')
       emit('.cache/thumb.png')
+      fakeFs.file('/notes/.cache/clip.mp4')
+      emit('.cache/clip.mp4')
       await advance(DEBOUNCE)
 
       expect(tree).not.toHaveBeenCalled()

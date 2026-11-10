@@ -100,6 +100,13 @@ export const manifest = {
       changed: 'tasks:changed'
     }
   },
+  video: {
+    operations: {
+      explain: 'video:explain',
+      openInDefaultApp: 'video:open-in-default-app'
+    },
+    events: {}
+  },
   workspace: {
     operations: {
       getState: 'workspace:get-state',

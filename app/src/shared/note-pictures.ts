@@ -1,4 +1,4 @@
-/** Pictures in notes load through this scheme, from inside the notes folder only. */
+/** Pictures and videos in notes load through this scheme, from inside the notes folder only. */
 export const NOTE_FILE_SCHEME = 'ryte-file'
 export const NOTE_FILE_URL_PREFIX = `${NOTE_FILE_SCHEME}://notes/`
 

@@ -115,6 +115,13 @@ change or remove one.
 | --- | --- | --- | --- |
 | `tasks.changed` | `tasks:changed` | Tasks may have changed on disk or through a toggle; callers should reload. | `none` |
 
+## video
+
+| Operation | Channel | What it does | Input |
+| --- | --- | --- | --- |
+| `video.explain` | `video:explain` | Why a video from the notes folder did not play: `missing`, `blocked` (outside the notes folder, or not a type Ryte plays), or `unplayable` (it passes every check but the player could not play it, for example a codec Chromium does not support). Carries the size in bytes when the file was found. | `{ path: string }` |
+| `video.openInDefaultApp` | `video:open-in-default-app` | Open an MP4, WebM or MOV video from the notes folder in its default app, after checking again that it is inside the notes folder and of one of those types. Every other type is refused. Returns whether it opened. | `{ path: string }` |
+
 ## workspace
 
 | Operation | Channel | What it does | Input |

@@ -33,9 +33,10 @@ if (userDataDirOverride) app.setPath('userData', userDataDirOverride)
 // "Electron" (only relevant in dev — packaged builds use CFBundleName).
 app.setName('Ryte')
 
-// Pictures in notes load through this scheme. Privileges can only be granted before `ready`.
+// Pictures and videos in notes load through this scheme. Privileges can only be granted before `ready`.
+// `stream` lets Chromium play media from it, with byte-range requests for seeking.
 protocol.registerSchemesAsPrivileged([
-  { scheme: NOTE_FILE_SCHEME, privileges: { standard: true, secure: true } }
+  { scheme: NOTE_FILE_SCHEME, privileges: { standard: true, secure: true, stream: true } }
 ])
 
 function createWindow(): BrowserWindow {

@@ -330,6 +330,9 @@ export const ICON_SPEC: Record<string, IconSpec> = {
     ]
   },
   type: { strokes: [line([3, 13], [8, 3], [13, 13]), line([4.9, 9.5], [11.1, 9.5])] },
+  video: {
+    strokes: [rect(2, 4, 8.5, 8, 1.5), line([10.5, 7], [13.5, 5.25], [13.5, 10.75], [10.5, 9])]
+  },
   underline: {
     strokes: ['M4.75 2.5V7.25A3.25 3.25 0 0 0 11.25 7.25V2.5', line([3, 13.75], [13, 13.75])]
   },

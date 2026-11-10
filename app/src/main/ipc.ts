@@ -21,6 +21,7 @@ import { createEmitter, registerOperations } from './contract/register'
 import { createSearch } from './contract/search-handlers'
 import { createSettingsHandlers } from './contract/settings-handlers'
 import { createTaskHandlers } from './contract/tasks-handlers'
+import { createVideoHandlers } from './contract/video-handlers'
 import { createWorkspaceHandlers } from './contract/workspace-handlers'
 import { contract } from '../contract'
 import { taskFactsService } from './facts/task-facts-service'
@@ -158,6 +159,10 @@ export function registerIpc(): void {
       listAuthorizedOpenAIModels
     }),
     tasks: createTaskHandlers({ service: taskFactsService, settings: settingsStore, emit }),
+    video: createVideoHandlers({
+      getNotesRoot: () => settingsStore.load().notesRoot,
+      openPath: (path) => shell.openPath(path)
+    }),
     workspace: createWorkspaceHandlers({
       store: workspaceStore,
       refreshAppMenu,

@@ -45,7 +45,7 @@ export function resolveNotePicturePath(
   return segments.length > 0 ? segments.join('/') : null
 }
 
-function escapeHtml(value: string): string {
+export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
@@ -53,7 +53,7 @@ function escapeHtml(value: string): string {
     .replace(/"/g, '&quot;')
 }
 
-function fileName(path: string): string {
+export function fileName(path: string): string {
   return path.slice(path.lastIndexOf('/') + 1)
 }
 
