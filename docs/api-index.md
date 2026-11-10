@@ -69,6 +69,19 @@ change or remove one.
 | `indexer.rebuildNotice` | `indexer:rebuild-notice-event` | The rebuild notice appeared or was dismissed (null); sent to every open window, so a window that opened before the notice existed still shows it. | `see schema` |
 | `indexer.embeddingStatus` | `indexer:embedding-status-event` | What smart search is doing changed; sent to every open window at once when its state changes and at most a few times a second while it makes progress. | `{ state: 'off' \| 'idle' \| 'running' \| 'paused', total: integer, done: integer, pending: integer, reason?: 'no-key' \| 'no-agreement' \| 'offline' \| 'rate-limit' \| 'service' \| 'auth', retryAt?: string }` |
 
+## page
+
+| Operation | Channel | What it does | Input |
+| --- | --- | --- | --- |
+| `page.show` | `page:show` | Show an HTML page from the notes folder in a locked view over the given area of the window. The page loads only from its own folder and cannot reach the network, other files, new windows, downloads or permissions. Showing the page that is already open only moves and reveals it. Returns `shown`, or why not: `missing`, `blocked` (outside the notes folder, or not an HTML page) or `too-large` (over 10 MB). | `{ path: string, bounds: { x: number, y: number, width: number, height: number } }` |
+| `page.setBounds` | `page:set-bounds` | Move and resize the open page view to a new area of the window. | `{ bounds: { x: number, y: number, width: number, height: number } }` |
+| `page.hide` | `page:hide` | Hide the open page view, for example while an overlay is open, because a native view always draws on top. Returns a still picture of the page (a data URL) to show in its place, or null when there is none. | `none` |
+| `page.close` | `page:close` | Close the open page view and forget its folder. The page keeps nothing. | `none` |
+
+| Event | Channel | What it means | Payload |
+| --- | --- | --- | --- |
+| `page.blocked` | `page:blocked` | The open page tried something the locked view refuses. Carries how many things were blocked since the page opened and the addresses of the last 50, as plain text. | `{ count: number, addresses: string[] }` |
+
 ## pictures
 
 | Operation | Channel | What it does | Input |

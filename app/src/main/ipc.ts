@@ -16,6 +16,7 @@ import {
   forwardIndexerStatus,
   forwardRebuildNotice
 } from './contract/indexer-handlers'
+import { createPageHandlers } from './contract/page-handlers'
 import { createPicturesHandlers } from './contract/pictures-handlers'
 import { createEmitter, registerOperations } from './contract/register'
 import { createSearch } from './contract/search-handlers'
@@ -29,6 +30,8 @@ import { createIndexerRestarter } from './indexer-restart'
 import { indexerService } from './indexing/indexer-service'
 import { walkLibrary } from './indexing/walker'
 import { watcher } from './indexing/watcher'
+import { createPageBox } from './page/page-box'
+import { createPageFolders } from './page/page-scheme'
 import { fileRefForPickedMarkdownFile, resolveExternalMarkdownFile } from './picked-file'
 import { SearchService } from './search/search-service'
 import { settingsStore } from './settings/settings-store'
@@ -146,6 +149,13 @@ export function registerIpc(): void {
       service: indexerService,
       beforeClear: stopSearchesBeforeClear
     }),
+    page: createPageHandlers(
+      createPageBox({
+        folders: createPageFolders(),
+        getNotesRoot: () => settingsStore.load().notesRoot,
+        emitTo: emit.to
+      })
+    ),
     pictures: createPicturesHandlers({
       getNotesRoot: () => settingsStore.load().notesRoot,
       openPath: (path) => shell.openPath(path)
