@@ -2,7 +2,8 @@ import { stat } from 'node:fs/promises'
 import { basename, dirname, relative, sep } from 'node:path'
 
 import type { FileCatalogEntry, FileCatalogResponse } from '../../shared/files'
-import { walkNotes } from '../indexing/walker'
+import { supportedKindOf } from '../../shared/supported-types'
+import { walkLibrary } from '../indexing/walker'
 import { readMarkdownTitleFromFile } from './markdown-title-reader'
 
 const SOURCE_DATE_RE = /\d{4}-\d{2}-\d{2}/g
@@ -53,17 +54,22 @@ async function mapWithConcurrency<T, U>(
   return results
 }
 
-/** Build one safe catalog entry for a markdown file below the configured notes root. */
+/**
+ * Build one safe catalog entry for a note or a picture below the configured notes root. A picture gets a size
+ * check only, no title read, and its file name as the title; a viewer tells the two apart by the extension
+ * (`supportedKindOf`), so the entry has no kind field.
+ */
 export async function fileCatalogEntryFor(
   notesRoot: string,
   absolutePath: string
 ): Promise<FileCatalogEntry> {
+  const isPicture = supportedKindOf(absolutePath) === 'picture'
   const [metadata, documentTitle] = await Promise.all([
     stat(absolutePath),
-    readMarkdownTitleFromFile(absolutePath)
+    isPicture ? null : readMarkdownTitleFromFile(absolutePath)
   ])
   const sourcePath = sourcePathFor(notesRoot, absolutePath)
-  const fallbackTitle = titleFromSourcePath(sourcePath)
+  const fallbackTitle = isPicture ? basename(sourcePath) : titleFromSourcePath(sourcePath)
   const title = documentTitle ?? fallbackTitle
   const directory = directoryFromSourcePath(sourcePath)
 
@@ -82,7 +88,7 @@ export async function fileCatalogEntryFor(
 }
 
 export async function listFileCatalog(notesRoot: string): Promise<FileCatalogResponse> {
-  const absolutePaths = await walkNotes(notesRoot)
+  const absolutePaths = await walkLibrary(notesRoot)
   const files = await mapWithConcurrency(absolutePaths, CATALOG_ENTRY_CONCURRENCY, (absolutePath) =>
     fileCatalogEntryFor(notesRoot, absolutePath)
   )
