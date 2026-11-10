@@ -18,6 +18,7 @@ import {
 } from '../../../shared/workspace'
 import StIconButton from '../stencil/components/StIconButton.vue'
 import StProse from '../stencil/components/StProse.vue'
+import { buildPictureProblemNotice, notePicturePathOf } from './note-picture-problems'
 import { WORKSPACE_TABPANEL_ID, getWorkspaceTabDomId } from './workspace-tab-keyboard'
 
 const viewer = useViewerStore()
@@ -172,8 +173,41 @@ function onToggleSourceMode(): void {
   void togglePreservingScroll()
 }
 
+async function explainFailedPicture(img: HTMLImageElement): Promise<void> {
+  const path = notePicturePathOf(img)
+  if (path === null || img.dataset.notePictureFailed) return
+  img.dataset.notePictureFailed = 'true'
+  const problem = await window.ryte.pictures.explain({ path })
+  if (!img.isConnected) return
+  img.replaceWith(buildPictureProblemNotice(document, problem, path, img.alt))
+}
+
+// `error` does not bubble, so the prose listens for it in the capture phase.
+function onRenderedError(event: Event): void {
+  if (!(event.target instanceof HTMLImageElement)) return
+  explainFailedPicture(event.target).catch(() => {
+    // The picture keeps its broken state; nothing about the file is shown.
+  })
+}
+
+async function openPictureInDefaultApp(button: HTMLButtonElement, path: string): Promise<void> {
+  button.disabled = true
+  try {
+    const { opened } = await window.ryte.pictures.openInDefaultApp({ path })
+    if (!opened) button.textContent = "Couldn't open it"
+  } finally {
+    button.disabled = false
+  }
+}
+
 function onRenderedClick(event: MouseEvent): void {
   const target = event.target instanceof Element ? event.target : null
+  const openButton = target?.closest<HTMLButtonElement>('[data-note-picture-open]')
+  if (openButton?.dataset.notePictureOpen && proseEl.value?.contains(openButton)) {
+    event.preventDefault()
+    void openPictureInDefaultApp(openButton, openButton.dataset.notePictureOpen)
+    return
+  }
   if (target?.closest('a')) return
 
   const taskLine = target?.closest<HTMLElement>('.markdown-task-line')
@@ -422,6 +456,7 @@ onUnmounted(() => {
         class="viewer-prose ryte-scrollbar ryte-scrollbar--y"
         :html="renderedHtml"
         @click="onRenderedClick"
+        @error.capture="onRenderedError"
         @scroll.passive="onRenderedScroll"
       />
     </div>

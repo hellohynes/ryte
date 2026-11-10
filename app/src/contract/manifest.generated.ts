@@ -51,6 +51,13 @@ export const manifest = {
       embeddingStatus: 'indexer:embedding-status-event'
     }
   },
+  pictures: {
+    operations: {
+      explain: 'pictures:explain',
+      openInDefaultApp: 'pictures:open-in-default-app'
+    },
+    events: {}
+  },
   search: {
     operations: {
       query: 'search:query',
