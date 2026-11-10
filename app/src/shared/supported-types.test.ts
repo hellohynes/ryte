@@ -10,4 +10,11 @@ describe('supportedKindOf', () => {
     expect(supportedKindOf('page.html')).toBeNull()
     expect(supportedKindOf('notes.MD')).toBe('note')
   })
+
+  it('gives video files the video kind in any letter case', () => {
+    for (const name of ['clip.mp4', 'Demo.MOV', 'a/b/screen.WebM']) {
+      expect(supportedKindOf(name)).toBe('video')
+    }
+    expect(supportedKindOf('clip.mkv')).toBeNull()
+  })
 })
