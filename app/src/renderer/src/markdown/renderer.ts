@@ -4,7 +4,12 @@ import { fromHighlighter } from '@shikijs/markdown-it/core'
 import imageRule from 'markdown-it/lib/rules_inline/image.mjs'
 import { createHighlighter, createJavaScriptRegexEngine } from 'shiki'
 
-import { isNoteRelativeTarget, renderNotePicture, resolveNotePicturePath } from './note-pictures'
+import {
+  isNoteRelativeTarget,
+  renderNotePicture,
+  renderUnresolvedNotePicture,
+  resolveNotePicturePath
+} from './note-pictures'
 import { isSafeLinkTarget, sanitizeRenderedHtml } from './sanitizer'
 
 const FRONTMATTER_RE = /^---\n[\s\S]*?\n---\n?/
@@ -288,8 +293,11 @@ async function getMd(): Promise<MarkdownIt> {
         const token = tokens[idx]
         const target = token.attrGet('src') ?? ''
         const picturePath = resolveNotePicturePath(target, env.notePath)
-        if (picturePath === null) return defaultImage(tokens, idx, options, env, self)
+        if (picturePath === null && !isNoteRelativeTarget(target)) {
+          return defaultImage(tokens, idx, options, env, self)
+        }
         const alt = self.renderInlineAsText(token.children ?? [], options, env)
+        if (picturePath === null) return renderUnresolvedNotePicture(target, alt)
         return renderNotePicture(picturePath, alt, token.attrGet('title'))
       }
       const defaultLinkOpen =

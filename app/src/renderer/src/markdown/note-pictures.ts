@@ -58,6 +58,20 @@ function fileName(path: string): string {
 }
 
 /**
+ * The markup for a relative picture that can't be resolved inside the notes folder (it leaves the folder, or
+ * the note itself is outside it): a quiet notice with the description, so nothing is requested and no
+ * broken-picture icon shows.
+ */
+export function renderUnresolvedNotePicture(target: string, alt: string): string {
+  const label = alt || fileName(target) || 'Picture'
+  return [
+    '<span class="note-picture-notice" data-note-picture-notice="unresolved">',
+    `<span class="note-picture-notice-alt">${escapeHtml(label)}</span>`,
+    '</span>'
+  ].join('')
+}
+
+/**
  * The markup for a picture that resolved inside the notes folder. A type Ryte can't show becomes a small
  * notice instead, so nothing is requested for it.
  */

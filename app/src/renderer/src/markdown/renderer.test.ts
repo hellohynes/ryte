@@ -257,8 +257,11 @@ describe('render', () => {
       ['leaves the notes folder', '../../../outside.png', notePath],
       ['has a backslash', 'images%5Ca.png', notePath],
       ['belongs to a note outside the notes folder', 'a.png', undefined]
-    ])('should leave a picture that %s unresolved', async (_name, target, path) => {
-      expect(await render(`![alt](${target})`, { notePath: path })).toBe('<p><img alt="alt"></p>\n')
+    ])('should show a quiet notice for a picture that %s', async (_name, target, path) => {
+      const html = await render(`![alt](${target})`, { notePath: path })
+      expect(html).toContain('data-note-picture-notice="unresolved"')
+      expect(html).toContain('<span class="note-picture-notice-alt">alt</span>')
+      expect(html).not.toContain('<img')
     })
 
     it('should load pictures lazily and keep their description and title', async () => {
