@@ -101,7 +101,7 @@ export async function checkNotePicture(
 export async function readLocatedNoteFile(
   located: { realPath: string; dev: number; ino: number },
   maxBytes: number
-): Promise<Buffer | null> {
+): Promise<Buffer<ArrayBuffer> | null> {
   const handle = await open(
     located.realPath,
     constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK
@@ -169,7 +169,8 @@ export async function respondToNoteFileRequest(
 
   const body = await readLocatedNoteFile(check, MAX_NOTE_PICTURE_BYTES)
   if (!body) return emptyResponse(404)
-  return new Response(new Uint8Array(body), {
+  // A view over the buffer already read; `new Uint8Array(body)` would copy the whole picture again.
+  return new Response(new Uint8Array(body.buffer, body.byteOffset, body.byteLength), {
     status: 200,
     headers: { ...headers, 'Content-Length': String(body.byteLength) }
   })
