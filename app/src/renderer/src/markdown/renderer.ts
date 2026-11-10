@@ -1,8 +1,10 @@
 import MarkdownIt from 'markdown-it'
 import type Token from 'markdown-it/lib/token.mjs'
 import { fromHighlighter } from '@shikijs/markdown-it/core'
+import imageRule from 'markdown-it/lib/rules_inline/image.mjs'
 import { createHighlighter, createJavaScriptRegexEngine } from 'shiki'
 
+import { isNoteRelativeTarget, renderNotePicture, resolveNotePicturePath } from './note-pictures'
 import { isSafeLinkTarget, sanitizeRenderedHtml } from './sanitizer'
 
 const FRONTMATTER_RE = /^---\n[\s\S]*?\n---\n?/
@@ -40,6 +42,8 @@ let mdPromise: Promise<MarkdownIt> | null = null
 interface RenderOptions {
   interactiveTasks?: boolean
   breaks?: boolean
+  /** The note's notes-relative path. Pictures resolve against it; without it they stay unresolved. */
+  notePath?: string
 }
 
 export interface MarkdownOutlineItem {
@@ -54,6 +58,7 @@ export interface RenderedMarkdownDocument {
 }
 
 interface RenderEnv {
+  notePath?: string
   lineOffset?: number
   taskMarkers?: Map<number, RenderedTaskMarker>
   outline?: MarkdownOutlineItem[]
@@ -265,6 +270,28 @@ async function getMd(): Promise<MarkdownIt> {
       })
       const md = new MarkdownIt({ html: false, linkify: true, typographer: true })
       md.validateLink = isSafeLinkTarget
+      // Picture targets may also be paths in the notes folder. Links keep the strict check, so a
+      // relative link still renders as plain text.
+      md.inline.ruler.at('image', (state, silent) => {
+        const validateLink = state.md.validateLink
+        state.md.validateLink = (url) => validateLink(url) || isNoteRelativeTarget(url)
+        try {
+          return imageRule(state, silent)
+        } finally {
+          state.md.validateLink = validateLink
+        }
+      })
+      const defaultImage =
+        md.renderer.rules.image ??
+        ((tokens, idx, options, _env, self) => self.renderToken(tokens, idx, options))
+      md.renderer.rules.image = (tokens, idx, options, env: RenderEnv, self) => {
+        const token = tokens[idx]
+        const target = token.attrGet('src') ?? ''
+        const picturePath = resolveNotePicturePath(target, env.notePath)
+        if (picturePath === null) return defaultImage(tokens, idx, options, env, self)
+        const alt = self.renderInlineAsText(token.children ?? [], options, env)
+        return renderNotePicture(picturePath, alt, token.attrGet('title'))
+      }
       const defaultLinkOpen =
         md.renderer.rules.link_open ??
         ((tokens, idx, options, _env, self) => self.renderToken(tokens, idx, options))
@@ -370,6 +397,7 @@ export async function renderDocument(
   const stripped = stripFrontmatterForRender(text)
   const outline: MarkdownOutlineItem[] = []
   const env: RenderEnv = {
+    notePath: options.notePath,
     lineOffset: stripped.lineOffset,
     taskMarkers: options.interactiveTasks ? findTaskMarkers(text) : undefined,
     outline

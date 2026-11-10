@@ -1,3 +1,5 @@
+import { parseNoteFileUrl } from '../../../shared/note-pictures'
+
 const SAFE_LINK_PROTOCOLS = new Set(['https:', 'mailto:'])
 
 // A start tag, with quoted values allowed to contain `>`. Text between tags is
@@ -41,7 +43,16 @@ export function isSafeLinkTarget(rawTarget: string): boolean {
   }
 }
 
-function sanitizeAttributes(attributes: string): string {
+/** A picture in the notes folder. Allowed on `img src` only, never on links or other tags. */
+function isNotePictureSource(tagName: string, attributeName: string, rawTarget: string): boolean {
+  return (
+    tagName === 'img' &&
+    attributeName === 'src' &&
+    parseNoteFileUrl(decodeHtmlAttribute(rawTarget).trim()) !== null
+  )
+}
+
+function sanitizeAttributes(tagName: string, attributes: string): string {
   return attributes.replace(
     ATTRIBUTE_RE,
     (match, space: string, rawName: string, _equals?: string, rawValue?: string) => {
@@ -51,7 +62,7 @@ function sanitizeAttributes(attributes: string): string {
       if (rawValue === undefined) return ''
 
       const target = unquote(rawValue)
-      if (!isSafeLinkTarget(target)) return ''
+      if (!isSafeLinkTarget(target) && !isNotePictureSource(tagName, name, target)) return ''
       return `${space}${name}="${encodeHtmlAttribute(decodeHtmlAttribute(target).trim())}"`
     }
   )
@@ -60,6 +71,7 @@ function sanitizeAttributes(attributes: string): string {
 export function sanitizeRenderedHtml(html: string): string {
   return html.replace(
     START_TAG_RE,
-    (_match, tagName: string, attributes: string) => `<${tagName}${sanitizeAttributes(attributes)}>`
+    (_match, tagName: string, attributes: string) =>
+      `<${tagName}${sanitizeAttributes(tagName.toLowerCase(), attributes)}>`
   )
 }
