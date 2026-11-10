@@ -42,6 +42,19 @@ describe('walkNotes', () => {
     expect(result).toEqual([join(tempDir, 'a.md')])
   })
 
+  it('matches the .md extension in any letter case', async () => {
+    writeFileSync(join(tempDir, 'a.md'), '')
+    writeFileSync(join(tempDir, 'IDEAS.MD'), '')
+    writeFileSync(join(tempDir, 'Mixed.Md'), '')
+
+    const result = await walkNotes(tempDir)
+    expect(result).toEqual([
+      join(tempDir, 'IDEAS.MD'),
+      join(tempDir, 'Mixed.Md'),
+      join(tempDir, 'a.md')
+    ])
+  })
+
   it('includes dotfile .md files', async () => {
     writeFileSync(join(tempDir, 'a.md'), '')
     mkdirSync(join(tempDir, 'hidden'))
