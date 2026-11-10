@@ -20,6 +20,7 @@ import StIconButton from '../stencil/components/StIconButton.vue'
 import StProse from '../stencil/components/StProse.vue'
 import NoteLightbox from './NoteLightbox.vue'
 import { buildLightboxList, type LightboxPicture, type PagePicture } from './lightbox-model'
+import CodeViewer from './CodeViewer.vue'
 import PictureViewer from './PictureViewer.vue'
 import {
   buildPictureProblemNotice,
@@ -179,8 +180,8 @@ async function togglePreservingScroll(): Promise<void> {
 }
 
 function onToggleSourceMode(): void {
-  // A picture has no source to show.
-  if (viewer.picturePath) return
+  // A picture or a code file has no source to switch to.
+  if (viewer.picturePath || viewer.codePath) return
   void togglePreservingScroll()
 }
 
@@ -395,6 +396,7 @@ onUnmounted(() => {
     :aria-label="activeTabPanelLabelledBy ? undefined : 'Markdown viewer'"
   >
     <PictureViewer v-if="viewer.picturePath" :key="viewer.picturePath" :path="viewer.picturePath" />
+    <CodeViewer v-else-if="viewer.codePath" :key="viewer.codePath" :path="viewer.codePath" />
     <div v-else-if="viewer.error" class="error">
       <p>
         Could not open <code>{{ filenameDisplay }}</code>

@@ -96,10 +96,12 @@ describe('useViewerStore', () => {
 
   function installRyteApi({
     files,
+    code,
     tasks,
     workspace
   }: {
     files?: Partial<Window['ryte']['files']>
+    code?: Partial<Window['ryte']['code']>
     tasks?: Partial<Window['ryte']['tasks']>
     workspace?: Partial<Window['ryte']['workspace']>
   }): void {
@@ -123,6 +125,10 @@ describe('useViewerStore', () => {
             return vi.fn()
           }),
           ...files
+        },
+        code: {
+          read: vi.fn().mockResolvedValue({ status: 'ok', text: 'const a = 1\n', bytes: 12 }),
+          ...code
         },
         tasks: {
           list: vi.fn(),
@@ -201,6 +207,39 @@ describe('useViewerStore', () => {
     await viewer.hydrate()
 
     expect(viewer.picturePath).toBe('img/Shot.PNG')
+    expect(viewer.loading).toBe(false)
+    expect(readWorkspaceTab).not.toHaveBeenCalled()
+    expect(watchWorkspaceTab).not.toHaveBeenCalled()
+  })
+
+  it('shows a code tab through code:read, without reading it as a note or watching it', async () => {
+    const active = tab({ id: 'tab-code', sourcePath: 'src/Build.TS', title: 'Build.TS' })
+    const readWorkspaceTab = vi.fn().mockResolvedValue('not a note')
+    const watchWorkspaceTab = vi.fn().mockResolvedValue(undefined)
+    const read = vi.fn().mockResolvedValue({ status: 'ok', text: 'const a = 1\n', bytes: 12 })
+
+    installRyteApi({
+      files: {
+        listTree: vi.fn().mockResolvedValue({ notesRoot: '/notes', paths: ['src/Build.TS'] }),
+        readWorkspaceTab,
+        watchWorkspaceTab
+      },
+      code: { read },
+      workspace: {
+        getState: vi
+          .fn()
+          .mockResolvedValue(workspaceState({ tabs: [active], activeTabId: active.id }))
+      }
+    })
+
+    const workspace = useWorkspaceStore()
+    await workspace.hydrate()
+    const viewer = useViewerStore()
+    await viewer.hydrate()
+
+    expect(viewer.codePath).toBe('src/Build.TS')
+    expect(read).toHaveBeenCalledWith({ path: 'src/Build.TS' })
+    expect(viewer.codeFile).toEqual({ status: 'ok', text: 'const a = 1\n', bytes: 12 })
     expect(viewer.loading).toBe(false)
     expect(readWorkspaceTab).not.toHaveBeenCalled()
     expect(watchWorkspaceTab).not.toHaveBeenCalled()

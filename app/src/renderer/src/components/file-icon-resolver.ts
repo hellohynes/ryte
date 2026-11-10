@@ -1,6 +1,6 @@
 import { supportedKindOf } from '../../../shared/supported-types'
 
-export type FileIconName = 'file' | 'image'
+export type FileIconName = 'file' | 'image' | 'code'
 
 const FALLBACK_FILE_ICON: FileIconName = 'file'
 
@@ -16,5 +16,8 @@ export function fileExtension(fileName: string): string {
 }
 
 export function resolveFileIconName(fileName: string): FileIconName {
-  return supportedKindOf(fileName) === 'picture' ? 'image' : FALLBACK_FILE_ICON
+  const kind = supportedKindOf(fileName)
+  if (kind === 'picture') return 'image'
+  if (kind === 'code') return 'code'
+  return FALLBACK_FILE_ICON
 }

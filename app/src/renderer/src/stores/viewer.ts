@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 
 import { supportedKindOf } from '../../../shared/supported-types'
+import type { CodeReadResult } from '../components/code-view-model'
 import {
   isWorkspaceSourceFileRef,
   workspaceFileDisplayPath,
@@ -116,6 +117,13 @@ export const useViewerStore = defineStore('viewer', () => {
       ? sourcePath.value
       : null
   )
+  // A code tab reads its file through `code:read`; it is never read as a note or watched.
+  const codePath = computed(() =>
+    sourcePath.value !== null && supportedKindOf(sourcePath.value) === 'code'
+      ? sourcePath.value
+      : null
+  )
+  const codeFile = ref<CodeReadResult | null>(null)
   const displayPath = computed(() =>
     activeTab.value ? workspaceFileDisplayPath(activeTab.value) : null
   )
@@ -162,6 +170,8 @@ export const useViewerStore = defineStore('viewer', () => {
     const tab = activeTab.value
     const requestId = ++contentRequestId
 
+    codeFile.value = null
+
     if (!tab) {
       loading.value = false
       content.value = ''
@@ -187,6 +197,11 @@ export const useViewerStore = defineStore('viewer', () => {
           error.value = e instanceof Error ? e.message : String(e)
         }
       }
+      return
+    }
+
+    if (codePath.value !== null) {
+      await loadCodeTab(tab.id, codePath.value, requestId)
       return
     }
 
@@ -220,9 +235,41 @@ export const useViewerStore = defineStore('viewer', () => {
     }
   }
 
+  async function loadCodeTab(tabId: string, path: string, requestId: number): Promise<void> {
+    loading.value = true
+    content.value = ''
+    error.value = null
+
+    try {
+      await window.ryte.files.unwatch()
+    } catch {
+      // Nothing is watched for a code tab; a failed unwatch changes nothing it shows.
+    }
+    if (requestId !== contentRequestId) return
+    if (isOptimisticWorkspaceTabId(tabId)) return
+
+    try {
+      const result = await window.ryte.code.read({ path })
+      if (requestId !== contentRequestId || codePath.value !== path) return
+      codeFile.value = result
+    } catch (e) {
+      if (requestId !== contentRequestId || codePath.value !== path) return
+      error.value = e instanceof Error ? e.message : String(e)
+    } finally {
+      if (requestId === contentRequestId) loading.value = false
+    }
+  }
+
   async function refreshActiveTabInBackground(): Promise<void> {
     const tab = activeTab.value
-    if (!tab || isOptimisticWorkspaceTabId(tab.id) || picturePath.value !== null) return
+    if (
+      !tab ||
+      isOptimisticWorkspaceTabId(tab.id) ||
+      picturePath.value !== null ||
+      codePath.value !== null
+    ) {
+      return
+    }
 
     const requestedFileKey = workspaceFileKey(tab)
     const mutationId = renderedTaskMutationId
@@ -352,6 +399,8 @@ export const useViewerStore = defineStore('viewer', () => {
     activeTabId,
     sourcePath,
     picturePath,
+    codePath,
+    codeFile,
     displayPath,
     selectedPath: displayPath,
     viewMode,
