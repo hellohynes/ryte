@@ -67,7 +67,8 @@ export const ICON_GROUPS: Array<{ title: string; names: IconName[] }> = [
       'strikethrough',
       'table',
       'underline',
-      'undo'
+      'undo',
+      'video'
     ]
   },
   { title: 'Brand', names: ['anthropic', 'openai'] }

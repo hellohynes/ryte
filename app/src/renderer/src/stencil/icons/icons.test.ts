@@ -60,7 +60,8 @@ const EXPECTED = [
   'table',
   'type',
   'underline',
-  'undo'
+  'undo',
+  'video'
 ]
 
 const bounds = (name: string): paper.Rectangle =>

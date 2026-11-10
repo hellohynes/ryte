@@ -22,6 +22,7 @@ import NoteLightbox from './NoteLightbox.vue'
 import { buildLightboxList, type LightboxPicture, type PagePicture } from './lightbox-model'
 import CodeViewer from './CodeViewer.vue'
 import PictureViewer from './PictureViewer.vue'
+import VideoViewer from './VideoViewer.vue'
 import {
   buildPictureProblemNotice,
   notePicturePathOf,
@@ -180,8 +181,8 @@ async function togglePreservingScroll(): Promise<void> {
 }
 
 function onToggleSourceMode(): void {
-  // A picture or a code file has no source to switch to.
-  if (viewer.picturePath || viewer.codePath) return
+  // A picture, a video or a code file has no source to switch to.
+  if (viewer.picturePath || viewer.videoPath || viewer.codePath) return
   void togglePreservingScroll()
 }
 
@@ -396,6 +397,7 @@ onUnmounted(() => {
     :aria-label="activeTabPanelLabelledBy ? undefined : 'Markdown viewer'"
   >
     <PictureViewer v-if="viewer.picturePath" :key="viewer.picturePath" :path="viewer.picturePath" />
+    <VideoViewer v-else-if="viewer.videoPath" :key="viewer.videoPath" :path="viewer.videoPath" />
     <CodeViewer v-else-if="viewer.codePath" :key="viewer.codePath" :path="viewer.codePath" />
     <div v-else-if="viewer.error" class="error">
       <p>

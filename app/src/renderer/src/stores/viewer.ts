@@ -123,6 +123,12 @@ export const useViewerStore = defineStore('viewer', () => {
       ? sourcePath.value
       : null
   )
+  // A video tab plays the file itself through the `ryte-file` scheme; it is never read as text or watched.
+  const videoPath = computed(() =>
+    sourcePath.value !== null && supportedKindOf(sourcePath.value) === 'video'
+      ? sourcePath.value
+      : null
+  )
   const codeFile = ref<CodeReadResult | null>(null)
   const displayPath = computed(() =>
     activeTab.value ? workspaceFileDisplayPath(activeTab.value) : null
@@ -187,7 +193,7 @@ export const useViewerStore = defineStore('viewer', () => {
       return
     }
 
-    if (picturePath.value !== null) {
+    if (picturePath.value !== null || videoPath.value !== null) {
       loading.value = false
       content.value = ''
       error.value = null
@@ -290,6 +296,7 @@ export const useViewerStore = defineStore('viewer', () => {
       !tab ||
       isOptimisticWorkspaceTabId(tab.id) ||
       picturePath.value !== null ||
+      videoPath.value !== null ||
       codePath.value !== null
     ) {
       return
@@ -435,6 +442,7 @@ export const useViewerStore = defineStore('viewer', () => {
     activeTabId,
     sourcePath,
     picturePath,
+    videoPath,
     codePath,
     codeFile,
     displayPath,

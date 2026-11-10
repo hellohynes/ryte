@@ -219,6 +219,35 @@ describe('useViewerStore', () => {
     expect(watchWorkspaceTab).not.toHaveBeenCalled()
   })
 
+  it('shows a video tab without reading it as text or watching it', async () => {
+    const active = tab({ id: 'tab-vid', sourcePath: 'clips/Demo.MP4', title: 'Demo.MP4' })
+    const readWorkspaceTab = vi.fn().mockResolvedValue('not text')
+    const watchWorkspaceTab = vi.fn().mockResolvedValue(undefined)
+
+    installRyteApi({
+      files: {
+        listTree: vi.fn().mockResolvedValue({ notesRoot: '/notes', paths: ['clips/Demo.MP4'] }),
+        readWorkspaceTab,
+        watchWorkspaceTab
+      },
+      workspace: {
+        getState: vi
+          .fn()
+          .mockResolvedValue(workspaceState({ tabs: [active], activeTabId: active.id }))
+      }
+    })
+
+    const workspace = useWorkspaceStore()
+    await workspace.hydrate()
+    const viewer = useViewerStore()
+    await viewer.hydrate()
+
+    expect(viewer.videoPath).toBe('clips/Demo.MP4')
+    expect(viewer.loading).toBe(false)
+    expect(readWorkspaceTab).not.toHaveBeenCalled()
+    expect(watchWorkspaceTab).not.toHaveBeenCalled()
+  })
+
   it('shows a code tab through code:read, without reading it as a note or watching it', async () => {
     const active = tab({ id: 'tab-code', sourcePath: 'src/Build.TS', title: 'Build.TS' })
     const readWorkspaceTab = vi.fn().mockResolvedValue('not a note')
