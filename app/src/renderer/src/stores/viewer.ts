@@ -135,6 +135,7 @@ export const useViewerStore = defineStore('viewer', () => {
   let pendingRenderedTaskToggles = 0
   let unsubscribeSourceChange: (() => void) | null = null
   let unsubscribeTreeChange: (() => void) | null = null
+  let unsubscribeCatalogChange: (() => void) | null = null
   let stopActiveTabWatch: (() => void) | null = null
 
   function sourcePathExists(paths: string[]): boolean {
@@ -260,6 +261,29 @@ export const useViewerStore = defineStore('viewer', () => {
     }
   }
 
+  // Reads the open code file again after it changed on disk. An answer that arrives after the tab changed is dropped,
+  // and the same text is not assigned again, so the view only changes when the file did.
+  async function refreshCodeInBackground(): Promise<void> {
+    const path = codePath.value
+    const tab = activeTab.value
+    if (path === null || !tab || isOptimisticWorkspaceTabId(tab.id)) return
+
+    const requestId = contentRequestId
+    try {
+      const result = await window.ryte.code.read({ path })
+      if (requestId !== contentRequestId || codePath.value !== path) return
+      const current = codeFile.value
+      if (current?.status === 'ok' && result.status === 'ok' && current.text === result.text) {
+        return
+      }
+      codeFile.value = result
+      error.value = null
+    } catch (e) {
+      if (requestId !== contentRequestId || codePath.value !== path) return
+      error.value = e instanceof Error ? e.message : String(e)
+    }
+  }
+
   async function refreshActiveTabInBackground(): Promise<void> {
     const tab = activeTab.value
     if (
@@ -292,6 +316,7 @@ export const useViewerStore = defineStore('viewer', () => {
 
     unsubscribeSourceChange?.()
     unsubscribeTreeChange?.()
+    unsubscribeCatalogChange?.()
     stopActiveTabWatch?.()
 
     unsubscribeSourceChange = window.ryte.files.onSourceChange((changedSourcePath) => {
@@ -308,6 +333,17 @@ export const useViewerStore = defineStore('viewer', () => {
 
     unsubscribeTreeChange = window.ryte.files.onTreeChanged(() => {
       void refreshTree()
+    })
+
+    // A code tab has no note watch; the catalog says when its file changed. No event means the whole catalog changed.
+    unsubscribeCatalogChange = window.ryte.files.onCatalogChanged((event) => {
+      const path = codePath.value
+      if (path === null) return
+      if (event) {
+        const changedPath = event.type === 'upsert' ? event.file.sourcePath : event.sourcePath
+        if (changedPath !== path) return
+      }
+      void refreshCodeInBackground()
     })
 
     stopActiveTabWatch = watch(

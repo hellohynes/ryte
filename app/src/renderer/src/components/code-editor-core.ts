@@ -10,7 +10,7 @@ import {
   syntaxTreeAvailable
 } from '@codemirror/language'
 import { highlightSelectionMatches, search, searchKeymap } from '@codemirror/search'
-import { EditorState, type Extension } from '@codemirror/state'
+import { Compartment, EditorState, type Extension } from '@codemirror/state'
 import { EditorView, drawSelection, keymap, lineNumbers, type KeyBinding } from '@codemirror/view'
 import { tags } from '@lezer/highlight'
 
@@ -188,12 +188,19 @@ function foldKeys(onFoldAllUnavailable: (() => void) | undefined): readonly KeyB
   )
 }
 
+export interface CodeEditor {
+  view: EditorView
+  /** Holds the language support, so a file that changes language is recolored without a new view. */
+  language: Compartment
+}
+
 /**
  * A read-only, focusable CodeMirror view in `host`: line numbers, a fold gutter with the fold keys, find (⌘F)
  * and selection and copy. It is read-only through the state, not by turning editing off, so the text can still
  * take focus.
  */
-export function createCodeEditorView(host: HTMLElement, options: CodeEditorOptions): EditorView {
+export function createCodeEditorView(host: HTMLElement, options: CodeEditorOptions): CodeEditor {
+  const language = new Compartment()
   const extensions: Extension[] = [
     EditorState.readOnly.of(true),
     lineNumbers(),
@@ -205,14 +212,48 @@ export function createCodeEditorView(host: HTMLElement, options: CodeEditorOptio
     syntaxHighlighting(highlightStyle),
     keymap.of([...defaultKeymap, ...searchKeymap, ...foldKeys(options.onFoldAllUnavailable)]),
     EditorView.contentAttributes.of({ 'aria-label': options.label, 'aria-readonly': 'true' }),
-    theme
+    theme,
+    language.of(options.language ?? [])
   ]
-  if (options.language) extensions.push(options.language)
 
   const view = new EditorView({
     parent: host,
     state: EditorState.create({ doc: options.text, extensions })
   })
   view.scrollDOM.classList.add('ryte-scrollbar')
-  return view
+  return { view, language }
+}
+
+/**
+ * Shows new text for the same file. Only the part that differs is replaced, so the scroll position, the folds and
+ * the selection outside it stay. `language` undefined keeps the current language; null shows plain text.
+ */
+export function replaceCodeText(
+  editor: CodeEditor,
+  text: string,
+  language?: Extension | null
+): void {
+  const { view } = editor
+  const previous = view.state.doc.toString()
+  let start = 0
+  const shortest = Math.min(previous.length, text.length)
+  while (start < shortest && previous.charCodeAt(start) === text.charCodeAt(start)) start += 1
+  let previousEnd = previous.length
+  let textEnd = text.length
+  while (
+    previousEnd > start &&
+    textEnd > start &&
+    previous.charCodeAt(previousEnd - 1) === text.charCodeAt(textEnd - 1)
+  ) {
+    previousEnd -= 1
+    textEnd -= 1
+  }
+
+  const { scrollTop, scrollLeft } = view.scrollDOM
+  view.dispatch({
+    changes: { from: start, to: previousEnd, insert: text.slice(start, textEnd) },
+    effects: language === undefined ? [] : editor.language.reconfigure(language ?? [])
+  })
+  view.scrollDOM.scrollTop = scrollTop
+  view.scrollDOM.scrollLeft = scrollLeft
 }

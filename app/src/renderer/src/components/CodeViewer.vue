@@ -64,14 +64,25 @@ watch(
           foldAllUnavailable.value = true
         }
       })
-      if (id !== mountId) opened.destroy()
-      else handle = opened
+      if (id !== mountId) {
+        opened.destroy()
+        return
+      }
+      handle = opened
+      // The file may have changed while the view was loading.
+      const latest = prepared.value
+      if (latest && latest !== view) void opened.update(latest)
     } catch {
       if (id === mountId) loadFailed.value = true
     }
   },
   { flush: 'post' }
 )
+
+// The file changed on disk while its view is open: show the new text where the old one was.
+watch(prepared, (next) => {
+  if (next && handle) void handle.update(next)
+})
 
 onBeforeUnmount(closeEditor)
 

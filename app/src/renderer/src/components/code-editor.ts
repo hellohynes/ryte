@@ -1,7 +1,11 @@
+import type { Extension } from '@codemirror/state'
+
 import type { CodeLanguageId } from '../../../shared/code-files'
 import { loadCodeLanguage } from './code-editor-languages'
 
 export interface CodeEditorHandle {
+  /** Shows new text for the same file, keeping the scroll position. */
+  update: (next: { text: string; language: CodeLanguageId | null }) => Promise<void>
   destroy: () => void
 }
 
@@ -25,11 +29,28 @@ export async function openCodeEditor(
       ? Promise.resolve(null)
       : loadCodeLanguage(options.language).catch(() => null)
   ])
-  const view = core.createCodeEditorView(host, {
+  const editor = core.createCodeEditorView(host, {
     text: options.text,
     language,
     label: options.label,
     onFoldAllUnavailable: options.onFoldAllUnavailable
   })
-  return { destroy: () => view.destroy() }
+  let shownLanguage = options.language
+  let destroyed = false
+
+  return {
+    update: async (next) => {
+      let extension: Extension | null | undefined
+      if (next.language !== shownLanguage) {
+        extension =
+          next.language === null ? null : await loadCodeLanguage(next.language).catch(() => null)
+        shownLanguage = next.language
+      }
+      if (!destroyed) core.replaceCodeText(editor, next.text, extension)
+    },
+    destroy: () => {
+      destroyed = true
+      editor.view.destroy()
+    }
+  }
 }
