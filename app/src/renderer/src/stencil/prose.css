@@ -303,3 +303,32 @@
 .st-prose .note-picture-notice-detail {
   color: var(--st-color-text-muted);
 }
+
+.st-prose .note-picture-open {
+  align-self: flex-start;
+  margin-top: var(--st-space-50);
+}
+
+/* A picture that opens the lightbox. The button only adds the focus ring and the pointer. */
+.st-prose .note-picture-button {
+  display: inline-block;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--st-space-50);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  vertical-align: bottom;
+  cursor: zoom-in;
+}
+
+.st-prose .note-picture-button:focus-visible {
+  outline: var(--st-border-200) solid var(--st-color-focus);
+  outline-offset: var(--st-space-25);
+}
+
+.st-prose .note-picture-button img {
+  display: block;
+}

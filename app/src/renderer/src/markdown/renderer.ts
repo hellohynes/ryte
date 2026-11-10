@@ -7,6 +7,7 @@ import { createHighlighter, createJavaScriptRegexEngine } from 'shiki'
 import {
   isNoteRelativeTarget,
   renderNotePicture,
+  renderPictureButton,
   renderUnresolvedNotePicture,
   resolveNotePicturePath
 } from './note-pictures'
@@ -64,6 +65,8 @@ export interface RenderedMarkdownDocument {
 
 interface RenderEnv {
   notePath?: string
+  /** Pictures that open in the lightbox, numbered in reading order. */
+  pictureCount?: number
   lineOffset?: number
   taskMarkers?: Map<number, RenderedTaskMarker>
   outline?: MarkdownOutlineItem[]
@@ -197,6 +200,15 @@ function renderTaskContentClose(): string {
   return '</span></span>'
 }
 
+function isInsideLink(tokens: Token[], index: number): boolean {
+  let depth = 0
+  for (let i = 0; i < index; i += 1) {
+    if (tokens[i]?.type === 'link_open') depth += 1
+    else if (tokens[i]?.type === 'link_close') depth -= 1
+  }
+  return depth > 0
+}
+
 function hasTokenClass(token: Token, className: string): boolean {
   return token.attrGet('class')?.split(/\s+/).includes(className) ?? false
 }
@@ -298,7 +310,12 @@ async function getMd(): Promise<MarkdownIt> {
         }
         const alt = self.renderInlineAsText(token.children ?? [], options, env)
         if (picturePath === null) return renderUnresolvedNotePicture(target, alt)
-        return renderNotePicture(picturePath, alt, token.attrGet('title'))
+        const picture = renderNotePicture(picturePath, alt, token.attrGet('title'))
+        // A picture inside a link stays part of the link and never opens the lightbox.
+        if (!picture.startsWith('<img') || isInsideLink(tokens, idx)) return picture
+        const index = env.pictureCount ?? 0
+        env.pictureCount = index + 1
+        return renderPictureButton(picture, index, alt)
       }
       const defaultLinkOpen =
         md.renderer.rules.link_open ??

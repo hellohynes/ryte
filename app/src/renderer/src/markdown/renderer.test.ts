@@ -266,8 +266,26 @@ describe('render', () => {
 
     it('should load pictures lazily and keep their description and title', async () => {
       expect(await render('![A *bold* shot](a.png "Title")', { notePath })).toBe(
-        '<p><img src="ryte-file://notes/journal/2026/a.png" alt="A bold shot" title="Title" loading="lazy" decoding="async"></p>\n'
+        '<p><button type="button" class="note-picture-button" aria-label="Open picture: A bold shot" data-note-picture-index="0">' +
+          '<img src="ryte-file://notes/journal/2026/a.png" alt="A bold shot" title="Title" loading="lazy" decoding="async">' +
+          '</button></p>\n'
       )
+    })
+
+    it('should number lightbox pictures in reading order, skipping linked and unsupported ones', async () => {
+      const html = await render(
+        '![one](1.png) [![linked](2.png)](https://example.com)\n\n![phone](3.heic)\n\n- ![two](4.png)\n- ![three](5.png)',
+        { notePath }
+      )
+      expect(
+        [...html.matchAll(/data-note-picture-index="(\d+)"><img src="[^"]*\/(\d)\.png"/g)].map(
+          ([, index, file]) => [Number(index), file]
+        )
+      ).toEqual([
+        [0, '1'],
+        [1, '4'],
+        [2, '5']
+      ])
     })
 
     it('should show a notice instead of requesting a type Ryte cannot show', async () => {
