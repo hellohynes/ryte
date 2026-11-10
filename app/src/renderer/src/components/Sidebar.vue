@@ -16,6 +16,7 @@ import {
   modifiedAtMsBySourcePath,
   type SidebarTreeNode as TreeNode
 } from './sidebar-tree-model'
+import { supportedKindOf } from '../../../shared/supported-types'
 import type { WorkspaceFolderSortMode } from '../../../shared/workspace'
 import { useFileCatalogStore } from '../stores/file-catalog'
 import { useViewerStore } from '../stores/viewer'
@@ -31,6 +32,7 @@ interface TreeConnector {
 interface SidebarFileContextMenu {
   sourcePath: string
   name: string
+  isNote: boolean
   x: number
   y: number
 }
@@ -225,6 +227,7 @@ function openFileContextMenu(event: MouseEvent, node: TreeNode, index: number): 
   fileContextMenu.value = {
     sourcePath: node.relPath,
     name: node.name,
+    isNote: supportedKindOf(node.relPath) === 'note',
     x: event.clientX,
     y: event.clientY
   }
@@ -607,6 +610,7 @@ onUnmounted(() => {
     :x="fileContextMenu.x"
     :y="fileContextMenu.y"
     :file-name="fileContextMenu.name"
+    :is-note="fileContextMenu.isNote"
     @action="handleFileContextAction"
     @dismiss="fileContextMenu = null"
   />

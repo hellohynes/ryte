@@ -2,6 +2,7 @@ import { realpath, rename, stat } from 'node:fs/promises'
 import { dirname, extname, join, relative, resolve, sep } from 'node:path'
 
 import type { FileRenameInput } from '../../shared/files'
+import { supportedKindOf } from '../../shared/supported-types'
 import {
   isWorkspaceSourceFileRef,
   type WorkspaceFileRef,
@@ -88,6 +89,7 @@ export async function renameWorkspaceFile(
 ): Promise<WorkspaceFileRef> {
   const name = requireFileName(input.name)
   const currentPath = await resolveWorkspaceFilePath(input, notesRoot)
+  if (supportedKindOf(currentPath) !== 'note') throw new Error('Only notes can be renamed')
   const nextPath = join(dirname(currentPath), name)
 
   if (currentPath !== nextPath) {

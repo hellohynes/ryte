@@ -4,6 +4,7 @@ import type { WebContents } from 'electron'
 
 import type { Contract } from '../../contract'
 import type { FileCatalogResponse } from '../../shared/files'
+import { supportedKindOf } from '../../shared/supported-types'
 import { isWorkspaceSourceFileRef } from '../../shared/workspace'
 import type { WorkspaceTabFileDependencies } from '../workspace-tab-file'
 import { fileRefForWorkspaceTab } from '../workspace-tab-file'
@@ -85,6 +86,7 @@ export function createFilesHandlers<TWindow>({
     },
     copyContent: async (file) => {
       const path = await store.resolveFilePath(file)
+      if (supportedKindOf(path) !== 'note') throw new Error('Only notes can be copied as text')
       clipboard.writeText(await readTextFile(path))
     },
     copyPath: async (file) => {

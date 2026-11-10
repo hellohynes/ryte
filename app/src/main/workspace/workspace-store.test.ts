@@ -306,6 +306,18 @@ describe('WorkspaceStore', () => {
     await expect(workspace.resolveFilePath({ externalPath })).resolves.toBe(externalPath)
   })
 
+  it('refuses to rename a picture and leaves it unchanged', async () => {
+    const path = join(notesRoot, 'shot.png')
+    writeFileSync(path, 'synthetic picture bytes', 'utf-8')
+
+    await expect(store().renameFile({ sourcePath: 'shot.png', name: 'shot.md' })).rejects.toThrow(
+      'Only notes can be renamed'
+    )
+
+    expect(readFileSync(path, 'utf-8')).toBe('synthetic picture bytes')
+    expect(existsSync(join(notesRoot, 'shot.md'))).toBe(false)
+  })
+
   it('refuses to overwrite an existing file during rename', async () => {
     writeNote('original.md')
     writeNote('existing.md')
