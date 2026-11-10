@@ -63,7 +63,8 @@ export const manifest = {
       show: 'page:show',
       setBounds: 'page:set-bounds',
       hide: 'page:hide',
-      close: 'page:close'
+      close: 'page:close',
+      openInBrowser: 'page:open-in-browser'
     },
     events: {
       blocked: 'page:blocked'

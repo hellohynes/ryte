@@ -160,14 +160,16 @@ export function registerIpc(): void {
       service: indexerService,
       beforeClear: stopSearchesBeforeClear
     }),
-    page: createPageHandlers(
-      createPageBox({
+    page: createPageHandlers({
+      box: createPageBox({
         folders: createPageFolders(),
         getNotesRoot: () => settingsStore.load().notesRoot,
         emitTo: emit.to,
         openExternal: openPageLink
-      })
-    ),
+      }),
+      getNotesRoot: () => settingsStore.load().notesRoot,
+      openPath: (path) => shell.openPath(path)
+    }),
     pictures: createPicturesHandlers({
       getNotesRoot: () => settingsStore.load().notesRoot,
       openPath: (path) => shell.openPath(path)

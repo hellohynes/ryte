@@ -77,6 +77,7 @@ change or remove one.
 | `page.setBounds` | `page:set-bounds` | Move and resize the open page view to a new area of the window. | `{ bounds: { x: number, y: number, width: number, height: number } }` |
 | `page.hide` | `page:hide` | Hide the open page view, for example while an overlay is open, because a native view always draws on top. Returns a still picture of the page (a data URL) to show in its place, or null when there is none. | `none` |
 | `page.close` | `page:close` | Close the open page view and forget its folder. The page keeps nothing. | `none` |
+| `page.openInBrowser` | `page:open-in-browser` | Open an HTML page from the notes folder in the default browser, outside the locked view, after checking again that it is inside the notes folder and an HTML page. The page runs unlocked there, so this is only for the button the person presses. Returns whether it opened. | `{ path: string }` |
 
 | Event | Channel | What it means | Payload |
 | --- | --- | --- | --- |

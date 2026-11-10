@@ -42,6 +42,19 @@ const stopBlocked = window.ryte.page.onBlocked((report) => {
   banner.value = receiveReport(banner.value, report)
 })
 
+const openFailed = ref(false)
+
+// The page runs without the lock there, so this is only ever a button the person presses.
+async function openInBrowser(): Promise<void> {
+  openFailed.value = false
+  try {
+    const { opened } = await window.ryte.page.openInBrowser({ path: props.path })
+    openFailed.value = !opened
+  } catch {
+    openFailed.value = true
+  }
+}
+
 function dismiss(): void {
   banner.value = dismissBanner(banner.value)
   showAddresses.value = false
@@ -157,6 +170,16 @@ watch(() => viewer.pageVersion, reload)
   <div class="page-tab">
     <header class="page-caption">
       <span class="page-name">{{ name }}</span>
+      <StButton
+        v-if="!problem"
+        variant="secondary"
+        size="sm"
+        class="page-open"
+        data-page-open-browser
+        @click="openInBrowser"
+      >
+        {{ openFailed ? "Couldn't open it" : 'Open in browser (not locked)' }}
+      </StButton>
     </header>
     <StNotice
       v-if="bannerView"
@@ -199,6 +222,10 @@ watch(() => viewer.pageVersion, reload)
   align-items: baseline;
   gap: var(--st-space-100) var(--st-space-200);
   padding: 0 var(--st-space-400);
+}
+
+.page-open {
+  margin-left: auto;
 }
 
 .page-name {

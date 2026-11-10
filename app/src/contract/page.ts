@@ -48,6 +48,15 @@ export const close = defineOperation({
   example: { input: undefined, output: undefined }
 })
 
+export const openInBrowser = defineOperation({
+  channel: 'page:open-in-browser',
+  description:
+    'Open an HTML page from the notes folder in the default browser, outside the locked view, after checking again that it is inside the notes folder and an HTML page. The page runs unlocked there, so this is only for the button the person presses. Returns whether it opened.',
+  input: z.strictObject({ path: sourcePath }),
+  output: z.object({ opened: z.boolean() }),
+  example: { input: { path: 'review/index.html' }, output: { opened: true } }
+})
+
 export const blocked = defineEvent({
   channel: 'page:blocked',
   description:
@@ -56,6 +65,6 @@ export const blocked = defineEvent({
 })
 
 export const page = defineArea('page', {
-  operations: { show, setBounds, hide, close },
+  operations: { show, setBounds, hide, close, openInBrowser },
   events: { blocked }
 })
