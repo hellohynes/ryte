@@ -1,4 +1,5 @@
 import { parseNoteFileUrl } from '../../../shared/note-pictures'
+import { isSupportedNoteVideo } from '../../../shared/note-videos'
 
 const SAFE_LINK_PROTOCOLS = new Set(['https:', 'mailto:'])
 
@@ -43,13 +44,37 @@ export function isSafeLinkTarget(rawTarget: string): boolean {
   }
 }
 
-/** A picture in the notes folder. Allowed on `img src` only, never on links or other tags. */
+/** A picture in the notes folder. Allowed on `img src` only, never on links or other tags; a video's `src` is handled by `sanitizeVideoTag`. */
 function isNotePictureSource(tagName: string, attributeName: string, rawTarget: string): boolean {
   return (
     tagName === 'img' &&
     attributeName === 'src' &&
     parseNoteFileUrl(decodeHtmlAttribute(rawTarget).trim()) !== null
   )
+}
+
+/** A video in the notes folder: a `ryte-file` address with a video extension. Allowed on `video src` only. */
+function noteVideoSource(rawTarget: string): string | null {
+  const target = decodeHtmlAttribute(rawTarget).trim()
+  const path = parseNoteFileUrl(target)
+  return path !== null && isSupportedNoteVideo(path) ? target : null
+}
+
+/**
+ * A `<video>` keeps only a notes-folder `src`. It always gets the standard controls and `preload="metadata"`,
+ * so it never loads more than its first frame until it is played, and it can't play by itself: `autoplay`,
+ * `loop`, `muted`, `poster`, event handlers and every other attribute are dropped.
+ */
+function sanitizeVideoTag(attributes: string): string {
+  let src: string | null = null
+  for (const match of attributes.matchAll(ATTRIBUTE_RE)) {
+    const [, , rawName, , rawValue] = match
+    if (rawName!.toLowerCase() === 'src' && rawValue !== undefined) {
+      src = noteVideoSource(unquote(rawValue))
+    }
+  }
+  const srcAttribute = src === null ? '' : ` src="${encodeHtmlAttribute(src)}"`
+  return `<video${srcAttribute} controls preload="metadata">`
 }
 
 function sanitizeAttributes(tagName: string, attributes: string): string {
@@ -69,9 +94,11 @@ function sanitizeAttributes(tagName: string, attributes: string): string {
 }
 
 export function sanitizeRenderedHtml(html: string): string {
-  return html.replace(
-    START_TAG_RE,
-    (_match, tagName: string, attributes: string) =>
-      `<${tagName}${sanitizeAttributes(tagName.toLowerCase(), attributes)}>`
-  )
+  return html.replace(START_TAG_RE, (_match, tagName: string, attributes: string) => {
+    const name = tagName.toLowerCase()
+    // A video's own sources and subtitle tracks could point anywhere; only its `src` is kept.
+    if (name === 'source' || name === 'track') return ''
+    if (name === 'video') return sanitizeVideoTag(attributes)
+    return `<${tagName}${sanitizeAttributes(name, attributes)}>`
+  })
 }

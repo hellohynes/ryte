@@ -5,13 +5,16 @@ import imageRule from 'markdown-it/lib/rules_inline/image.mjs'
 import { createHighlighter, createJavaScriptRegexEngine } from 'shiki'
 
 import {
+  fileName,
   isNoteRelativeTarget,
   renderNotePicture,
   renderPictureButton,
   renderUnresolvedNotePicture,
   resolveNotePicturePath
 } from './note-pictures'
+import { renderNoteVideo, isWebVideoTarget, renderWebVideoLink } from './note-videos'
 import { isSafeLinkTarget, sanitizeRenderedHtml } from './sanitizer'
+import { isSupportedNoteVideo } from '../../../shared/note-videos'
 
 const FRONTMATTER_RE = /^---\n[\s\S]*?\n---\n?/
 const MERMAID_LANGUAGE = 'mermaid'
@@ -305,11 +308,17 @@ async function getMd(): Promise<MarkdownIt> {
         const token = tokens[idx]
         const target = token.attrGet('src') ?? ''
         const picturePath = resolveNotePicturePath(target, env.notePath)
+        const alt = self.renderInlineAsText(token.children ?? [], options, env)
         if (picturePath === null && !isNoteRelativeTarget(target)) {
+          if (isWebVideoTarget(target)) return renderWebVideoLink(target, alt)
           return defaultImage(tokens, idx, options, env, self)
         }
-        const alt = self.renderInlineAsText(token.children ?? [], options, env)
         if (picturePath === null) return renderUnresolvedNotePicture(target, alt)
+        if (isSupportedNoteVideo(picturePath)) {
+          // A video inside a link stays a link: the text is shown and no player sits inside it.
+          if (isInsideLink(tokens, idx)) return escapeHtml(alt || fileName(picturePath))
+          return renderNoteVideo(picturePath, alt)
+        }
         const picture = renderNotePicture(picturePath, alt, token.attrGet('title'))
         // A picture inside a link stays part of the link and never opens the lightbox.
         if (!picture.startsWith('<img') || isInsideLink(tokens, idx)) return picture

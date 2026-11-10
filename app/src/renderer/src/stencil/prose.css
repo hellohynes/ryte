@@ -279,7 +279,19 @@
   border-radius: var(--st-space-50);
 }
 
-/* A picture in the note that Ryte can't show: its description and why, in place of the picture. */
+/* A video linked from a note: the standard controls, fitted to the column. It never plays by itself. */
+.st-prose .note-video {
+  display: block;
+  max-width: 100%;
+}
+
+.st-prose video {
+  display: block;
+  max-width: 100%;
+  border-radius: var(--st-space-50);
+}
+
+/* A picture or video in the note that Ryte can't show: its description and why, in place of the picture. */
 .st-prose .note-picture-notice {
   display: inline-flex;
   flex-direction: column;

@@ -23,6 +23,7 @@ import { buildLightboxList, type LightboxPicture, type PagePicture } from './lig
 import CodeViewer from './CodeViewer.vue'
 import PictureViewer from './PictureViewer.vue'
 import VideoViewer from './VideoViewer.vue'
+import { buildVideoProblemNotice, noteVideoPathOf, openVideoInDefaultApp } from './video-problems'
 import {
   buildPictureProblemNotice,
   notePicturePathOf,
@@ -196,12 +197,28 @@ async function explainFailedPicture(img: HTMLImageElement): Promise<void> {
   host.replaceWith(buildPictureProblemNotice(document, problem, path, img.alt))
 }
 
+async function explainFailedVideo(video: HTMLVideoElement): Promise<void> {
+  const path = noteVideoPathOf(video)
+  if (path === null || video.dataset.noteVideoFailed) return
+  video.dataset.noteVideoFailed = 'true'
+  const problem = await window.ryte.video.explain({ path })
+  if (!video.isConnected) return
+  const host = video.closest('.note-video') ?? video
+  const alt = host.getAttribute('aria-label') ?? ''
+  host.replaceWith(buildVideoProblemNotice(document, problem, path, alt))
+}
+
 // `error` does not bubble, so the prose listens for it in the capture phase.
 function onRenderedError(event: Event): void {
-  if (!(event.target instanceof HTMLImageElement)) return
-  explainFailedPicture(event.target).catch(() => {
-    // The picture keeps its broken state; nothing about the file is shown.
-  })
+  if (event.target instanceof HTMLImageElement) {
+    explainFailedPicture(event.target).catch(() => {
+      // The picture keeps its broken state; nothing about the file is shown.
+    })
+  } else if (event.target instanceof HTMLVideoElement) {
+    explainFailedVideo(event.target).catch(() => {
+      // The video keeps its broken state; nothing about the file is shown.
+    })
+  }
 }
 
 function pagePictures(): PagePicture[] {
@@ -234,6 +251,12 @@ function onRenderedClick(event: MouseEvent): void {
   if (openButton?.dataset.notePictureOpen && proseEl.value?.contains(openButton)) {
     event.preventDefault()
     void openPictureInDefaultApp(openButton, openButton.dataset.notePictureOpen)
+    return
+  }
+  const openVideoButton = target?.closest<HTMLButtonElement>('[data-note-video-open]')
+  if (openVideoButton?.dataset.noteVideoOpen && proseEl.value?.contains(openVideoButton)) {
+    event.preventDefault()
+    void openVideoInDefaultApp(openVideoButton, openVideoButton.dataset.noteVideoOpen)
     return
   }
   if (target?.closest('a')) return

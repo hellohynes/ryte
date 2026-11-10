@@ -32,4 +32,27 @@ describe('sanitizeRenderedHtml', () => {
       )
     ).toBe('<img src="ryte-file://notes/a.png"><a>a</a><iframe></iframe><img><img>')
   })
+
+  it('keeps only a notes-folder src, controls and preload metadata on a video', () => {
+    expect(
+      sanitizeRenderedHtml(
+        '<video src="ryte-file://notes/a.mp4" autoplay loop muted poster="ryte-file://notes/p.png" ' +
+          'onplay="x()" class="big" preload="auto"><source src="ryte-file://notes/a.mp4">' +
+          '<track src="ryte-file://notes/a.vtt"></video>'
+      )
+    ).toBe('<video src="ryte-file://notes/a.mp4" controls preload="metadata"></video>')
+  })
+
+  it('removes a video src that is not a notes-folder video, and ryte-file on other tags', () => {
+    expect(
+      sanitizeRenderedHtml(
+        '<video src="https://example.com/a.mp4"></video><video src="ryte-file://notes/a.png"></video>' +
+          '<video src="ryte-file://notes/%2e%2e/a.mp4"></video><audio src="ryte-file://notes/a.mp4"></audio>' +
+          '<embed src="ryte-file://notes/a.mp4">'
+      )
+    ).toBe(
+      '<video controls preload="metadata"></video><video controls preload="metadata"></video>' +
+        '<video controls preload="metadata"></video><audio></audio><embed>'
+    )
+  })
 })

@@ -310,6 +310,58 @@ describe('render', () => {
     })
   })
 
+  describe('videos in notes', () => {
+    const notePath = 'journal/2026/today.md'
+    const videoTag = (src: string): string =>
+      '<span class="note-video" role="group" aria-label="clip">' +
+      `<video src="${src}" controls preload="metadata"></video></span>`
+
+    it.each([
+      ['the same folder', 'a.mp4', 'ryte-file://notes/journal/2026/a.mp4'],
+      ['the notes folder root', '/clips/a.webm', 'ryte-file://notes/clips/a.webm'],
+      ['an uppercase extension', 'SCREEN.MOV', 'ryte-file://notes/journal/2026/SCREEN.MOV']
+    ])(
+      'should turn a picture-style link in %s into a video with controls',
+      async (_name, target, src) => {
+        expect(await render(`![clip](${target})`, { notePath })).toBe(`<p>${videoTag(src)}</p>\n`)
+      }
+    )
+
+    it('should keep a video inside a link a link, with no player inside it', async () => {
+      expect(await render('[![clip](a.mp4)](https://example.com)', { notePath })).toBe(
+        '<p><a href="https://example.com" target="_blank" rel="noreferrer noopener">clip</a></p>\n'
+      )
+      expect(await render('[![](a.mp4)](https://example.com)', { notePath })).toBe(
+        '<p><a href="https://example.com" target="_blank" rel="noreferrer noopener">a.mp4</a></p>\n'
+      )
+    })
+
+    it('should never give a video a ryte-file address outside the notes folder, or load one from the web', async () => {
+      const outside = await render('![clip](../../../outside.mp4)', { notePath })
+      expect(outside).toContain('data-note-picture-notice="unresolved"')
+      expect(outside).not.toContain('<video')
+      expect(outside).not.toContain('ryte-file:')
+
+      const web = await render('![clip](https://example.com/a.mp4)', { notePath })
+      expect(web).toBe(
+        '<p><a href="https://example.com/a.mp4" target="_blank" rel="noreferrer noopener">clip</a></p>\n'
+      )
+
+      const disk = await render('![clip](file:///Users/me/a.mp4)', { notePath })
+      expect(disk).not.toContain('<video')
+      expect(disk).not.toContain('ryte-file:')
+    })
+
+    it('should show raw video HTML in a note as text, with no video element', async () => {
+      const html = await render(
+        '<video autoplay loop muted poster="p.png" onplay="x()"><source src="a.mp4"><track src="a.vtt"></video>',
+        { notePath }
+      )
+      expect(html).not.toMatch(/<(video|source|track)/)
+      expect(html).toContain('&lt;video autoplay')
+    })
+  })
+
   it('should strip unsafe markdown link targets', async () => {
     const html = await render('[bad](javascript:alert(1)) [file](file:///tmp/private.md)')
     expect(html).not.toContain('href="javascript:')
