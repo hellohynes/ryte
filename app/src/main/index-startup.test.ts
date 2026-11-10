@@ -142,12 +142,12 @@ describe('main startup ordering', () => {
     expect(mocks.order.indexOf('theme:dark')).toBeLessThan(mocks.order.indexOf('window:create'))
   })
 
-  it('grants the picture scheme its privileges before ready and answers it after', async () => {
+  it('grants the file scheme its privileges, including streaming, before ready and answers it after', async () => {
     await import('./index')
     await vi.waitFor(() => expect(mocks.order).toContain('indexer:init'))
 
     expect(mocks.protocol.registerSchemesAsPrivileged).toHaveBeenCalledWith([
-      { scheme: 'ryte-file', privileges: { standard: true, secure: true } }
+      { scheme: 'ryte-file', privileges: { standard: true, secure: true, stream: true } }
     ])
     expect(mocks.order.indexOf('scheme:privileged')).toBeLessThan(
       mocks.order.indexOf('app:whenReady')

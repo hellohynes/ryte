@@ -1,4 +1,12 @@
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, truncateSync, writeFileSync } from 'node:fs'
+import {
+  mkdirSync,
+  mkdtempSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+  truncateSync,
+  writeFileSync
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -121,5 +129,105 @@ describe('respondToNoteFileRequest', () => {
     expect((await handle({ method: 'GET', url })).status).toBe(200)
     notesRoot = outside
     expect((await handle({ method: 'GET', url })).status).toBe(404)
+  })
+})
+
+describe('respondToNoteFileRequest for videos', () => {
+  let root: string
+  let outside: string
+
+  // 100 bytes where byte n has the value n, so any slice says where it came from.
+  const VIDEO_BYTES = Buffer.from(Array.from({ length: 100 }, (_, index) => index))
+
+  const get = (url: string, range?: string): Promise<Response> =>
+    respondToNoteFileRequest(
+      { method: 'GET', url, headers: new Headers(range ? { Range: range } : {}) },
+      root
+    )
+
+  beforeEach(() => {
+    root = mkdtempSync(join(tmpdir(), 'ryte-nv-root-'))
+    outside = mkdtempSync(join(tmpdir(), 'ryte-nv-outside-'))
+    mkdirSync(join(root, 'clips'))
+    writeFileSync(join(root, 'clips', 'demo.mp4'), VIDEO_BYTES)
+    writeFileSync(join(outside, 'secret.mp4'), VIDEO_BYTES)
+  })
+
+  afterEach(() => {
+    rmSync(root, { recursive: true, force: true })
+    rmSync(outside, { recursive: true, force: true })
+  })
+
+  it('streams a whole video with the type of its extension, in any letter case', async () => {
+    writeFileSync(join(root, 'clips', 'a.webm'), VIDEO_BYTES)
+    writeFileSync(join(root, 'clips', 'B.MOV'), VIDEO_BYTES)
+
+    const mp4 = await get('ryte-file://notes/clips/demo.mp4')
+    expect(mp4.status).toBe(200)
+    expect(Buffer.from(await mp4.arrayBuffer())).toEqual(VIDEO_BYTES)
+    expect(Object.fromEntries(mp4.headers)).toMatchObject({
+      'accept-ranges': 'bytes',
+      'content-length': '100',
+      'content-type': 'video/mp4',
+      'x-content-type-options': 'nosniff'
+    })
+    expect((await get('ryte-file://notes/clips/a.webm')).headers.get('content-type')).toBe(
+      'video/webm'
+    )
+    expect((await get('ryte-file://notes/clips/B.MOV')).headers.get('content-type')).toBe(
+      'video/quicktime'
+    )
+  })
+
+  it.each([
+    ['a closed range', 'bytes=10-19', 10, 19],
+    ['an open-ended range', 'bytes=10-', 10, 99],
+    ['a range that ends past the file', 'bytes=90-500', 90, 99],
+    ['a range that ends past any size', 'bytes=90-99999999999999999999', 90, 99],
+    ['the last bytes', 'bytes=-5', 95, 99]
+  ])('answers %s with 206 and the matching bytes', async (_name, range, start, end) => {
+    const response = await get('ryte-file://notes/clips/demo.mp4', range)
+
+    expect(response.status).toBe(206)
+    expect(response.headers.get('content-range')).toBe(`bytes ${start}-${end}/100`)
+    expect(response.headers.get('content-length')).toBe(String(end - start + 1))
+    expect(response.headers.get('accept-ranges')).toBe('bytes')
+    expect(Buffer.from(await response.arrayBuffer())).toEqual(VIDEO_BYTES.subarray(start, end + 1))
+  })
+
+  it.each([
+    ['a malformed range', 'bytes=abc'],
+    ['a reversed range', 'bytes=20-10'],
+    ['several ranges', 'bytes=0-9,20-29'],
+    ['another unit', 'items=0-9'],
+    ['a range past the end', 'bytes=100-'],
+    ['a start past any size', 'bytes=99999999999999999999-']
+  ])('answers %s with 416 and the file size', async (_name, range) => {
+    const response = await get('ryte-file://notes/clips/demo.mp4', range)
+
+    expect(response.status).toBe(416)
+    expect(response.headers.get('content-range')).toBe('bytes */100')
+  })
+
+  it('errors instead of serving another file that replaced the video after the check', async () => {
+    writeFileSync(join(root, 'clips', 'd.mp4'), VIDEO_BYTES)
+    writeFileSync(join(root, 'clips', 'other.mp4'), Buffer.from('a different video'))
+    const response = await get('ryte-file://notes/clips/d.mp4')
+
+    renameSync(join(root, 'clips', 'other.mp4'), join(root, 'clips', 'd.mp4'))
+
+    await expect(response.arrayBuffer()).rejects.toThrow()
+  })
+
+  it('refuses a link out of the notes folder, a video-named link to another type, and a missing video', async () => {
+    writeFileSync(join(root, 'note.md'), '# private\n')
+    symlinkSync(join(outside, 'secret.mp4'), join(root, 'out.mp4'))
+    symlinkSync(join(root, 'note.md'), join(root, 'note.mp4'))
+    writeFileSync(join(root, 'clips', 'demo.mkv'), VIDEO_BYTES)
+
+    expect((await get('ryte-file://notes/out.mp4')).status).toBe(403)
+    expect((await get('ryte-file://notes/note.mp4')).status).toBe(403)
+    expect((await get('ryte-file://notes/clips/demo.mkv')).status).toBe(403)
+    expect((await get('ryte-file://notes/clips/none.mp4')).status).toBe(404)
   })
 })
