@@ -25,19 +25,20 @@ function isInside(root: string, target: string): boolean {
   return target.startsWith(root + sep)
 }
 
-type LocatedPicture =
+export type LocatedNoteFile =
   | { ok: true; realPath: string; extension: string; size: number; dev: number; ino: number }
   | { ok: false; reason: 'blocked' | 'missing' }
 
 /**
- * Finds a notes-relative picture: an allowed picture type (before and after following links), inside the
- * notes folder after following links, and a file. The size is not checked here.
+ * Finds a notes-relative file of an allowed type: the type is allowed before and after following links, the
+ * file is inside the notes folder after following links, and it is a regular file. The size is not checked here.
  */
-export async function locateNotePicture(
+export async function locateNoteFile(
   notesRelativePath: string,
-  notesRoot: string
-): Promise<LocatedPicture> {
-  if (!Object.hasOwn(NOTE_PICTURE_CONTENT_TYPES, notePictureExtension(notesRelativePath))) {
+  notesRoot: string,
+  isAllowedExtension: (extension: string) => boolean
+): Promise<LocatedNoteFile> {
+  if (!isAllowedExtension(notePictureExtension(notesRelativePath))) {
     return { ok: false, reason: 'blocked' }
   }
 
@@ -51,7 +52,7 @@ export async function locateNotePicture(
   }
 
   const extension = notePictureExtension(target.split(sep).join('/'))
-  if (!isInside(root, target) || !Object.hasOwn(NOTE_PICTURE_CONTENT_TYPES, extension)) {
+  if (!isInside(root, target) || !isAllowedExtension(extension)) {
     return { ok: false, reason: 'blocked' }
   }
 
@@ -59,6 +60,17 @@ export async function locateNotePicture(
   if (!stats) return { ok: false, reason: 'missing' }
   if (!stats.isFile()) return { ok: false, reason: 'blocked' }
   return { ok: true, realPath: target, extension, size: stats.size, dev: stats.dev, ino: stats.ino }
+}
+
+const isPictureExtension = (extension: string): boolean =>
+  Object.hasOwn(NOTE_PICTURE_CONTENT_TYPES, extension)
+
+/** `locateNoteFile` for the allowed picture types. */
+export function locateNotePicture(
+  notesRelativePath: string,
+  notesRoot: string
+): Promise<LocatedNoteFile> {
+  return locateNoteFile(notesRelativePath, notesRoot, isPictureExtension)
 }
 
 /** `locateNotePicture`, plus the size cap for showing it inline. */
@@ -81,25 +93,33 @@ export async function checkNotePicture(
   }
 }
 
-/** Reads the file that was checked, refusing it if a link or another file has taken its place since. */
-async function readCheckedPicture(
-  check: Extract<NotePictureCheck, { ok: true }>
+/**
+ * Reads the file that was located, refusing it if a link or another file has taken its place since, or if it
+ * is over `maxBytes`. It reads no more than the size it checked, so a file that grows meanwhile is cut at that
+ * size, and it opens without blocking, so a pipe swapped in since can't hold it up. Null means refused or gone.
+ */
+export async function readLocatedNoteFile(
+  located: { realPath: string; dev: number; ino: number },
+  maxBytes: number
 ): Promise<Buffer | null> {
-  const handle = await open(check.realPath, constants.O_RDONLY | constants.O_NOFOLLOW).catch(
-    () => null
-  )
+  const handle = await open(
+    located.realPath,
+    constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_NONBLOCK
+  ).catch(() => null)
   if (!handle) return null
   try {
     const stats = await handle.stat()
     if (
       !stats.isFile() ||
-      stats.dev !== check.dev ||
-      stats.ino !== check.ino ||
-      stats.size > MAX_NOTE_PICTURE_BYTES
+      stats.dev !== located.dev ||
+      stats.ino !== located.ino ||
+      stats.size > maxBytes
     ) {
       return null
     }
-    return await handle.readFile()
+    const buffer = Buffer.alloc(stats.size)
+    const { bytesRead } = await handle.read(buffer, 0, stats.size, 0)
+    return buffer.subarray(0, bytesRead)
   } finally {
     await handle.close()
   }
@@ -147,7 +167,7 @@ export async function respondToNoteFileRequest(
   }
   if (method === 'HEAD') return new Response(null, { status: 200, headers })
 
-  const body = await readCheckedPicture(check)
+  const body = await readLocatedNoteFile(check, MAX_NOTE_PICTURE_BYTES)
   if (!body) return emptyResponse(404)
   return new Response(new Uint8Array(body), {
     status: 200,

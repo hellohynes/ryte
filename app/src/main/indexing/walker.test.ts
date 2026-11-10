@@ -82,34 +82,39 @@ describe('walkLibrary', () => {
     rmSync(tempDir, { recursive: true, force: true })
   })
 
-  it('lists notes and supported pictures, in any letter case, and hides everything else', async () => {
+  it('lists notes, pictures and code files, in any letter case, and hides everything else', async () => {
     writeFileSync(join(tempDir, 'a.md'), '')
     writeFileSync(join(tempDir, 'b.PNG'), '')
     writeFileSync(join(tempDir, 'c.svg'), '')
-    writeFileSync(join(tempDir, 'd.json'), '')
+    writeFileSync(join(tempDir, 'd.JSON'), '')
     writeFileSync(join(tempDir, 'e.mp4'), '')
     writeFileSync(join(tempDir, 'f.txt'), '')
+    writeFileSync(join(tempDir, 'g.html'), '')
 
     expect(await walkLibrary(tempDir)).toEqual([
       join(tempDir, 'a.md'),
       join(tempDir, 'b.PNG'),
-      join(tempDir, 'c.svg')
+      join(tempDir, 'c.svg'),
+      join(tempDir, 'd.JSON')
     ])
   })
 
-  it('skips node_modules and dot folders for pictures but still lists their notes', async () => {
+  it('skips node_modules and dot folders for pictures and code but still lists their notes', async () => {
     for (const folder of ['node_modules', '.hidden', join('docs', 'node_modules')]) {
       mkdirSync(join(tempDir, folder), { recursive: true })
       writeFileSync(join(tempDir, folder, 'inside.md'), '')
       writeFileSync(join(tempDir, folder, 'inside.png'), '')
+      writeFileSync(join(tempDir, folder, 'inside.ts'), '')
     }
     mkdirSync(join(tempDir, 'docs'), { recursive: true })
     writeFileSync(join(tempDir, 'docs', 'shown.png'), '')
+    writeFileSync(join(tempDir, 'docs', 'shown.ts'), '')
 
     expect(await walkLibrary(tempDir)).toEqual([
       join(tempDir, '.hidden', 'inside.md'),
       join(tempDir, 'docs', 'node_modules', 'inside.md'),
       join(tempDir, 'docs', 'shown.png'),
+      join(tempDir, 'docs', 'shown.ts'),
       join(tempDir, 'node_modules', 'inside.md')
     ])
   })

@@ -20,8 +20,8 @@ export async function walkNotes(notesRoot: string): Promise<string[]> {
 
 /**
  * Walk a notes root recursively for everything Ryte lists: notes exactly as `walkNotes` lists them, plus
- * supported pictures outside `node_modules` and dot folders. Sorted absolute paths. The indexer and the task
- * facts keep `walkNotes`; pictures are listed, never indexed.
+ * supported pictures and code files outside `node_modules` and dot folders. Sorted absolute paths. The indexer and
+ * the task facts keep `walkNotes`; pictures and code files are listed, never indexed.
  */
 export async function walkLibrary(notesRoot: string): Promise<string[]> {
   const entries = await readdir(notesRoot, { withFileTypes: true, recursive: true })

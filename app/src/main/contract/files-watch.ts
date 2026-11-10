@@ -119,7 +119,7 @@ export function forwardFileChanges({
     // final old-root event against the new root.
     if (event.notesRoot !== notesRoot) return
 
-    // Tasks come from notes only; a picture changes the catalog and nothing else.
+    // Tasks come from notes only; a picture or code file changes the catalog and nothing else.
     if (supportedKindOf(event.path) === 'note') {
       markTasksStale()
       emit(contract.tasks.events.changed)

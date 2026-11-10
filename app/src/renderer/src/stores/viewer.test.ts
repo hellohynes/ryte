@@ -7,6 +7,7 @@ import {
   type WorkspaceFileTab,
   type WorkspaceState
 } from '../../../shared/workspace'
+import type { FileCatalogChangeEvent } from '../../../shared/files'
 import type { TaskToggleResponse } from '../../../shared/tasks'
 import { useViewerStore } from './viewer'
 import { useWorkspaceStore } from './workspace'
@@ -82,12 +83,14 @@ describe('useViewerStore', () => {
   let sourceChangeHandler: ((sourcePath: string) => void) | null = null
   let workspaceTabChangeHandler: ((tabId: string) => void) | null = null
   let treeChangeHandler: (() => void) | null = null
+  let catalogChangeHandler: ((event?: FileCatalogChangeEvent) => void) | null = null
 
   beforeEach(() => {
     setActivePinia(createPinia())
     sourceChangeHandler = null
     workspaceTabChangeHandler = null
     treeChangeHandler = null
+    catalogChangeHandler = null
   })
 
   afterEach(() => {
@@ -96,10 +99,12 @@ describe('useViewerStore', () => {
 
   function installRyteApi({
     files,
+    code,
     tasks,
     workspace
   }: {
     files?: Partial<Window['ryte']['files']>
+    code?: Partial<Window['ryte']['code']>
     tasks?: Partial<Window['ryte']['tasks']>
     workspace?: Partial<Window['ryte']['workspace']>
   }): void {
@@ -122,7 +127,15 @@ describe('useViewerStore', () => {
             treeChangeHandler = cb
             return vi.fn()
           }),
+          onCatalogChanged: vi.fn((cb: (event?: FileCatalogChangeEvent) => void) => {
+            catalogChangeHandler = cb
+            return vi.fn()
+          }),
           ...files
+        },
+        code: {
+          read: vi.fn().mockResolvedValue({ status: 'ok', text: 'const a = 1\n', bytes: 12 }),
+          ...code
         },
         tasks: {
           list: vi.fn(),
@@ -204,6 +217,75 @@ describe('useViewerStore', () => {
     expect(viewer.loading).toBe(false)
     expect(readWorkspaceTab).not.toHaveBeenCalled()
     expect(watchWorkspaceTab).not.toHaveBeenCalled()
+  })
+
+  it('shows a code tab through code:read, without reading it as a note or watching it', async () => {
+    const active = tab({ id: 'tab-code', sourcePath: 'src/Build.TS', title: 'Build.TS' })
+    const readWorkspaceTab = vi.fn().mockResolvedValue('not a note')
+    const watchWorkspaceTab = vi.fn().mockResolvedValue(undefined)
+    const read = vi.fn().mockResolvedValue({ status: 'ok', text: 'const a = 1\n', bytes: 12 })
+
+    installRyteApi({
+      files: {
+        listTree: vi.fn().mockResolvedValue({ notesRoot: '/notes', paths: ['src/Build.TS'] }),
+        readWorkspaceTab,
+        watchWorkspaceTab
+      },
+      code: { read },
+      workspace: {
+        getState: vi
+          .fn()
+          .mockResolvedValue(workspaceState({ tabs: [active], activeTabId: active.id }))
+      }
+    })
+
+    const workspace = useWorkspaceStore()
+    await workspace.hydrate()
+    const viewer = useViewerStore()
+    await viewer.hydrate()
+
+    expect(viewer.codePath).toBe('src/Build.TS')
+    expect(read).toHaveBeenCalledWith({ path: 'src/Build.TS' })
+    expect(viewer.codeFile).toEqual({ status: 'ok', text: 'const a = 1\n', bytes: 12 })
+    expect(viewer.loading).toBe(false)
+    expect(readWorkspaceTab).not.toHaveBeenCalled()
+    expect(watchWorkspaceTab).not.toHaveBeenCalled()
+  })
+
+  it('reads an open code file again when the catalog reports a change to it, and only then', async () => {
+    const active = tab({ id: 'tab-code', sourcePath: 'src/build.ts', title: 'build.ts' })
+    const read = vi
+      .fn()
+      .mockResolvedValueOnce({ status: 'ok', text: 'one\n', bytes: 4 })
+      .mockResolvedValue({ status: 'ok', text: 'two\n', bytes: 4 })
+
+    installRyteApi({
+      files: {
+        listTree: vi.fn().mockResolvedValue({ notesRoot: '/notes', paths: ['src/build.ts'] })
+      },
+      code: { read },
+      workspace: {
+        getState: vi
+          .fn()
+          .mockResolvedValue(workspaceState({ tabs: [active], activeTabId: active.id }))
+      }
+    })
+
+    const workspace = useWorkspaceStore()
+    await workspace.hydrate()
+    const viewer = useViewerStore()
+    await viewer.hydrate()
+    expect(read).toHaveBeenCalledTimes(1)
+
+    catalogChangeHandler?.({ type: 'remove', sourcePath: 'src/other.ts' })
+    await nextTick()
+    expect(read).toHaveBeenCalledTimes(1)
+
+    catalogChangeHandler?.({ type: 'remove', sourcePath: 'src/build.ts' })
+    await vi.waitFor(() =>
+      expect(viewer.codeFile).toEqual({ status: 'ok', text: 'two\n', bytes: 4 })
+    )
+    expect(read).toHaveBeenCalledTimes(2)
   })
 
   it('hydrates an external workspace tab through tab-scoped file APIs', async () => {

@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 
 import { supportedKindOf } from '../../../shared/supported-types'
+import type { CodeReadResult } from '../components/code-view-model'
 import {
   isWorkspaceSourceFileRef,
   workspaceFileDisplayPath,
@@ -116,6 +117,13 @@ export const useViewerStore = defineStore('viewer', () => {
       ? sourcePath.value
       : null
   )
+  // A code tab reads its file through `code:read`; it is never read as a note or watched.
+  const codePath = computed(() =>
+    sourcePath.value !== null && supportedKindOf(sourcePath.value) === 'code'
+      ? sourcePath.value
+      : null
+  )
+  const codeFile = ref<CodeReadResult | null>(null)
   const displayPath = computed(() =>
     activeTab.value ? workspaceFileDisplayPath(activeTab.value) : null
   )
@@ -127,6 +135,7 @@ export const useViewerStore = defineStore('viewer', () => {
   let pendingRenderedTaskToggles = 0
   let unsubscribeSourceChange: (() => void) | null = null
   let unsubscribeTreeChange: (() => void) | null = null
+  let unsubscribeCatalogChange: (() => void) | null = null
   let stopActiveTabWatch: (() => void) | null = null
 
   function sourcePathExists(paths: string[]): boolean {
@@ -162,6 +171,8 @@ export const useViewerStore = defineStore('viewer', () => {
     const tab = activeTab.value
     const requestId = ++contentRequestId
 
+    codeFile.value = null
+
     if (!tab) {
       loading.value = false
       content.value = ''
@@ -187,6 +198,11 @@ export const useViewerStore = defineStore('viewer', () => {
           error.value = e instanceof Error ? e.message : String(e)
         }
       }
+      return
+    }
+
+    if (codePath.value !== null) {
+      await loadCodeTab(tab.id, codePath.value, requestId)
       return
     }
 
@@ -220,9 +236,64 @@ export const useViewerStore = defineStore('viewer', () => {
     }
   }
 
+  async function loadCodeTab(tabId: string, path: string, requestId: number): Promise<void> {
+    loading.value = true
+    content.value = ''
+    error.value = null
+
+    try {
+      await window.ryte.files.unwatch()
+    } catch {
+      // Nothing is watched for a code tab; a failed unwatch changes nothing it shows.
+    }
+    if (requestId !== contentRequestId) return
+    if (isOptimisticWorkspaceTabId(tabId)) return
+
+    try {
+      const result = await window.ryte.code.read({ path })
+      if (requestId !== contentRequestId || codePath.value !== path) return
+      codeFile.value = result
+    } catch (e) {
+      if (requestId !== contentRequestId || codePath.value !== path) return
+      error.value = e instanceof Error ? e.message : String(e)
+    } finally {
+      if (requestId === contentRequestId) loading.value = false
+    }
+  }
+
+  // Reads the open code file again after it changed on disk. An answer that arrives after the tab changed is dropped,
+  // and the same text is not assigned again, so the view only changes when the file did.
+  async function refreshCodeInBackground(): Promise<void> {
+    const path = codePath.value
+    const tab = activeTab.value
+    if (path === null || !tab || isOptimisticWorkspaceTabId(tab.id)) return
+
+    const requestId = contentRequestId
+    try {
+      const result = await window.ryte.code.read({ path })
+      if (requestId !== contentRequestId || codePath.value !== path) return
+      const current = codeFile.value
+      if (current?.status === 'ok' && result.status === 'ok' && current.text === result.text) {
+        return
+      }
+      codeFile.value = result
+      error.value = null
+    } catch (e) {
+      if (requestId !== contentRequestId || codePath.value !== path) return
+      error.value = e instanceof Error ? e.message : String(e)
+    }
+  }
+
   async function refreshActiveTabInBackground(): Promise<void> {
     const tab = activeTab.value
-    if (!tab || isOptimisticWorkspaceTabId(tab.id) || picturePath.value !== null) return
+    if (
+      !tab ||
+      isOptimisticWorkspaceTabId(tab.id) ||
+      picturePath.value !== null ||
+      codePath.value !== null
+    ) {
+      return
+    }
 
     const requestedFileKey = workspaceFileKey(tab)
     const mutationId = renderedTaskMutationId
@@ -245,6 +316,7 @@ export const useViewerStore = defineStore('viewer', () => {
 
     unsubscribeSourceChange?.()
     unsubscribeTreeChange?.()
+    unsubscribeCatalogChange?.()
     stopActiveTabWatch?.()
 
     unsubscribeSourceChange = window.ryte.files.onSourceChange((changedSourcePath) => {
@@ -261,6 +333,17 @@ export const useViewerStore = defineStore('viewer', () => {
 
     unsubscribeTreeChange = window.ryte.files.onTreeChanged(() => {
       void refreshTree()
+    })
+
+    // A code tab has no note watch; the catalog says when its file changed. No event means the whole catalog changed.
+    unsubscribeCatalogChange = window.ryte.files.onCatalogChanged((event) => {
+      const path = codePath.value
+      if (path === null) return
+      if (event) {
+        const changedPath = event.type === 'upsert' ? event.file.sourcePath : event.sourcePath
+        if (changedPath !== path) return
+      }
+      void refreshCodeInBackground()
     })
 
     stopActiveTabWatch = watch(
@@ -352,6 +435,8 @@ export const useViewerStore = defineStore('viewer', () => {
     activeTabId,
     sourcePath,
     picturePath,
+    codePath,
+    codeFile,
     displayPath,
     selectedPath: displayPath,
     viewMode,
