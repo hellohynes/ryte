@@ -236,6 +236,62 @@ describe('render', () => {
     )
   })
 
+  describe('pictures in notes', () => {
+    const notePath = 'journal/2026/today.md'
+    const pictureSrc = (html: string): string | undefined => /<img src="([^"]*)"/.exec(html)?.[1]
+
+    it.each([
+      ['the same folder', 'a.png', 'ryte-file://notes/journal/2026/a.png'],
+      ['a dot path', './a.png', 'ryte-file://notes/journal/2026/a.png'],
+      ['a subfolder', 'images/a.png', 'ryte-file://notes/journal/2026/images/a.png'],
+      ['a parent folder', '../shared/a.png', 'ryte-file://notes/journal/shared/a.png'],
+      ['the notes folder root', '/assets/a.png', 'ryte-file://notes/assets/a.png'],
+      ['spaces in angle brackets', '<my pic.png>', 'ryte-file://notes/journal/2026/my%20pic.png'],
+      ['accents', '<déjà vu.png>', 'ryte-file://notes/journal/2026/d%C3%A9j%C3%A0%20vu.png'],
+      ['an uppercase extension', 'SHOT.PNG', 'ryte-file://notes/journal/2026/SHOT.PNG']
+    ])('should resolve a picture in %s inside the notes folder', async (_name, target, src) => {
+      expect(pictureSrc(await render(`![alt](${target})`, { notePath }))).toBe(src)
+    })
+
+    it.each([
+      ['leaves the notes folder', '../../../outside.png', notePath],
+      ['has a backslash', 'images%5Ca.png', notePath],
+      ['belongs to a note outside the notes folder', 'a.png', undefined]
+    ])('should show a quiet notice for a picture that %s', async (_name, target, path) => {
+      const html = await render(`![alt](${target})`, { notePath: path })
+      expect(html).toContain('data-note-picture-notice="unresolved"')
+      expect(html).toContain('<span class="note-picture-notice-alt">alt</span>')
+      expect(html).not.toContain('<img')
+    })
+
+    it('should load pictures lazily and keep their description and title', async () => {
+      expect(await render('![A *bold* shot](a.png "Title")', { notePath })).toBe(
+        '<p><img src="ryte-file://notes/journal/2026/a.png" alt="A bold shot" title="Title" loading="lazy" decoding="async"></p>\n'
+      )
+    })
+
+    it('should show a notice instead of requesting a type Ryte cannot show', async () => {
+      expect(await render('![Phone photo](IMG_1.HEIC)', { notePath })).toBe(
+        '<p><span class="note-picture-notice" data-note-picture-notice="unsupported">' +
+          '<span class="note-picture-notice-alt">Phone photo</span>' +
+          `<span class="note-picture-notice-detail">Ryte can't show .heic pictures yet.</span></span></p>\n`
+      )
+    })
+
+    it('should keep relative links as plain text', async () => {
+      expect(await render('[other note](other.md)', { notePath })).toBe(
+        '<p>[other note](other.md)</p>\n'
+      )
+    })
+
+    it('should keep a picture inside a link a link', async () => {
+      expect(await render('[![alt](a.png)](https://example.com)', { notePath })).toBe(
+        '<p><a href="https://example.com" target="_blank" rel="noreferrer noopener">' +
+          '<img src="ryte-file://notes/journal/2026/a.png" alt="alt" loading="lazy" decoding="async"></a></p>\n'
+      )
+    })
+  })
+
   it('should strip unsafe markdown link targets', async () => {
     const html = await render('[bad](javascript:alert(1)) [file](file:///tmp/private.md)')
     expect(html).not.toContain('href="javascript:')

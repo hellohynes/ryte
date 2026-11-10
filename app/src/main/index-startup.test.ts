@@ -31,7 +31,10 @@ const mocks = vi.hoisted(() => {
     windowOptions,
     app: {
       setName: vi.fn(),
-      whenReady: vi.fn(() => Promise.resolve()),
+      whenReady: vi.fn(() => {
+        order.push('app:whenReady')
+        return Promise.resolve()
+      }),
       on: vi.fn((event: string, listener: () => void) => {
         appHandlers.set(event, listener)
       }),
@@ -45,7 +48,15 @@ const mocks = vi.hoisted(() => {
     }),
     applyColorMode: vi.fn((mode: string) => {
       order.push(`theme:${mode}`)
-    })
+    }),
+    protocol: {
+      registerSchemesAsPrivileged: vi.fn(() => {
+        order.push('scheme:privileged')
+      }),
+      handle: vi.fn(() => {
+        order.push('scheme:handle')
+      })
+    }
   }
 })
 
@@ -53,6 +64,7 @@ vi.mock('electron', () => ({
   app: mocks.app,
   BrowserWindow: mocks.BrowserWindowMock,
   Notification: { isSupported: vi.fn(() => false) },
+  protocol: mocks.protocol,
   screen: { getAllDisplays: vi.fn(() => []) }
 }))
 
@@ -128,6 +140,22 @@ describe('main startup ordering', () => {
 
     expect(mocks.order.indexOf('theme:dark')).toBeGreaterThanOrEqual(0)
     expect(mocks.order.indexOf('theme:dark')).toBeLessThan(mocks.order.indexOf('window:create'))
+  })
+
+  it('grants the picture scheme its privileges before ready and answers it after', async () => {
+    await import('./index')
+    await vi.waitFor(() => expect(mocks.order).toContain('indexer:init'))
+
+    expect(mocks.protocol.registerSchemesAsPrivileged).toHaveBeenCalledWith([
+      { scheme: 'ryte-file', privileges: { standard: true, secure: true } }
+    ])
+    expect(mocks.order.indexOf('scheme:privileged')).toBeLessThan(
+      mocks.order.indexOf('app:whenReady')
+    )
+    expect(mocks.order.indexOf('scheme:handle')).toBeGreaterThan(
+      mocks.order.indexOf('app:whenReady')
+    )
+    expect(mocks.order.indexOf('scheme:handle')).toBeLessThan(mocks.order.indexOf('window:create'))
   })
 
   it('uses title case for native app and window names', async () => {

@@ -278,3 +278,28 @@
   max-width: 100%;
   border-radius: var(--st-space-50);
 }
+
+/* A picture in the note that Ryte can't show: its description and why, in place of the picture. */
+.st-prose .note-picture-notice {
+  display: inline-flex;
+  flex-direction: column;
+  gap: var(--st-space-25);
+  max-width: 100%;
+  padding: var(--st-space-100) var(--st-space-150);
+  border: var(--st-border-100) dashed var(--st-color-border-base);
+  border-radius: var(--st-space-75);
+  background: var(--st-color-surface-sunken);
+  font-size: var(--st-type-body-sm-size);
+  line-height: var(--st-type-body-sm-leading);
+  vertical-align: middle;
+}
+
+.st-prose .note-picture-notice-alt {
+  color: var(--st-color-text-primary);
+  font-weight: var(--st-font-weight-semi-bold);
+  overflow-wrap: anywhere;
+}
+
+.st-prose .note-picture-notice-detail {
+  color: var(--st-color-text-muted);
+}

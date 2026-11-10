@@ -22,4 +22,14 @@ describe('sanitizeRenderedHtml', () => {
         '<a>d</a><img><a>e</a>'
     )
   })
+
+  it('allows notes-folder pictures on img src only', () => {
+    expect(
+      sanitizeRenderedHtml(
+        '<img src="ryte-file://notes/a.png"><a href="ryte-file://notes/a.png">a</a>' +
+          '<iframe src="ryte-file://notes/a.png"></iframe><img src="ryte-file://notes/%2e%2e/a.png">' +
+          '<img src="ryte-file://other/a.png">'
+      )
+    ).toBe('<img src="ryte-file://notes/a.png"><a>a</a><iframe></iframe><img><img>')
+  })
 })

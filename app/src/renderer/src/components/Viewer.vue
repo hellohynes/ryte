@@ -94,14 +94,17 @@ const documentOutlineStyle = computed(() => {
 })
 
 async function updateRender(text: string): Promise<void> {
-  if (renderCache.has(text)) {
-    const cached = renderCache.get(text)!
+  // Pictures resolve against the note's folder, so the same text renders differently per note.
+  const notePath = viewer.sourcePath ?? undefined
+  const cacheKey = `${notePath ?? ''}\0${text}`
+  if (renderCache.has(cacheKey)) {
+    const cached = renderCache.get(cacheKey)!
     renderedHtml.value = cached.html
     documentOutline.value = cached.outline
     return
   }
-  const document = await renderDocument(text, { interactiveTasks: true, breaks: true })
-  renderCache.set(text, document)
+  const document = await renderDocument(text, { interactiveTasks: true, breaks: true, notePath })
+  renderCache.set(cacheKey, document)
   // Bound cache to avoid unbounded growth on many file edits in one session.
   if (renderCache.size > 50) {
     const firstKey = renderCache.keys().next().value
@@ -109,7 +112,7 @@ async function updateRender(text: string): Promise<void> {
   }
   // Only commit the result if the content hasn't changed in the meantime
   // (user may have switched files while we were rendering).
-  if (text === viewer.content) {
+  if (text === viewer.content && notePath === (viewer.sourcePath ?? undefined)) {
     renderedHtml.value = document.html
     documentOutline.value = document.outline
   }
@@ -123,8 +126,8 @@ async function hydrateRenderedContent(): Promise<void> {
 }
 
 watch(
-  () => viewer.content,
-  (next) => {
+  [() => viewer.content, () => viewer.sourcePath],
+  ([next]) => {
     renderError.value = null
     if (!next) {
       renderedHtml.value = ''
