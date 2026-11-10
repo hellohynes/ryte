@@ -343,6 +343,21 @@ describe('buildHomeSidebarModel', () => {
     expect(model.groups.find((group) => group.id === 'recent')?.items[0]?.title).toBe('overview.md')
   })
 
+  it('leaves pictures out of every group', () => {
+    const model = buildHomeSidebarModel({
+      activeTabId: null,
+      catalogFiles: [
+        catalogEntry({ sourcePath: 'plans/real-plan.md', title: 'real-plan' }),
+        catalogEntry({ sourcePath: 'plans/diagram.png', title: 'diagram.png' })
+      ],
+      recents: [],
+      tabs: []
+    })
+
+    const paths = model.groups.flatMap((group) => group.items.map((item) => item.sourcePath))
+    expect(paths).toEqual(['plans/real-plan.md'])
+  })
+
   it('ranks plans by recent activity before modified time and caps at 10 items', () => {
     const catalogFiles = Array.from({ length: 12 }, (_, index) =>
       catalogEntry({

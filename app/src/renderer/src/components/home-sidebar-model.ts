@@ -1,4 +1,5 @@
 import type { FileCatalogEntry } from '../../../shared/files'
+import { supportedKindOf } from '../../../shared/supported-types'
 import type { MarkdownTaskFact } from '../../../shared/tasks'
 import {
   isWorkspaceSourceFileRef,
@@ -270,6 +271,8 @@ export function buildHomeSidebarModel(input: HomeSidebarModelInput): HomeSidebar
   const sourceRecents = input.recents.filter(isSourceWorkspaceRecentFile)
   const context: HomeSidebarModelContext = {
     ...input,
+    // Home's groups are about notes; pictures are in the catalog for the tree and quick open.
+    catalogFiles: input.catalogFiles.filter((file) => supportedKindOf(file.sourcePath) === 'note'),
     recents: sourceRecents,
     taskFacts: input.taskFacts ?? [],
     activeTaskFingerprint: input.activeTaskFingerprint ?? null,

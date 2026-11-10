@@ -11,6 +11,7 @@ import StDialog from '../stencil/components/StDialog.vue'
 import StInput from '../stencil/components/StInput.vue'
 import StNotice from '../stencil/components/StNotice.vue'
 import StIcon from '../stencil/icons/StIcon.vue'
+import { resolveFileIconName } from './file-icon-resolver'
 import { buildFileOpenResults, type FileOpenResult } from './file-open-model'
 
 const emit = defineEmits<{ close: [] }>()
@@ -158,7 +159,7 @@ function onKeydown(event: KeyboardEvent): void {
           @mouseenter="selectedIndex = index"
           @click="openResult(result)"
         >
-          <StIcon name="file" :size="12" />
+          <StIcon :name="resolveFileIconName(result.sourcePath)" :size="12" />
           <span class="result-copy">
             <span class="result-title">{{ result.title }}</span>
             <span class="result-path">{{ result.sourcePath }}</span>
