@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
 
+import { supportedKindOf } from '../../../shared/supported-types'
 import {
   isWorkspaceSourceFileRef,
   workspaceFileDisplayPath,
@@ -109,6 +110,12 @@ export const useViewerStore = defineStore('viewer', () => {
   const sourcePath = computed(() =>
     activeTab.value && isWorkspaceSourceFileRef(activeTab.value) ? activeTab.value.sourcePath : null
   )
+  // A picture tab shows the picture itself; it is never read as text or watched.
+  const picturePath = computed(() =>
+    sourcePath.value !== null && supportedKindOf(sourcePath.value) === 'picture'
+      ? sourcePath.value
+      : null
+  )
   const displayPath = computed(() =>
     activeTab.value ? workspaceFileDisplayPath(activeTab.value) : null
   )
@@ -169,6 +176,20 @@ export const useViewerStore = defineStore('viewer', () => {
       return
     }
 
+    if (picturePath.value !== null) {
+      loading.value = false
+      content.value = ''
+      error.value = null
+      try {
+        await window.ryte.files.unwatch()
+      } catch (e) {
+        if (requestId === contentRequestId) {
+          error.value = e instanceof Error ? e.message : String(e)
+        }
+      }
+      return
+    }
+
     loading.value = true
     content.value = ''
     error.value = null
@@ -201,7 +222,7 @@ export const useViewerStore = defineStore('viewer', () => {
 
   async function refreshActiveTabInBackground(): Promise<void> {
     const tab = activeTab.value
-    if (!tab || isOptimisticWorkspaceTabId(tab.id)) return
+    if (!tab || isOptimisticWorkspaceTabId(tab.id) || picturePath.value !== null) return
 
     const requestedFileKey = workspaceFileKey(tab)
     const mutationId = renderedTaskMutationId
@@ -330,6 +351,7 @@ export const useViewerStore = defineStore('viewer', () => {
     activeTab,
     activeTabId,
     sourcePath,
+    picturePath,
     displayPath,
     selectedPath: displayPath,
     viewMode,

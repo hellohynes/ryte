@@ -20,7 +20,12 @@ import StIconButton from '../stencil/components/StIconButton.vue'
 import StProse from '../stencil/components/StProse.vue'
 import NoteLightbox from './NoteLightbox.vue'
 import { buildLightboxList, type LightboxPicture, type PagePicture } from './lightbox-model'
-import { buildPictureProblemNotice, notePicturePathOf } from './note-picture-problems'
+import PictureViewer from './PictureViewer.vue'
+import {
+  buildPictureProblemNotice,
+  notePicturePathOf,
+  openPictureInDefaultApp
+} from './note-picture-problems'
 import { WORKSPACE_TABPANEL_ID, getWorkspaceTabDomId } from './workspace-tab-keyboard'
 
 const viewer = useViewerStore()
@@ -174,6 +179,8 @@ async function togglePreservingScroll(): Promise<void> {
 }
 
 function onToggleSourceMode(): void {
+  // A picture has no source to show.
+  if (viewer.picturePath) return
   void togglePreservingScroll()
 }
 
@@ -193,16 +200,6 @@ function onRenderedError(event: Event): void {
   explainFailedPicture(event.target).catch(() => {
     // The picture keeps its broken state; nothing about the file is shown.
   })
-}
-
-async function openPictureInDefaultApp(button: HTMLButtonElement, path: string): Promise<void> {
-  button.disabled = true
-  try {
-    const { opened } = await window.ryte.pictures.openInDefaultApp({ path })
-    if (!opened) button.textContent = "Couldn't open it"
-  } finally {
-    button.disabled = false
-  }
 }
 
 function pagePictures(): PagePicture[] {
@@ -397,7 +394,8 @@ onUnmounted(() => {
     :aria-labelledby="activeTabPanelLabelledBy"
     :aria-label="activeTabPanelLabelledBy ? undefined : 'Markdown viewer'"
   >
-    <div v-if="viewer.error" class="error">
+    <PictureViewer v-if="viewer.picturePath" :key="viewer.picturePath" :path="viewer.picturePath" />
+    <div v-else-if="viewer.error" class="error">
       <p>
         Could not open <code>{{ filenameDisplay }}</code>
       </p>
