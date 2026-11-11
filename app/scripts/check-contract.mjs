@@ -14,6 +14,10 @@
 //               the registrar, the preload builder and the two wiring files that hand ipcMain / ipcRenderer
 //               to them. A channel built by concatenation or a template, or not shaped `area:name`, fails
 //               wherever it is.
+//   schemes     registerSchemesAsPrivileged, and handle / unhandle / isProtocolHandled / register*Protocol /
+//               intercept*Protocol on `protocol` or a `.protocol` property, appear only in SCHEME_ALLOWED:
+//               the app entry and the page box. A custom scheme is a second way in from a page, so a new one
+//               is a review decision. The check does not confirm the privileged list names every scheme.
 //   imports     nothing under src/contract/ imports electron, and the generated manifest imports nothing;
 //               src/contract/ is value-imported only from src/main/ and, for the manifest alone, the
 //               preload builder; the renderer references neither ipcRenderer nor electron.
@@ -52,6 +56,11 @@ const MANIFEST = 'src/contract/manifest.generated.ts'
 // The only files that may reference IPC primitives. The two wiring files only hand ipcMain / ipcRenderer to the
 // registrar and the builder; this excuses the primitives, never a channel string.
 const IPC_ALLOWED = new Set([REGISTRAR, BUILDER, 'src/main/ipc.ts', 'src/preload/index.ts'])
+
+// The only files that may register or handle a custom scheme (ryte-file, ryte-page).
+const SCHEME_ALLOWED = new Set(['src/main/index.ts', 'src/main/page/page-box.ts'])
+const SCHEME_METHODS =
+  /^(?:registerSchemesAsPrivileged|handle|unhandle|isProtocolHandled|register\w*Protocol|intercept\w*Protocol)$/
 
 const isSkipped = (path) =>
   /\.test\.[cm]?[jt]sx?$|\.fixture\.[cm]?[jt]sx?$|\.d\.[cm]?ts$/.test(path) ||
@@ -146,6 +155,7 @@ function moduleReferences(sourceFile) {
 function scan(sourceFile) {
   const channels = []
   const access = []
+  const schemes = []
   visit(sourceFile, (node) => {
     if (ts.isStringLiteralLike(node) && CHANNEL.test(node.text) && !node.text.startsWith('node:')) {
       channels.push({ channel: node.text, line: lineOf(sourceFile, node) })
@@ -180,6 +190,16 @@ function scan(sourceFile) {
         }
       }
     }
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
+      const method = node.expression.name.text
+      const target = node.expression.expression
+      const onProtocol =
+        (ts.isIdentifier(target) && target.text === 'protocol') ||
+        (ts.isPropertyAccessExpression(target) && target.name.text === 'protocol')
+      if (method === 'registerSchemesAsPrivileged' || (onProtocol && SCHEME_METHODS.test(method))) {
+        schemes.push({ name: method, line: lineOf(sourceFile, node) })
+      }
+    }
     if (ts.isIdentifier(node) && IPC_NAMES.has(node.text)) {
       access.push({ kind: 'ipc', name: node.text, line: lineOf(sourceFile, node) })
     }
@@ -201,7 +221,7 @@ function scan(sourceFile) {
       }
     }
   })
-  return { channels, access }
+  return { channels, access, schemes }
 }
 
 /** A renderer .vue file: parse the contents of its script blocks as TypeScript. */
@@ -273,7 +293,7 @@ export function checkContract({ files, manifestSource }) {
 
     if (!isTs || !INVENTORY_ROOTS.some((root) => path.startsWith(root))) continue
     const sourceFile = parse(path, text)
-    const { channels, access } = scan(sourceFile)
+    const { channels, access, schemes } = scan(sourceFile)
     const references = moduleReferences(sourceFile)
 
     // inventory
@@ -326,6 +346,18 @@ export function checkContract({ files, manifestSource }) {
         hit.line,
         `${hit.name} reaches IPC outside the registrar, the preload builder and the two wiring files; add an operation to src/contract/ instead`
       )
+    }
+
+    // custom schemes
+    if (!SCHEME_ALLOWED.has(path)) {
+      for (const hit of schemes) {
+        fail(
+          'schemes',
+          path,
+          hit.line,
+          `${hit.name} registers or handles a custom scheme outside src/main/index.ts and src/main/page/page-box.ts; see "Custom schemes" in docs/api-contract.md`
+        )
+      }
     }
 
     // imports

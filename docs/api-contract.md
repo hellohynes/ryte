@@ -204,6 +204,8 @@ outside a fixed list of files (below). It is a guardrail, not a security boundar
   files through their `<script>` blocks.
 - `src/contract/` never imports Electron, and is imported by value only from `src/main/` (and, for the manifest, the
   preload builder). The renderer never touches `ipcRenderer` or `electron`.
+- A custom scheme is registered or handled only in `src/main/index.ts` and `src/main/page/page-box.ts`
+  (`SCHEME_ALLOWED`; see "Custom schemes").
 
 It is a guardrail against authoring mistakes, not a security boundary: the renderer is sandboxed and reaches the main
 process only through `window.ryte`. It does not try to stop deliberate
@@ -231,6 +233,21 @@ Review catches those.
   terminal one. A finished request leaves the registry, so nothing is cancelled or sent for it afterwards.
 - A call that takes options takes **one object**, `{ query, retrievalMode?, answerMode? }`, never positional
   arguments, and an event hands its listener **one object**, `({ requestId, ... }) => void`.
+
+## Custom schemes
+
+Two custom schemes carry data to the window outside the contract. Neither is IPC.
+
+- `ryte-file` serves a note's files (pictures, video) to the main window. It is handled on the default session by
+  `createNoteFileHandler`.
+- `ryte-page` serves a folder of a locked HTML page. It is handled only on the page view's own in-memory session, never
+  on the default one.
+
+A scheme is a second way for a page to reach the main process, so a new one is a review decision, not a side effect.
+`check:contract` flags `registerSchemesAsPrivileged`, and `handle`, `unhandle`, `isProtocolHandled`, `register*Protocol`
+and `intercept*Protocol` on `protocol` or a `.protocol` property, anywhere except `src/main/index.ts` and
+`src/main/page/page-box.ts` (`SCHEME_ALLOWED` in `scripts/check-contract.mjs`). It does not confirm that
+`registerSchemesAsPrivileged` lists every scheme.
 
 ## Not covered yet
 
