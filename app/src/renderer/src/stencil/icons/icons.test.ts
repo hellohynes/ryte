@@ -15,6 +15,7 @@ const EXPECTED = [
   'arrow-right',
   'arrow-up',
   'bold',
+  'brackets',
   'check',
   'checklist',
   'chevron-down',

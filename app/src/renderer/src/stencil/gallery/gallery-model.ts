@@ -52,6 +52,7 @@ export const ICON_GROUPS: Array<{ title: string; names: IconName[] }> = [
       'align-left',
       'align-right',
       'bold',
+      'brackets',
       'checklist',
       'code',
       'code-block',

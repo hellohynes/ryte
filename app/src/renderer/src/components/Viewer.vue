@@ -55,7 +55,7 @@ let _stopOutlineResize: (() => void) | undefined
 
 const NOTE_VIEWS = [
   { value: 'preview', label: 'Preview', icon: 'eye' },
-  { value: 'source', label: 'Code', icon: 'code' }
+  { value: 'source', label: 'Code', icon: 'brackets' }
 ] as const
 
 // A note has both a rendered view and its text. A picture, a video, a page, a local address and a code
