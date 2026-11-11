@@ -4,6 +4,8 @@ const MAX_ADDRESS_LENGTH = 300
 export interface BlockedLog {
   /** Records one refused thing. The address is cut short, and shown to the person as plain text only. */
   add(address: string): void
+  /** Drops a report still waiting and ignores later ones, so a closed page cannot reach the next page's banner. */
+  stop(): void
 }
 
 /**
@@ -16,16 +18,23 @@ export function createBlockedLog(
   let count = 0
   let addresses: string[] = []
   let scheduled = false
+  let stopped = false
+  let timer: ReturnType<typeof setTimeout> | undefined
   return {
     add(address) {
+      if (stopped) return
       count += 1
       addresses = [...addresses, address.slice(0, MAX_ADDRESS_LENGTH)].slice(-MAX_ADDRESSES)
       if (scheduled) return
       scheduled = true
-      setTimeout(() => {
+      timer = setTimeout(() => {
         scheduled = false
         onChange({ count, addresses })
       }, 100)
+    },
+    stop() {
+      stopped = true
+      clearTimeout(timer)
     }
   }
 }

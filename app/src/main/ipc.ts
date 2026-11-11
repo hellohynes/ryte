@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { appendFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 
 import { app, BrowserWindow, clipboard, dialog, ipcMain, shell } from 'electron'
@@ -30,7 +31,9 @@ import { createIndexerRestarter } from './indexer-restart'
 import { indexerService } from './indexing/indexer-service'
 import { walkLibrary } from './indexing/walker'
 import { watcher } from './indexing/watcher'
+import { openExternalIfSafe } from './navigation'
 import { createPageBox } from './page/page-box'
+import { OPENABLE_PROTOCOLS } from './page/page-links'
 import { createPageFolders } from './page/page-scheme'
 import { fileRefForPickedMarkdownFile, resolveExternalMarkdownFile } from './picked-file'
 import { SearchService } from './search/search-service'
@@ -62,6 +65,14 @@ function getOrCreateSearchService(): SearchService | null {
 }
 
 const emit = createEmitter(() => BrowserWindow.getAllWindows())
+
+// Only a web address or a mail link leaves a page. A launch check sets RYTE_TEST_OPEN_EXTERNAL_LOG so a link is
+// written to that file instead of opening a browser (never in a packaged build).
+function openPageLink(url: string): void {
+  const logPath = app.isPackaged ? undefined : process.env['RYTE_TEST_OPEN_EXTERNAL_LOG']
+  if (logPath) appendFileSync(logPath, `${url}\n`)
+  else openExternalIfSafe(url, OPENABLE_PROTOCOLS)
+}
 
 /**
  * Register all IPC handlers once during app.whenReady(). Search and indexing
@@ -149,13 +160,16 @@ export function registerIpc(): void {
       service: indexerService,
       beforeClear: stopSearchesBeforeClear
     }),
-    page: createPageHandlers(
-      createPageBox({
+    page: createPageHandlers({
+      box: createPageBox({
         folders: createPageFolders(),
         getNotesRoot: () => settingsStore.load().notesRoot,
-        emitTo: emit.to
-      })
-    ),
+        emitTo: emit.to,
+        openExternal: openPageLink
+      }),
+      getNotesRoot: () => settingsStore.load().notesRoot,
+      openPath: (path) => shell.openPath(path)
+    }),
     pictures: createPicturesHandlers({
       getNotesRoot: () => settingsStore.load().notesRoot,
       openPath: (path) => shell.openPath(path)

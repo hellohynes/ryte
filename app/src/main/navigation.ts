@@ -2,13 +2,26 @@ import { shell, type BrowserWindow } from 'electron'
 
 const SAFE_EXTERNAL_PROTOCOLS = new Set(['https:', 'mailto:'])
 
-export function isSafeExternalUrl(url: string): boolean {
+export function isSafeExternalUrl(
+  url: string,
+  protocols: ReadonlySet<string> = SAFE_EXTERNAL_PROTOCOLS
+): boolean {
   try {
     const parsed = new URL(url)
-    return SAFE_EXTERNAL_PROTOCOLS.has(parsed.protocol)
+    return protocols.has(parsed.protocol)
   } catch {
     return false
   }
+}
+
+/** Opens an address in the default browser or mail app after the same check every external link gets. */
+export function openExternalIfSafe(
+  url: string,
+  protocols: ReadonlySet<string> = SAFE_EXTERNAL_PROTOCOLS
+): boolean {
+  if (!isSafeExternalUrl(url, protocols)) return false
+  void shell.openExternal(url)
+  return true
 }
 
 export function originForUrl(url: string): string | null {

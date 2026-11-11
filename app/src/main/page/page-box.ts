@@ -7,7 +7,9 @@ import { isHtmlPagePath, MAX_PAGE_TEXT_BYTES, PAGE_SCHEME, pageUrl } from '../..
 import type { EmitTo } from '../contract/register'
 import { locateNoteFile } from '../viewer/note-files'
 import { createBlockedLog, type BlockedLog } from './page-blocked'
+import { createPageLinkOpener, createRealInputGate, isOpenablePageLink } from './page-links'
 import { appKeyFor } from './page-keys'
+import { isOwnPageAddress, isOwnPageMove } from './page-moves'
 import { createPageFolderHandler, type PageFolders } from './page-scheme'
 
 export interface PageBounds {
@@ -30,6 +32,8 @@ export interface PageBoxDependencies {
   folders: PageFolders
   getNotesRoot: () => string
   emitTo: EmitTo
+  /** Opens an address in the browser. The caller has already checked the kind of address. */
+  openExternal: (url: string) => void
 }
 
 interface OpenPage {
@@ -38,12 +42,8 @@ interface OpenPage {
   view: WebContentsView
   host: BrowserWindow
   ses: Session
+  log: BlockedLog
   onHostClosed: () => void
-}
-
-/** Whether a request is for a file of this page's own folder. Anything else the session cancels. */
-export function isOwnPageAddress(url: string, id: string): boolean {
-  return url.toLowerCase().startsWith(`${PAGE_SCHEME}://${id}/`)
 }
 
 const rounded = (bounds: PageBounds): PageBounds => ({
@@ -58,7 +58,12 @@ const rounded = (bounds: PageBounds): PageBounds => ({
  * no Node. It loads only from the page's folder through `ryte-page`, never `ryte-file`, and refuses the
  * network, other files, windows, downloads and permissions. One page is open per app window.
  */
-export function createPageBox({ folders, getNotesRoot, emitTo }: PageBoxDependencies): PageBox {
+export function createPageBox({
+  folders,
+  getNotesRoot,
+  emitTo,
+  openExternal
+}: PageBoxDependencies): PageBox {
   const open = new Map<number, OpenPage>()
   // Each show and close takes a new number for its window. A show that finds its number changed while it
   // waited has been overtaken by a close or a newer show, and must not attach a view.
@@ -74,7 +79,8 @@ export function createPageBox({ folders, getNotesRoot, emitTo }: PageBoxDependen
     if (!page) return
     open.delete(senderId)
     folders.close(page.id)
-    const { view, host, ses } = page
+    const { view, host, ses, log } = page
+    log.stop()
     host.removeListener('closed', page.onHostClosed)
     if (!host.isDestroyed()) host.contentView.removeChildView(view)
     if (!view.webContents.isDestroyed()) view.webContents.close()
@@ -142,18 +148,28 @@ export function createPageBox({ folders, getNotesRoot, emitTo }: PageBoxDependen
     // A page is shown on white, as a browser would, not through the window's translucent background.
     view.setBackgroundColor('#ffffff')
     contents.setWebRTCIPHandlingPolicy('disable_non_proxied_udp')
+    // A link opens in the browser only when the person just clicked it, and the box itself never loads it.
+    const gate = createRealInputGate()
+    const openLink = createPageLinkOpener(gate, openExternal)
+    contents.on('input-event', (_event, input) => {
+      if (input.type === 'mouseUp') gate.note()
+    })
     contents.setWindowOpenHandler(({ url }) => {
-      log.add(url)
+      if (!openLink(url)) log.add(url)
       return { action: 'deny' }
     })
     contents.on('will-frame-navigate', (event) => {
-      // A frame inside the page may load the page's own files; the page itself never leaves the one it opened.
-      if (!event.isMainFrame && isOwnPageAddress(event.url, id)) return
+      // A frame inside the page may load the page's own files, and the page may move to another page of its
+      // folder. Everything else is a link (opened only on a real click) or blocked.
+      if (event.isMainFrame ? isOwnPageMove(event.url, id) : isOwnPageAddress(event.url, id)) return
       event.preventDefault()
-      log.add(event.url)
+      if (!event.isMainFrame || !isOpenablePageLink(event.url) || !openLink(event.url)) {
+        log.add(event.url)
+      }
     })
     contents.on('before-input-event', (event, input) => {
       if (input.type !== 'keyDown') return
+      if (input.key === 'Enter' && !input.isAutoRepeat) gate.note()
       const appKey = appKeyFor(input, process.platform)
       if (!appKey) return
       event.preventDefault()
@@ -174,7 +190,7 @@ export function createPageBox({ folders, getNotesRoot, emitTo }: PageBoxDependen
       latest.delete(sender.id)
     }
     host.once('closed', onHostClosed)
-    return { id, realPath, view, host, ses, onHostClosed }
+    return { id, realPath, view, host, ses, log, onHostClosed }
   }
 
   return {
