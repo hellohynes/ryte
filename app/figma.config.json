@@ -1,0 +1,10 @@
+{
+  "codeConnect": {
+    "include": ["src/renderer/src/stencil/figma/**/*.figma.js"],
+    "label": "Vue",
+    "language": "html",
+    "documentUrlSubstitutions": {
+      "<STENCIL_FILE>": "https://www.figma.com/design/YOUR_FILE_KEY/Stencil"
+    }
+  }
+}
