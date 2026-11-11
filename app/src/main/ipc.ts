@@ -33,8 +33,7 @@ import { indexerService } from './indexing/indexer-service'
 import { walkLibrary } from './indexing/walker'
 import { watcher } from './indexing/watcher'
 import { openExternalIfSafe } from './navigation'
-import { createApprovals } from './localhost/approvals'
-import { localhostApprovalsFilePath } from './paths'
+import { approvals } from './localhost/approvals-store'
 import { createLocalBox } from './page/local-box'
 import { createPageBox } from './page/page-box'
 import { OPENABLE_PROTOCOLS } from './page/page-links'
@@ -165,7 +164,8 @@ export function registerIpc(): void {
       beforeClear: stopSearchesBeforeClear
     }),
     localhost: createLocalhostHandlers({
-      approvals: createApprovals(localhostApprovalsFilePath),
+      approvals,
+      openAddressTab: (url) => workspaceStore.openAddress(url),
       box: createLocalBox({ emitTo: emit.to, openExternal: openPageLink }),
       openInBrowser: (url) => openExternalIfSafe(url, OPENABLE_PROTOCOLS)
     }),

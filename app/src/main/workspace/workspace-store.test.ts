@@ -535,6 +535,69 @@ describe('WorkspaceStore', () => {
     expect(saved.shell.activeSidebar).toBe('files')
   })
 
+  it('loads a version 6 workspace with every tab, its order and the active tab unchanged', () => {
+    const external = writeExternalNote('outside/six.md')
+    const version6 = {
+      schemaVersion: 6,
+      shell: { sidebarCollapsed: false, sidebarWidth: 300, activeSidebar: 'files' },
+      library: { expandedFolders: ['docs'], scrollTop: 20, folderSortModes: {} },
+      window: { bounds: null, maximized: false, fullscreen: false },
+      tabs: [
+        { id: 'tab-a', sourcePath: 'docs/a.md', title: 'a.md', viewMode: 'source' },
+        { id: 'tab-b', externalPath: external, title: 'six.md', viewMode: 'preview' },
+        { id: 'tab-c', sourcePath: 'docs/c.md', title: 'c.md', viewMode: 'preview' }
+      ],
+      activeTabId: 'tab-b',
+      recents: [{ sourcePath: 'docs/a.md', title: 'a.md', openedAt: '2026-01-01T00:00:00.000Z' }],
+      outlineWidth: 216,
+      outlineCollapsedByPath: {}
+    }
+    writeFileSync(join(tempDir, 'workspace.json'), JSON.stringify(version6), 'utf-8')
+
+    const state = store().publicState()
+    expect(state.schemaVersion).toBe(7)
+    expect(state.tabs).toEqual(version6.tabs)
+    expect(state.activeTabId).toBe('tab-b')
+    expect(state.recents).toEqual(version6.recents)
+  })
+
+  it('brings back an address tab only when its origin is always allowed', () => {
+    const tab = (id: string, url: string): object => ({
+      id,
+      url,
+      title: 'x',
+      viewMode: 'preview'
+    })
+    writeFileSync(
+      join(tempDir, 'workspace.json'),
+      JSON.stringify({
+        schemaVersion: 7,
+        tabs: [
+          tab('always', 'http://localhost:5173/app'),
+          tab('once', 'http://localhost:3000/'),
+          tab('not-local', 'http://example.com/')
+        ],
+        activeTabId: 'once'
+      }),
+      'utf-8'
+    )
+
+    const loaded = new WorkspaceStore(
+      join(tempDir, 'workspace.json'),
+      () => notesRoot,
+      (origin) => origin === 'http://localhost:5173'
+    ).publicState()
+    expect(loaded.tabs).toEqual([
+      {
+        id: 'always',
+        url: 'http://localhost:5173/app',
+        title: 'localhost:5173',
+        viewMode: 'preview'
+      }
+    ])
+    expect(loaded.activeTabId).toBe('always')
+  })
+
   it('migrates valid tabs, recents, outline flags, and library state while dropping malformed entries', () => {
     writeFileSync(
       join(tempDir, 'workspace.json'),

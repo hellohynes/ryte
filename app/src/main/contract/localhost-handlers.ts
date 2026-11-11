@@ -1,5 +1,6 @@
 import type { Contract } from '../../contract'
 import { parseLocalAddress } from '../../shared/local-address'
+import type { WorkspaceState } from '../../shared/workspace'
 import type { Approvals } from '../localhost/approvals'
 import type { LocalBox } from '../page/local-box'
 import type { Handlers } from './register'
@@ -7,6 +8,8 @@ import type { Handlers } from './register'
 export interface LocalhostHandlerDependencies {
   approvals: Approvals
   box: LocalBox
+  /** Opens the address in a tab and returns the new workspace. */
+  openAddressTab: (url: string) => WorkspaceState
   /** Opens an address in the default browser. Resolves to whether it opened. */
   openInBrowser: (url: string) => boolean
 }
@@ -19,6 +22,7 @@ export interface LocalhostHandlerDependencies {
 export function createLocalhostHandlers({
   approvals,
   box,
+  openAddressTab,
   openInBrowser
 }: LocalhostHandlerDependencies): Handlers<Contract>['localhost'] {
   const allowedOnce = new Set<string>()
@@ -36,7 +40,7 @@ export function createLocalhostHandlers({
       if (!address) return { status: 'refused' }
       if (choice === 'always') approvals.add(address.origin)
       else allowedOnce.add(address.origin)
-      return { status: 'ok', url: address.url, origin: address.origin }
+      return { status: 'ok', workspace: openAddressTab(address.url) }
     },
     release: ({ url }) => {
       const address = parseLocalAddress(url)

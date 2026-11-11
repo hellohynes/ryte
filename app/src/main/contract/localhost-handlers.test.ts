@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 
 import type { Approvals } from '../localhost/approvals'
 import type { LocalBox } from '../page/local-box'
@@ -18,11 +18,17 @@ function fakeApprovals(): Approvals & { saved: string[] } {
 }
 
 const box = {} as LocalBox
+const openAddressTab = vi.fn(() => ({ tabs: [] }) as never)
 
 describe('localhost handlers', () => {
   it('refuses an address that is not local and saves nothing', async () => {
     const approvals = fakeApprovals()
-    const handlers = createLocalhostHandlers({ approvals, box, openInBrowser: () => true })
+    const handlers = createLocalhostHandlers({
+      approvals,
+      box,
+      openAddressTab,
+      openInBrowser: () => true
+    })
     for (const url of ['http://example.com', 'http://0.0.0.0:5173', 'file:///etc/hosts']) {
       expect(await handlers.open({ url, choice: 'always' }, ctx)).toEqual({ status: 'refused' })
     }
@@ -31,15 +37,16 @@ describe('localhost handlers', () => {
 
   it('saves an always choice but not an once choice', async () => {
     const approvals = fakeApprovals()
-    const handlers = createLocalhostHandlers({ approvals, box, openInBrowser: () => true })
+    const handlers = createLocalhostHandlers({
+      approvals,
+      box,
+      openAddressTab,
+      openInBrowser: () => true
+    })
     await handlers.open({ url: 'http://localhost:3000', choice: 'once' }, ctx)
     expect(approvals.saved).toEqual([])
-    const result = await handlers.open({ url: 'http://localhost:5173/x', choice: 'always' }, ctx)
-    expect(result).toEqual({
-      status: 'ok',
-      url: 'http://localhost:5173/x',
-      origin: 'http://localhost:5173'
-    })
+    await handlers.open({ url: 'http://localhost:5173/x', choice: 'always' }, ctx)
+    expect(openAddressTab).toHaveBeenLastCalledWith('http://localhost:5173/x')
     expect(approvals.saved).toEqual(['http://localhost:5173'])
   })
 

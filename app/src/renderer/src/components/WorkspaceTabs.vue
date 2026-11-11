@@ -11,10 +11,12 @@ import {
 
 import { useWorkspaceStore } from '../stores/workspace'
 import {
+  isWorkspaceAddressTab,
   isWorkspaceSourceFileRef,
   workspaceFileDisplayPath,
   type WorkspaceFileRef,
-  type WorkspaceFileTab
+  type WorkspaceFileTab,
+  type WorkspaceTab
 } from '../../../shared/workspace'
 import { supportedKindOf } from '../../../shared/supported-types'
 import StIconButton from '../stencil/components/StIconButton.vue'
@@ -191,8 +193,8 @@ function tabAccessibleLabel(title: string, sourcePath: string): string {
   return title === sourcePath ? title : `${title}, ${sourcePath}`
 }
 
-function tabDisplayPath(tab: WorkspaceFileTab): string {
-  return workspaceFileDisplayPath(tab)
+function tabDisplayPath(tab: WorkspaceTab): string {
+  return isWorkspaceAddressTab(tab) ? tab.url : workspaceFileDisplayPath(tab)
 }
 
 function fileRefForTab(tab: WorkspaceFileTab): WorkspaceFileRef {
@@ -201,7 +203,9 @@ function fileRefForTab(tab: WorkspaceFileTab): WorkspaceFileRef {
     : { externalPath: tab.externalPath }
 }
 
-function openTabContextMenu(event: MouseEvent, tab: WorkspaceFileTab): void {
+function openTabContextMenu(event: MouseEvent, tab: WorkspaceTab): void {
+  // The file menu (rename, copy, reveal) has nothing to act on for an address.
+  if (isWorkspaceAddressTab(tab)) return
   inlineRename.value = null
   fileContextMenu.value = {
     tabId: tab.id,
@@ -329,7 +333,7 @@ async function handleFileContextAction(action: FileContextMenuAction): Promise<v
   if (!menu) return
   fileContextMenu.value = null
   const tab = workspace.tabs.find((candidate) => candidate.id === menu.tabId)
-  if (!tab) return
+  if (!tab || isWorkspaceAddressTab(tab)) return
 
   if (action === 'rename') {
     startInlineRename(tab)
@@ -443,11 +447,11 @@ function onGlobalKeydown(event: KeyboardEvent): void {
           @contextmenu.prevent.stop="openTabContextMenu($event, tab)"
         >
           <InlineFileRename
-            v-if="inlineRename?.tabId === tab.id"
+            v-if="inlineRename?.tabId === tab.id && !isWorkspaceAddressTab(tab)"
             :name="tab.title"
             :label="`Rename ${tab.title}`"
             variant="tab"
-            @submit="submitInlineRename(tab, $event)"
+            @submit="submitInlineRename(tab as WorkspaceFileTab, $event)"
             @cancel="cancelInlineRename(tab.id)"
           />
           <button

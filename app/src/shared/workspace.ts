@@ -1,4 +1,4 @@
-export const WORKSPACE_SCHEMA_VERSION = 6
+export const WORKSPACE_SCHEMA_VERSION = 7
 
 export const SIDEBAR_DEFAULT_WIDTH = 360
 export const SIDEBAR_MIN_WIDTH = 164
@@ -62,6 +62,22 @@ export type WorkspaceFileTab = WorkspaceFileRef & {
   viewMode: WorkspaceViewMode
 }
 
+/**
+ * A tab for a local address (`http://localhost:5173/`) instead of a file. It carries only the address, so the tab
+ * and its origin always agree; main re-checks the address and its approval every time the page is shown.
+ */
+export interface WorkspaceAddressTab {
+  id: string
+  title: string
+  viewMode: WorkspaceViewMode
+  url: string
+  sourcePath?: never
+  externalPath?: never
+}
+
+/** Any open tab: a file or a local address. */
+export type WorkspaceTab = WorkspaceFileTab | WorkspaceAddressTab
+
 export type WorkspaceRecentFile = WorkspaceFileRef & {
   title: string
   openedAt: string
@@ -72,7 +88,7 @@ export interface WorkspaceState {
   shell: WorkspaceShellState
   library: WorkspaceLibraryState
   window: WorkspaceWindowState
-  tabs: WorkspaceFileTab[]
+  tabs: WorkspaceTab[]
   activeTabId: string | null
   recents: WorkspaceRecentFile[]
   outlineWidth: number
@@ -129,6 +145,10 @@ export interface WorkspaceSetOutlineCollapsedInput {
 
 export interface WorkspaceSetOutlineWidthInput {
   width: number
+}
+
+export function isWorkspaceAddressTab(tab: WorkspaceTab): tab is WorkspaceAddressTab {
+  return typeof (tab as WorkspaceAddressTab).url === 'string'
 }
 
 export function isWorkspaceSourceFileRef(file: WorkspaceFileRef): file is WorkspaceSourceFileRef {

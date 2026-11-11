@@ -3,6 +3,7 @@
 // replaced them. The open-file, open-recent-file, open-native-file, record-recent and prune-missing-file-refs
 // members were copied the same way at cdd80d2, before they moved. It is the oracle for the type-equality check in
 // `workspace.wire-types.check.ts`: the types inferred from the contract must equal it. Do not edit.
+// Edited once, on purpose, for the local-address tab: `WorkspaceAddressTab`, `WorkspaceTab` and schema version 7.
 
 type WorkspaceViewMode = 'preview' | 'source'
 type WorkspaceSidebarMode = 'files'
@@ -51,17 +52,28 @@ type WorkspaceFileTab = WorkspaceFileRef & {
   viewMode: WorkspaceViewMode
 }
 
+interface WorkspaceAddressTab {
+  id: string
+  title: string
+  viewMode: WorkspaceViewMode
+  url: string
+  sourcePath?: never
+  externalPath?: never
+}
+
+type WorkspaceTab = WorkspaceFileTab | WorkspaceAddressTab
+
 type WorkspaceRecentFile = WorkspaceFileRef & {
   title: string
   openedAt: string
 }
 
 export interface WorkspaceState {
-  schemaVersion: 6
+  schemaVersion: 7
   shell: WorkspaceShellState
   library: WorkspaceLibraryState
   window: WorkspaceWindowState
-  tabs: WorkspaceFileTab[]
+  tabs: WorkspaceTab[]
   activeTabId: string | null
   recents: WorkspaceRecentFile[]
   outlineWidth: number
