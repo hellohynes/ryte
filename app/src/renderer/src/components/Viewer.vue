@@ -457,7 +457,6 @@ onUnmounted(() => {
     :aria-label="activeTabPanelLabelledBy ? undefined : 'Markdown viewer'"
   >
     <div v-if="showNoteBar" class="note-bar">
-      <div class="note-bar-glass" aria-hidden="true"></div>
       <div class="note-bar-row">
         <StIconButton
           v-if="hasOutlineHeadings"
@@ -570,34 +569,27 @@ onUnmounted(() => {
   overflow: hidden;
 }
 
-/* Text scrolls under the bar. The glass is a blurred, tinted layer behind the controls that fades out below them. */
+/* The bar has no background of its own. Text scrolls under it and fades out (see .note-scroll-fade). */
 .note-bar {
   position: absolute;
   top: 0;
   right: 0;
   left: 0;
   z-index: 4;
-  height: calc(var(--note-bar-inset) + var(--note-bar-height) + var(--st-space-300));
+  height: calc(var(--note-bar-inset) + var(--note-bar-height));
   pointer-events: none;
 }
 
-.note-bar-glass {
-  position: absolute;
-  inset: 0;
-  background: color-mix(in oklab, var(--st-color-shell-tint) 80%, transparent);
-  backdrop-filter: blur(var(--st-blur-200));
+/* Each note scroller fades its own content to nothing under the bar: invisible behind the controls,
+   then fully visible by the line where text starts at rest, so nothing moves before scrolling. */
+.document-outline,
+.source,
+.viewer-prose {
   mask-image: linear-gradient(
     to bottom,
-    var(--st-color-surface-base) calc(var(--note-bar-inset) + var(--note-bar-height)),
-    transparent
+    transparent calc(var(--note-bar-inset) + var(--note-bar-height) - var(--st-space-100)),
+    var(--st-color-surface-base) var(--note-content-start)
   );
-}
-
-@media (prefers-reduced-transparency: reduce) {
-  .note-bar-glass {
-    background: var(--st-color-surface-base);
-    backdrop-filter: none;
-  }
 }
 
 .note-bar-row {
