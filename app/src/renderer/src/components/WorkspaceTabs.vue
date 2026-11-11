@@ -534,7 +534,8 @@ function onGlobalKeydown(event: KeyboardEvent): void {
   padding-inline-end: var(--st-space-200);
   background: transparent;
   overflow: hidden;
-  -webkit-app-region: no-drag;
+  /* Empty strip space moves the window; each tab opts out below. */
+  -webkit-app-region: drag;
 }
 
 .sr-only {
@@ -557,6 +558,12 @@ function onGlobalKeydown(event: KeyboardEvent): void {
   height: calc(100% - var(--st-block-25));
   overflow-x: auto;
   overflow-y: hidden;
+}
+
+/* An overflowing list has no empty space and its scrollbar must stay clickable. */
+.tab-list.has-left-fade,
+.tab-list.has-right-fade {
+  -webkit-app-region: no-drag;
 }
 
 .tab-list.has-left-fade {
@@ -616,6 +623,8 @@ function onGlobalKeydown(event: KeyboardEvent): void {
   justify-content: flex-start;
   gap: var(--st-space-25);
   width: max-content;
+  /* Same gap as above the tabs; it scrolls with them, so the first tab keeps it at the start. */
+  padding-inline-start: var(--st-space-100);
 }
 
 .tab-item {
@@ -633,6 +642,7 @@ function onGlobalKeydown(event: KeyboardEvent): void {
   transition-duration: 250ms;
   transition-property: background-color, color;
   transition-timing-function: ease-out;
+  -webkit-app-region: no-drag;
 }
 
 .tab-item.active {
