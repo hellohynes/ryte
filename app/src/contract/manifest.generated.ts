@@ -63,7 +63,12 @@ export const manifest = {
       listApprovals: 'localhost:list-approvals',
       removeApproval: 'localhost:remove-approval',
       open: 'localhost:open',
-      release: 'localhost:release'
+      release: 'localhost:release',
+      show: 'localhost:show',
+      setBounds: 'localhost:set-bounds',
+      hide: 'localhost:hide',
+      close: 'localhost:close',
+      openInBrowser: 'localhost:open-in-browser'
     },
     events: {}
   },

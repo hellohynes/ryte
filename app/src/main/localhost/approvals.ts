@@ -32,10 +32,11 @@ function readOrigins(path: string): string[] {
  * The origins the person chose to always allow, kept in a small file beside the settings. A missing or damaged
  * file reads as "nothing approved", never as an error.
  */
-export function createApprovals(filePath: string): Approvals {
+export function createApprovals(getFilePath: () => string): Approvals {
   let origins: string[] | null = null
-  const load = (): string[] => (origins ??= readOrigins(filePath))
+  const load = (): string[] => (origins ??= readOrigins(getFilePath()))
   const save = (next: string[]): void => {
+    const filePath = getFilePath()
     mkdirSync(dirname(filePath), { recursive: true })
     const temp = `${filePath}.tmp`
     writeFileSync(temp, JSON.stringify(next, null, 2), 'utf-8')

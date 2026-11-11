@@ -35,6 +35,7 @@ import { watcher } from './indexing/watcher'
 import { openExternalIfSafe } from './navigation'
 import { createApprovals } from './localhost/approvals'
 import { localhostApprovalsFilePath } from './paths'
+import { createLocalBox } from './page/local-box'
 import { createPageBox } from './page/page-box'
 import { OPENABLE_PROTOCOLS } from './page/page-links'
 import { createPageFolders } from './page/page-scheme'
@@ -164,7 +165,9 @@ export function registerIpc(): void {
       beforeClear: stopSearchesBeforeClear
     }),
     localhost: createLocalhostHandlers({
-      approvals: createApprovals(localhostApprovalsFilePath())
+      approvals: createApprovals(localhostApprovalsFilePath),
+      box: createLocalBox({ emitTo: emit.to, openExternal: openPageLink }),
+      openInBrowser: (url) => openExternalIfSafe(url, OPENABLE_PROTOCOLS)
     }),
     page: createPageHandlers({
       box: createPageBox({

@@ -77,6 +77,11 @@ change or remove one.
 | `localhost.removeApproval` | `localhost:remove-approval` | Forget an always-allowed origin and close any open view of it, so the next open asks again. Returns the remaining origins. | `{ origin: string }` |
 | `localhost.open` | `localhost:open` | Approve opening a local address after the person answered the prompt. `always` remembers the origin; `once` allows it until the tab closes. Refuses anything that is not `http` or `https` on `localhost`, `127.0.0.1` or `[::1]`. Returns the address to open in a tab, or why not. | `{ url: string, choice: 'once' \| 'always' }` |
 | `localhost.release` | `localhost:release` | A tab opened with `once` was closed: forget that one-time allowance. An always-allowed origin is not affected. | `{ url: string }` |
+| `localhost.show` | `localhost:show` | Show an approved local address in a locked view over the given area of the window. The page can reach only its own origin, including its live-reload connection, and cannot reach the internet, other ports, other spellings of this Mac, the notes folder, new windows, downloads or permissions. Showing the address that is already open only moves and reveals it. Returns `shown`, `needs-approval` (not approved, or the approval was removed) or `blocked` (not a local address). | `{ url: string, bounds: { x: number, y: number, width: number, height: number } }` |
+| `localhost.setBounds` | `localhost:set-bounds` | Move and resize the open local view to a new area of the window. | `{ bounds: { x: number, y: number, width: number, height: number } }` |
+| `localhost.hide` | `localhost:hide` | Hide the open local view, for example while an overlay is open, because a native view always draws on top. Returns a still picture of the page (a data URL) to show in its place, or null when there is none. | `none` |
+| `localhost.close` | `localhost:close` | Close the open local view. The page keeps nothing. | `none` |
+| `localhost.openInBrowser` | `localhost:open-in-browser` | Open a local address in the default browser, outside the locked view, after checking again that it is a local address. The page runs unlocked there, so this is only for the button the person presses. Returns whether it opened. | `{ url: string }` |
 
 ## page
 

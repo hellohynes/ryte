@@ -2,8 +2,17 @@ import { z } from 'zod'
 
 import { MAX_LOCAL_ADDRESS_LENGTH } from '../shared/local-address'
 import { defineArea, defineOperation } from './define'
+import { integer } from './primitives'
 
 const address = z.string().min(1).max(MAX_LOCAL_ADDRESS_LENGTH)
+
+/** Where the page's view sits, in pixels from the window's top left corner. */
+const bounds = z.strictObject({
+  x: integer,
+  y: integer,
+  width: integer.refine((value) => value >= 0 && value <= 20_000, 'Expected a size'),
+  height: integer.refine((value) => value >= 0 && value <= 20_000, 'Expected a size')
+})
 
 export const listApprovals = defineOperation({
   channel: 'localhost:list-approvals',
@@ -47,7 +56,63 @@ export const release = defineOperation({
   example: { input: { url: 'http://localhost:5173/' }, output: undefined }
 })
 
+export const show = defineOperation({
+  channel: 'localhost:show',
+  description:
+    'Show an approved local address in a locked view over the given area of the window. The page can reach only its own origin, including its live-reload connection, and cannot reach the internet, other ports, other spellings of this Mac, the notes folder, new windows, downloads or permissions. Showing the address that is already open only moves and reveals it. Returns `shown`, `needs-approval` (not approved, or the approval was removed) or `blocked` (not a local address).',
+  input: z.strictObject({ url: address, bounds }),
+  output: z.object({ status: z.enum(['shown', 'needs-approval', 'blocked']) }),
+  example: {
+    input: { url: 'http://localhost:5173/', bounds: { x: 240, y: 80, width: 900, height: 600 } },
+    output: { status: 'shown' }
+  }
+})
+
+export const setBounds = defineOperation({
+  channel: 'localhost:set-bounds',
+  description: 'Move and resize the open local view to a new area of the window.',
+  input: z.strictObject({ bounds }),
+  output: z.void(),
+  example: { input: { bounds: { x: 240, y: 80, width: 900, height: 600 } }, output: undefined }
+})
+
+export const hide = defineOperation({
+  channel: 'localhost:hide',
+  description:
+    'Hide the open local view, for example while an overlay is open, because a native view always draws on top. Returns a still picture of the page (a data URL) to show in its place, or null when there is none.',
+  input: z.undefined(),
+  output: z.object({ still: z.string().nullable() }),
+  example: { input: undefined, output: { still: null } }
+})
+
+export const close = defineOperation({
+  channel: 'localhost:close',
+  description: 'Close the open local view. The page keeps nothing.',
+  input: z.undefined(),
+  output: z.void(),
+  example: { input: undefined, output: undefined }
+})
+
+export const openInBrowser = defineOperation({
+  channel: 'localhost:open-in-browser',
+  description:
+    'Open a local address in the default browser, outside the locked view, after checking again that it is a local address. The page runs unlocked there, so this is only for the button the person presses. Returns whether it opened.',
+  input: z.strictObject({ url: address }),
+  output: z.object({ opened: z.boolean() }),
+  example: { input: { url: 'http://localhost:5173/' }, output: { opened: true } }
+})
+
 export const localhost = defineArea('localhost', {
-  operations: { listApprovals, removeApproval, open, release },
+  operations: {
+    listApprovals,
+    removeApproval,
+    open,
+    release,
+    show,
+    setBounds,
+    hide,
+    close,
+    openInBrowser
+  },
   events: {}
 })
