@@ -4,7 +4,7 @@ All notable Ryte changes should be recorded here before a tagged release.
 
 Ryte follows [Semantic Versioning](https://semver.org). The app version in `app/package.json` is the source of truth for packaged builds, Git tags, and DMG filenames. See the [Versioning Policy](#versioning-policy).
 
-## Unreleased
+## 0.3.0
 
 ### Highlights
 
@@ -13,7 +13,17 @@ Ryte follows [Semantic Versioning](https://semver.org). The app version in `app/
 - Code and JSON files open in a read-only code view.
 - Videos play in their own tab and inside notes, with the standard controls and seeking.
 - HTML pages open in a locked box that blocks the network, other files and new windows, tells you what it blocked, and has an "Open in browser (not locked)" button. Links open only on a real click.
-- A link to a local address, such as a dev server, opens in a locked tab after you approve that address once or always. Allowed addresses are listed in Preferences, where you can remove them.
+- A link to a local address, such as a dev server, opens in a locked tab after you approve that address once or always. Allowed addresses are listed in Preferences, where you can remove them. Ryte accepts that approval only right after a real click or key press.
+- A note has a header: the outline button and the note's path on the left, and a Preview | Code switch on the right. Text fades out as it scrolls under the header.
+- The outline starts at the note's first heading, without an "Overview" entry, and tabs show a note's title instead of its file name.
+- The first tab has a small gap from the edge, and the empty part of the tab strip moves the window. Double-clicking it zooms the window.
+- Fixes: the note cleaner no longer deletes text inside code that mentions `src=`, `href=` or `onclick=`, and the "index ready" status counts only the notes that were indexed.
+
+### Validation
+
+- `pnpm --dir app validate`
+- `pnpm --dir app smoke:indexer` (synthetic fixtures)
+- `pnpm dmg:local` (ad-hoc signed Apple Silicon package)
 
 ## 0.2.0
 
