@@ -54,9 +54,9 @@ const lightbox = ref<{ pictures: LightboxPicture[]; start: number } | null>(null
 let _stopOutlineResize: (() => void) | undefined
 
 const NOTE_VIEWS = [
-  { value: 'preview', label: 'Preview' },
-  { value: 'source', label: 'Code' }
-]
+  { value: 'preview', label: 'Preview', icon: 'eye' },
+  { value: 'source', label: 'Code', icon: 'code' }
+] as const
 
 // A note has both a rendered view and its text. A picture, a video, a page, a local address and a code
 // file have no source to switch to.
@@ -460,6 +460,7 @@ onUnmounted(() => {
         :model-value="viewer.sourceMode ? 'source' : 'preview'"
         :options="NOTE_VIEWS"
         label="Note view"
+        size="sm"
         @update:model-value="onNoteViewChange"
       />
     </div>
@@ -588,8 +589,8 @@ onUnmounted(() => {
 .note-bar {
   flex: 0 0 auto;
   display: flex;
-  padding: var(--st-space-100) var(--st-space-400);
-  border-bottom: var(--st-border-100) solid var(--st-color-border-subtle);
+  justify-content: flex-end;
+  padding: var(--st-space-50) var(--st-space-200);
 }
 
 .document-view {
