@@ -147,7 +147,8 @@ describe('main startup ordering', () => {
     await vi.waitFor(() => expect(mocks.order).toContain('indexer:init'))
 
     expect(mocks.protocol.registerSchemesAsPrivileged).toHaveBeenCalledWith([
-      { scheme: 'ryte-file', privileges: { standard: true, secure: true, stream: true } }
+      { scheme: 'ryte-file', privileges: { standard: true, secure: true, stream: true } },
+      { scheme: 'ryte-page', privileges: { standard: true, secure: true, stream: true } }
     ])
     expect(mocks.order.indexOf('scheme:privileged')).toBeLessThan(
       mocks.order.indexOf('app:whenReady')

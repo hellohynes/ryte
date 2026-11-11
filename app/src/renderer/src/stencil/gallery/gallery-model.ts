@@ -30,6 +30,7 @@ export const ICON_GROUPS: Array<{ title: string; names: IconName[] }> = [
       'library',
       'moon',
       'more-vertical',
+      'page',
       'plus',
       'refresh',
       'search',

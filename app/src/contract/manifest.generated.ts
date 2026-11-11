@@ -58,6 +58,17 @@ export const manifest = {
       embeddingStatus: 'indexer:embedding-status-event'
     }
   },
+  page: {
+    operations: {
+      show: 'page:show',
+      setBounds: 'page:set-bounds',
+      hide: 'page:hide',
+      close: 'page:close'
+    },
+    events: {
+      blocked: 'page:blocked'
+    }
+  },
   pictures: {
     operations: {
       explain: 'pictures:explain',

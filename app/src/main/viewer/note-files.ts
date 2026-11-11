@@ -226,22 +226,25 @@ function streamNoteFileRange(
   )
 }
 
-/** Answers a request for a video, whole or by byte range, so the player can seek. */
-async function respondToVideoRequest(
-  request: NoteFileRequest,
-  method: string,
-  notesRelativePath: string,
-  notesRoot: string
-): Promise<Response> {
-  const located = await locateNoteFile(notesRelativePath, notesRoot, isVideoExtension)
-  if (!located.ok) return emptyResponse(PROBLEM_STATUS[located.reason])
+export interface RangedFileOptions {
+  method: string
+  /** The `Range` request header, if any. */
+  range: string | null | undefined
+  contentType: string
+  /** Headers sent on every answer, success or not (security headers). */
+  headers: Record<string, string>
+}
 
+/**
+ * Answers a request for a located file whole or by byte range, so a player can seek. `HEAD` gets the size and
+ * no body. The file is streamed a piece at a time and checked again when opened.
+ */
+export function respondWithLocatedRange(
+  located: { realPath: string; dev: number; ino: number; size: number },
+  { method, range: rangeHeader, contentType, headers }: RangedFileOptions
+): Response {
   const { size } = located
-  const baseHeaders = {
-    ...SECURITY_HEADERS,
-    'Accept-Ranges': 'bytes',
-    'Content-Type': noteVideoContentType(located.extension)!
-  }
+  const baseHeaders = { ...headers, 'Accept-Ranges': 'bytes', 'Content-Type': contentType }
   if (method === 'HEAD') {
     return new Response(null, {
       status: 200,
@@ -249,15 +252,21 @@ async function respondToVideoRequest(
     })
   }
 
-  const range = parseByteRange(request.headers?.get('range'), size)
+  const range = parseByteRange(rangeHeader, size)
   if (range.kind === 'malformed' || range.kind === 'unsatisfiable') {
-    return emptyResponse(416, { 'Accept-Ranges': 'bytes', 'Content-Range': `bytes */${size}` })
+    return new Response(null, {
+      status: 416,
+      headers: { ...headers, 'Accept-Ranges': 'bytes', 'Content-Range': `bytes */${size}` }
+    })
   }
 
   if (range.kind === 'whole') {
-    const headers = { ...baseHeaders, 'Content-Length': String(size) }
-    if (size === 0) return new Response(null, { status: 200, headers })
-    return new Response(streamNoteFileRange(located, 0, size - 1), { status: 200, headers })
+    const wholeHeaders = { ...baseHeaders, 'Content-Length': String(size) }
+    if (size === 0) return new Response(null, { status: 200, headers: wholeHeaders })
+    return new Response(streamNoteFileRange(located, 0, size - 1), {
+      status: 200,
+      headers: wholeHeaders
+    })
   }
 
   return new Response(streamNoteFileRange(located, range.start, range.end), {
@@ -267,6 +276,23 @@ async function respondToVideoRequest(
       'Content-Length': String(range.end - range.start + 1),
       'Content-Range': `bytes ${range.start}-${range.end}/${size}`
     }
+  })
+}
+
+/** Answers a request for a video, whole or by byte range, so the player can seek. */
+async function respondToVideoRequest(
+  request: NoteFileRequest,
+  method: string,
+  notesRelativePath: string,
+  notesRoot: string
+): Promise<Response> {
+  const located = await locateNoteFile(notesRelativePath, notesRoot, isVideoExtension)
+  if (!located.ok) return emptyResponse(PROBLEM_STATUS[located.reason])
+  return respondWithLocatedRange(located, {
+    method,
+    range: request.headers?.get('range'),
+    contentType: noteVideoContentType(located.extension)!,
+    headers: SECURITY_HEADERS
   })
 }
 

@@ -18,6 +18,7 @@ import { createNoteFileHandler } from './viewer/note-files'
 import { safeWindowBounds, workAreasFromDisplays } from './window-state'
 import { MIN_WINDOW_HEIGHT, MIN_WINDOW_WIDTH } from '../shared/workspace'
 import { NOTE_FILE_SCHEME } from '../shared/note-pictures'
+import { PAGE_SCHEME } from '../shared/page-box'
 
 const macOSVibrancyMaterial = 'hud' as const
 let hasInitializedIndexing = false
@@ -34,9 +35,11 @@ if (userDataDirOverride) app.setPath('userData', userDataDirOverride)
 app.setName('Ryte')
 
 // Pictures and videos in notes load through this scheme. Privileges can only be granted before `ready`.
-// `stream` lets Chromium play media from it, with byte-range requests for seeking.
+// `stream` lets Chromium play media from it, with byte-range requests for seeking. HTML pages open in a locked
+// view through `ryte-page`, which has a real origin of its own and is served only by that view's own session.
 protocol.registerSchemesAsPrivileged([
-  { scheme: NOTE_FILE_SCHEME, privileges: { standard: true, secure: true, stream: true } }
+  { scheme: NOTE_FILE_SCHEME, privileges: { standard: true, secure: true, stream: true } },
+  { scheme: PAGE_SCHEME, privileges: { standard: true, secure: true, stream: true } }
 ])
 
 function createWindow(): BrowserWindow {

@@ -82,7 +82,7 @@ describe('walkLibrary', () => {
     rmSync(tempDir, { recursive: true, force: true })
   })
 
-  it('lists notes, pictures, videos and code files, in any letter case, and hides everything else', async () => {
+  it('lists notes, pictures, videos, code files and HTML pages, in any letter case, and hides everything else', async () => {
     writeFileSync(join(tempDir, 'a.md'), '')
     writeFileSync(join(tempDir, 'b.PNG'), '')
     writeFileSync(join(tempDir, 'c.svg'), '')
@@ -90,14 +90,16 @@ describe('walkLibrary', () => {
     writeFileSync(join(tempDir, 'e.MP4'), '')
     writeFileSync(join(tempDir, 'e.mkv'), '')
     writeFileSync(join(tempDir, 'f.txt'), '')
-    writeFileSync(join(tempDir, 'g.html'), '')
+    writeFileSync(join(tempDir, 'g.HTML'), '')
+    writeFileSync(join(tempDir, 'g.xhtml'), '')
 
     expect(await walkLibrary(tempDir)).toEqual([
       join(tempDir, 'a.md'),
       join(tempDir, 'b.PNG'),
       join(tempDir, 'c.svg'),
       join(tempDir, 'd.JSON'),
-      join(tempDir, 'e.MP4')
+      join(tempDir, 'e.MP4'),
+      join(tempDir, 'g.HTML')
     ])
   })
 
