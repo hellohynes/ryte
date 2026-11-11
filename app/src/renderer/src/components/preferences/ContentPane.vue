@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import StButton from '../../stencil/components/StButton.vue'
 import StNotice from '../../stencil/components/StNotice.vue'
 import StText from '../../stencil/components/StText.vue'
 import StStack from '../../stencil/components/StStack.vue'
 
+import { describeOrigin } from '../../../../shared/local-address'
 import { RETENTION_OPTIONS, indexSummary } from '../../preferences/content-model'
 import { clearAndRebuildConfirm, embeddingLine } from '../../preferences/embedding-model'
 import { usePreferenceSaves } from '../../preferences/use-preference-saves'
@@ -32,6 +33,26 @@ const smartSearchLine = computed(() =>
   embeddingLine(embeddingStatus.status, props.state.semanticIndexEnabled)
 )
 const hasHistory = computed(() => search.history.length > 0)
+
+// The local addresses allowed with "Always allow". Removing one makes the next open ask again.
+const allowedAddresses = ref<string[]>([])
+
+onMounted(async () => {
+  try {
+    allowedAddresses.value = await window.ryte.localhost.listApprovals()
+  } catch (e) {
+    localError.value = e instanceof Error ? e.message : String(e)
+  }
+})
+
+async function removeAddress(origin: string): Promise<void> {
+  localError.value = null
+  try {
+    allowedAddresses.value = await window.ryte.localhost.removeApproval({ origin })
+  } catch (e) {
+    localError.value = e instanceof Error ? e.message : String(e)
+  }
+}
 
 async function chooseLocation(): Promise<void> {
   const picked = await window.ryte.dialog.openFolder()
@@ -147,6 +168,33 @@ async function clearAndRebuildIndex(): Promise<void> {
       </StStack>
     </section>
 
+    <section class="pf-section" aria-labelledby="pf-local-pages" data-pf-local-pages>
+      <StStack :gap="50">
+        <StText id="pf-local-pages" as="h3" kind="headline" size="sm">Local pages</StText>
+        <StText as="p" tone="primary" class="pf-desc"
+          >Pages from this Mac that Ryte opens without asking. Remove one and Ryte asks
+          again.</StText
+        >
+      </StStack>
+      <StText v-if="allowedAddresses.length === 0" as="p" kind="body" size="sm" tone="muted">
+        No addresses are allowed yet.
+      </StText>
+      <ul v-else class="pf-address-list">
+        <li v-for="origin in allowedAddresses" :key="origin" class="pf-address-row">
+          <StText kind="code" size="sm">{{ describeOrigin(origin) }}</StText>
+          <StButton
+            variant="link"
+            size="sm"
+            :aria-label="`Remove ${describeOrigin(origin)}`"
+            data-pf-remove-address
+            @click="removeAddress(origin)"
+          >
+            Remove
+          </StButton>
+        </li>
+      </ul>
+    </section>
+
     <StNotice v-if="localError" tone="danger" variant="inline" class="pf-error">{{
       localError
     }}</StNotice>
@@ -161,5 +209,20 @@ async function clearAndRebuildIndex(): Promise<void> {
 
 .pf-error-inline {
   color: var(--st-color-danger);
+}
+
+.pf-address-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--st-space-50);
+}
+
+.pf-address-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--st-space-200);
 }
 </style>
