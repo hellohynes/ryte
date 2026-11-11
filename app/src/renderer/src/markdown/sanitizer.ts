@@ -1,3 +1,4 @@
+import { parseLocalAddress } from '../../../shared/local-address'
 import { parseNoteFileUrl } from '../../../shared/note-pictures'
 import { isSupportedNoteVideo } from '../../../shared/note-videos'
 
@@ -29,6 +30,11 @@ function encodeHtmlAttribute(value: string): string {
 function unquote(value: string): string {
   const first = value[0]
   return first === '"' || first === "'" ? value.slice(1, -1) : value
+}
+
+/** Whether a link target is an `http` or `https` address on this Mac. The only `http` link a note keeps. */
+export function isLocalLinkTarget(rawTarget: string): boolean {
+  return parseLocalAddress(decodeHtmlAttribute(rawTarget).trim()) !== null
 }
 
 export function isSafeLinkTarget(rawTarget: string): boolean {
@@ -87,7 +93,19 @@ function sanitizeAttributes(tagName: string, attributes: string): string {
       if (rawValue === undefined) return ''
 
       const target = unquote(rawValue)
-      if (!isSafeLinkTarget(target) && !isNotePictureSource(tagName, name, target)) return ''
+      // A link to a page on this Mac keeps its address so a click can offer to open it; the click itself never
+      // navigates the app window. Only a link, never a `src`.
+      const isLocalLink =
+        tagName === 'a' &&
+        name === 'href' &&
+        parseLocalAddress(decodeHtmlAttribute(target).trim()) !== null
+      if (
+        !isSafeLinkTarget(target) &&
+        !isLocalLink &&
+        !isNotePictureSource(tagName, name, target)
+      ) {
+        return ''
+      }
       return `${space}${name}="${encodeHtmlAttribute(decodeHtmlAttribute(target).trim())}"`
     }
   )

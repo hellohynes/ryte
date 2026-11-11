@@ -11,6 +11,14 @@ describe('sanitizeRenderedHtml', () => {
     ).toBe('<button type="button">a</button><iframe></iframe>')
   })
 
+  it('keeps a link to a page on this Mac, and only as a link', () => {
+    expect(
+      sanitizeRenderedHtml(
+        '<a href="http://localhost:5173/">a</a><a href="http://example.com/">b</a><img src="http://localhost:5173/x.png">'
+      )
+    ).toBe('<a href="http://localhost:5173/">a</a><a>b</a><img>')
+  })
+
   it('keeps https, mailto and fragment targets and removes every other scheme', () => {
     expect(
       sanitizeRenderedHtml(
