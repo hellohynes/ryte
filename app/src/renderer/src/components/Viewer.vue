@@ -14,15 +14,14 @@ import { useLocalAddressStore } from '../stores/local-address'
 import { useSettingsStore } from '../stores/settings'
 import { useViewerStore } from '../stores/viewer'
 import { useWorkspaceStore } from '../stores/workspace'
-import {
-  DOCUMENT_OUTLINE_COLLAPSED_WIDTH,
-  clampDocumentOutlineWidth
-} from '../../../shared/workspace'
+import { clampDocumentOutlineWidth } from '../../../shared/workspace'
 import StIconButton from '../stencil/components/StIconButton.vue'
 import StProse from '../stencil/components/StProse.vue'
+import StSegmented from '../stencil/components/StSegmented.vue'
 import NoteLightbox from './NoteLightbox.vue'
 import { buildLightboxList, type LightboxPicture, type PagePicture } from './lightbox-model'
 import CodeViewer from './CodeViewer.vue'
+import { currentSectionId, sectionOutlineOf } from './document-outline-model'
 import PageViewer from './PageViewer.vue'
 import PictureViewer from './PictureViewer.vue'
 import VideoViewer from './VideoViewer.vue'
@@ -47,10 +46,28 @@ const proseEl = computed<HTMLElement | null>(() => (proseRef.value?.$el as HTMLE
 const sourceEl = ref<HTMLElement | null>(null)
 const fallbackOutlineCollapsed = ref(false)
 const dragOutlineWidth = ref<number | null>(null)
-const activeOutlineId = ref('overview')
+const activeOutlineId = ref('')
 const lightbox = ref<{ pictures: LightboxPicture[]; start: number } | null>(null)
 
 let _stopOutlineResize: (() => void) | undefined
+
+const NOTE_VIEWS = [
+  { value: 'preview', label: 'Preview', icon: 'eye' },
+  { value: 'source', label: 'Code', icon: 'brackets' }
+] as const
+
+// A note has both a rendered view and its text. A picture, a video, a page, a local address and a code
+// file have no source to switch to.
+const isNote = computed(
+  () =>
+    !!viewer.displayPath &&
+    !viewer.error &&
+    !viewer.picturePath &&
+    !viewer.videoPath &&
+    !viewer.pagePath &&
+    !viewer.addressUrl &&
+    !viewer.codePath
+)
 
 const filenameDisplay = computed(() => {
   return viewer.displayPath ?? ''
@@ -58,9 +75,9 @@ const filenameDisplay = computed(() => {
 const activeTabPanelLabelledBy = computed(() =>
   workspace.activeTabId ? getWorkspaceTabDomId(workspace.activeTabId) : undefined
 )
-const sectionOutline = computed(() =>
-  documentOutline.value.filter((item) => item.level >= 2 && item.level <= 4)
-)
+// The header bar shows for every note, in Preview and in Code.
+const showNoteBar = computed(() => isNote.value && !viewer.loading && !renderError.value)
+const sectionOutline = computed(() => sectionOutlineOf(documentOutline.value))
 const outlineParentById = computed(() => {
   const parents = new Map<string, string>()
   let currentSectionId: string | null = null
@@ -76,20 +93,15 @@ const outlineParentById = computed(() => {
 
   return parents
 })
-const activeSectionId = computed(() =>
-  activeOutlineId.value === 'overview'
-    ? null
-    : (outlineParentById.value.get(activeOutlineId.value) ?? null)
-)
+const activeSectionId = computed(() => outlineParentById.value.get(activeOutlineId.value) ?? null)
 const visibleSectionOutline = computed(() =>
   sectionOutline.value.filter((item) => {
     if (item.level === 2) return true
     return outlineParentById.value.get(item.id) === activeSectionId.value
   })
 )
-const hasDocumentOutline = computed(
-  () => !viewer.sourceMode && !viewer.loading && !viewer.error && sectionOutline.value.length > 0
-)
+// A note with section headings has an outline to show or hide; one without has no toggle.
+const hasOutlineHeadings = computed(() => sectionOutline.value.length > 0)
 const outlineSourcePath = computed(() => viewer.sourcePath)
 const isOutlineCollapsed = computed(() => {
   const sourcePath = outlineSourcePath.value
@@ -99,15 +111,18 @@ const isOutlineCollapsed = computed(() => {
 const documentOutlineWidth = computed(
   () => dragOutlineWidth.value ?? clampDocumentOutlineWidth(workspace.outlineWidth)
 )
-const documentOutlineStyle = computed(() => {
-  const width = isOutlineCollapsed.value
-    ? DOCUMENT_OUTLINE_COLLAPSED_WIDTH
-    : documentOutlineWidth.value
-  return {
-    width: `${width}px`,
-    flexBasis: `${width}px`
-  }
-})
+const hasDocumentOutline = computed(
+  () =>
+    !viewer.sourceMode &&
+    !viewer.loading &&
+    !viewer.error &&
+    hasOutlineHeadings.value &&
+    !isOutlineCollapsed.value
+)
+const documentOutlineStyle = computed(() => ({
+  width: `${documentOutlineWidth.value}px`,
+  flexBasis: `${documentOutlineWidth.value}px`
+}))
 
 async function updateRender(text: string): Promise<void> {
   // Pictures resolve against the note's folder, so the same text renders differently per note.
@@ -186,16 +201,12 @@ async function togglePreservingScroll(): Promise<void> {
 }
 
 function onToggleSourceMode(): void {
-  // A picture, a video, a page, a local address or a code file has no source to switch to.
-  if (
-    viewer.picturePath ||
-    viewer.videoPath ||
-    viewer.pagePath ||
-    viewer.addressUrl ||
-    viewer.codePath
-  )
-    return
+  if (!isNote.value) return
   void togglePreservingScroll()
+}
+
+function onNoteViewChange(value: string): void {
+  if ((value === 'source') !== viewer.sourceMode) onToggleSourceMode()
 }
 
 async function explainFailedPicture(img: HTMLImageElement): Promise<void> {
@@ -307,39 +318,44 @@ function onRenderedClick(event: MouseEvent): void {
   })
 }
 
+// Text starts below the header bar, so the scroll area's top padding is where the first line sits at rest.
+const ACTIVE_SECTION_SLACK_PX = 24
+
+function contentStartOf(scrollEl: HTMLElement): number {
+  return Number.parseFloat(getComputedStyle(scrollEl).paddingTop) || 0
+}
+
+function headingTopOf(scrollEl: HTMLElement, id: string): number | null {
+  const heading = scrollEl.querySelector<HTMLElement>(`#${CSS.escape(id)}`)
+  if (!heading) return null
+  return (
+    heading.getBoundingClientRect().top - scrollEl.getBoundingClientRect().top + scrollEl.scrollTop
+  )
+}
+
 function updateActiveOutline(): void {
   const scrollEl = proseEl.value
   if (!scrollEl) return
 
-  const scrollTop = scrollEl.scrollTop
-  let activeId = 'overview'
-
-  for (const item of sectionOutline.value) {
-    const heading = scrollEl.querySelector<HTMLElement>(`#${CSS.escape(item.id)}`)
-    if (!heading) continue
-    if (heading.offsetTop <= scrollTop + 32) {
-      activeId = item.id
-    }
-  }
-
-  activeOutlineId.value = activeId
+  const line = scrollEl.scrollTop + contentStartOf(scrollEl) + ACTIVE_SECTION_SLACK_PX
+  activeOutlineId.value = currentSectionId(
+    sectionOutline.value,
+    (id) => headingTopOf(scrollEl, id),
+    line
+  )
 }
 
 function onRenderedScroll(): void {
   updateActiveOutline()
 }
 
-function scrollToOverview(): void {
-  proseEl.value?.scrollTo({ top: 0, behavior: 'auto' })
-  activeOutlineId.value = 'overview'
-}
-
 function scrollToHeading(id: string): void {
   const scrollEl = proseEl.value
-  const heading = scrollEl?.querySelector<HTMLElement>(`#${CSS.escape(id)}`)
-  if (!scrollEl || !heading) return
+  const top = scrollEl ? headingTopOf(scrollEl, id) : null
+  if (!scrollEl || top === null) return
 
-  scrollEl.scrollTo({ top: Math.max(heading.offsetTop - 8, 0), behavior: 'auto' })
+  // The heading lands where the first line sits at rest, just below the header bar.
+  scrollEl.scrollTo({ top: Math.max(top - contentStartOf(scrollEl), 0), behavior: 'auto' })
   activeOutlineId.value = id
 }
 
@@ -440,6 +456,29 @@ onUnmounted(() => {
     :aria-labelledby="activeTabPanelLabelledBy"
     :aria-label="activeTabPanelLabelledBy ? undefined : 'Markdown viewer'"
   >
+    <div v-if="showNoteBar" class="note-bar">
+      <div class="note-bar-row">
+        <StIconButton
+          v-if="hasOutlineHeadings"
+          class="note-bar-control"
+          icon="sidebar"
+          size="sm"
+          :label="isOutlineCollapsed ? 'Show document sections' : 'Hide document sections'"
+          aria-controls="document-outline-list"
+          :aria-expanded="!isOutlineCollapsed"
+          @click="toggleDocumentOutline"
+        />
+        <span class="note-bar-path" :title="filenameDisplay">{{ filenameDisplay }}</span>
+        <StSegmented
+          class="note-bar-control"
+          :model-value="viewer.sourceMode ? 'source' : 'preview'"
+          :options="NOTE_VIEWS"
+          label="Note view"
+          size="sm"
+          @update:model-value="onNoteViewChange"
+        />
+      </div>
+    </div>
     <PictureViewer v-if="viewer.picturePath" :key="viewer.picturePath" :path="viewer.picturePath" />
     <VideoViewer v-else-if="viewer.videoPath" :key="viewer.videoPath" :path="viewer.videoPath" />
     <PageViewer v-else-if="viewer.pagePath" :key="viewer.pagePath" :path="viewer.pagePath" />
@@ -462,50 +501,14 @@ onUnmounted(() => {
       ref="sourceEl"
       class="source ryte-scrollbar ryte-scrollbar--y"
     ><code>{{ viewer.content }}</code></pre>
-    <div v-else class="document-view">
+    <div v-else class="document-view" :class="{ 'document-view--no-outline': !hasDocumentOutline }">
       <aside
         v-if="hasDocumentOutline"
         class="document-outline ryte-scrollbar ryte-scrollbar--y"
-        :class="{ 'document-outline--collapsed': isOutlineCollapsed }"
         :style="documentOutlineStyle"
         aria-label="Document sections"
       >
-        <div
-          v-if="!isOutlineCollapsed"
-          class="document-outline-overview-row"
-          :class="{ 'document-outline-item--active': activeOutlineId === 'overview' }"
-        >
-          <button
-            type="button"
-            class="document-outline-item document-outline-item--overview"
-            :aria-current="activeOutlineId === 'overview' ? 'location' : undefined"
-            @click="scrollToOverview"
-          >
-            <span
-              class="document-outline-marker"
-              :class="{ 'document-outline-marker--active': activeOutlineId === 'overview' }"
-              aria-hidden="true"
-            ></span>
-            <span class="document-outline-title">Overview</span>
-          </button>
-          <StIconButton
-            icon="sidebar"
-            label="Hide document sections"
-            aria-controls="document-outline-list"
-            :aria-expanded="true"
-            @click="toggleDocumentOutline"
-          />
-        </div>
-        <StIconButton
-          v-else
-          class="document-outline-expand-button"
-          icon="sidebar"
-          label="Show document sections"
-          aria-controls="document-outline-list"
-          :aria-expanded="false"
-          @click="toggleDocumentOutline"
-        />
-        <nav v-if="!isOutlineCollapsed" id="document-outline-list" class="document-outline-list">
+        <nav id="document-outline-list" class="document-outline-list">
           <button
             v-for="item in visibleSectionOutline"
             :key="item.id"
@@ -527,7 +530,6 @@ onUnmounted(() => {
           </button>
         </nav>
         <div
-          v-if="!isOutlineCollapsed"
           class="document-outline-resize"
           role="separator"
           aria-label="Resize document sections"
@@ -555,11 +557,69 @@ onUnmounted(() => {
 
 <style scoped>
 .viewer {
+  /* The header bar floats over the top of the note: 16px in from the edges, then a 16px gap before the text. */
+  --note-bar-inset: var(--st-space-200);
+  --note-bar-height: calc(var(--st-block-400) + var(--st-space-50) * 2);
+  --note-content-start: calc(var(--note-bar-inset) + var(--note-bar-height) + var(--st-space-200));
+  position: relative;
   flex: 1;
   height: 100%;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+/* The bar has no background of its own. Text scrolls under it and fades out (see .note-scroll-fade). */
+.note-bar {
+  position: absolute;
+  top: 0;
+  right: 0;
+  left: 0;
+  z-index: 4;
+  height: calc(var(--note-bar-inset) + var(--note-bar-height));
+  pointer-events: none;
+}
+
+/* Each note scroller fades its own content to nothing under the bar: invisible behind the controls,
+   then fully visible by the line where text starts at rest, so nothing moves before scrolling. */
+.document-outline,
+.source,
+.viewer-prose {
+  mask-image: linear-gradient(
+    to bottom,
+    transparent calc(var(--note-bar-inset) + var(--note-bar-height) - var(--st-space-100)),
+    var(--st-color-surface-base) var(--note-content-start)
+  );
+}
+
+.note-bar-row {
+  position: absolute;
+  top: var(--note-bar-inset);
+  right: var(--note-bar-inset);
+  left: var(--note-bar-inset);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--st-space-100);
+  min-height: var(--note-bar-height);
+  padding: var(--st-space-50);
+  border-radius: var(--st-space-100);
+}
+
+.note-bar-control {
+  flex: 0 0 auto;
+  pointer-events: auto;
+}
+
+.note-bar-path {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--st-color-text-tertiary);
+  font-size: var(--st-font-size-100);
+  line-height: var(--st-line-height-300);
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .document-view {
@@ -572,31 +632,8 @@ onUnmounted(() => {
 .document-outline {
   position: relative;
   flex: 0 0 auto;
-  padding: var(--st-space-250) var(--st-space-150) var(--st-space-300);
+  padding: var(--note-content-start) var(--st-space-150) var(--st-space-300) var(--st-space-200);
   overflow: auto;
-}
-
-.document-outline--collapsed {
-  padding-left: var(--st-space-100);
-  padding-right: var(--st-space-100);
-}
-
-.document-outline-overview-row {
-  width: 100%;
-  min-height: var(--st-block-400);
-  display: flex;
-  align-items: center;
-  border-radius: var(--st-space-75);
-  background: transparent;
-}
-
-.document-outline-overview-row:hover,
-.document-outline-overview-row:focus-within {
-  background: var(--st-color-surface-hover);
-}
-
-.document-outline-overview-row.document-outline-item--active {
-  background: var(--st-color-surface-hover);
 }
 
 .document-outline-item {
@@ -617,13 +654,6 @@ onUnmounted(() => {
   cursor: pointer;
 }
 
-.document-outline-overview-row .document-outline-item {
-  flex: 1 1 auto;
-  min-width: 0;
-  border-radius: 0;
-  background: transparent;
-}
-
 .document-outline-item:hover {
   background: var(--st-color-surface-hover);
   color: var(--st-color-text-primary);
@@ -635,22 +665,10 @@ onUnmounted(() => {
   color: var(--st-color-text-primary);
 }
 
-.document-outline-overview-row .document-outline-item:hover,
-.document-outline-overview-row .document-outline-item:focus-visible,
-.document-outline-overview-row .document-outline-item--active {
-  background: transparent;
-}
-
-.document-outline-item:focus-visible,
 .document-outline-list {
   display: flex;
   flex-direction: column;
   gap: var(--st-space-25);
-  margin-top: var(--st-space-100);
-}
-
-.document-outline-expand-button {
-  margin: 0 auto;
 }
 
 .document-outline-item--level-3 {
@@ -736,7 +754,7 @@ onUnmounted(() => {
 .source {
   flex: 1;
   margin: 0;
-  padding: var(--st-space-300) var(--st-space-400);
+  padding: var(--note-content-start) var(--st-space-400) var(--st-space-300);
   overflow: auto;
   font-family: var(--st-type-code-lg-family);
   font-size: var(--st-type-code-lg-size);
@@ -751,7 +769,11 @@ onUnmounted(() => {
   flex: 1;
   min-width: 0;
   overflow: auto;
-  padding: var(--st-space-400) var(--st-space-500) var(--st-space-800);
+  padding: var(--note-content-start) var(--st-space-500) var(--st-space-800) var(--st-space-300);
   max-width: var(--st-reading-measure);
+}
+
+.document-view--no-outline .viewer-prose {
+  padding-left: var(--st-space-500);
 }
 </style>

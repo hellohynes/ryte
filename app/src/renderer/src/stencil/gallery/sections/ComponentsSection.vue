@@ -63,6 +63,11 @@ const MODES = [
   { value: 'light', label: 'Light' },
   { value: 'dark', label: 'Dark' }
 ]
+const VIEWS = [
+  { value: 'preview', label: 'Preview', icon: 'eye' },
+  { value: 'source', label: 'Code', icon: 'code' }
+] as const
+const view = ref('preview')
 const RETENTION = [
   { value: '30', label: '30 days (default)' },
   { value: '90', label: '90 days' },
@@ -405,6 +410,10 @@ const RADII = [50, 100, 150, 200, 300, 'pill'] as const
         <div class="g-swatch">
           <StSegmented v-model="mode" :options="MODES" label="Color mode" />
           <span class="g-mono">radiogroup · arrows, Home, End · {{ mode }}</span>
+        </div>
+        <div class="g-swatch">
+          <StSegmented v-model="view" :options="VIEWS" label="Note view" size="sm" />
+          <span class="g-mono">size="sm" · option icons · {{ view }}</span>
         </div>
       </div>
     </div>

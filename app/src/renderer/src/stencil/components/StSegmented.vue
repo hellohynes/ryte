@@ -3,13 +3,21 @@
 import { ref } from 'vue'
 
 import { rovingTarget } from '../behaviors/roving'
+import StIcon from '../icons/StIcon.vue'
+import type { IconName } from '../icons/icons.generated'
 
-const props = defineProps<{
-  modelValue: string
-  options: ReadonlyArray<{ value: string; label: string }>
-  /** The accessible name of the group. */
-  label: string
-}>()
+const props = withDefaults(
+  defineProps<{
+    modelValue: string
+    /** Each option may carry an `icon`, drawn before its label and hidden from assistive tech. */
+    options: ReadonlyArray<{ value: string; label: string; icon?: IconName }>
+    /** The accessible name of the group. */
+    label: string
+    /** `md` is a row of separate buttons. `sm` is one compact joined pill, sized for a toolbar. */
+    size?: 'md' | 'sm'
+  }>(),
+  { size: 'md' }
+)
 const emit = defineEmits<{ 'update:modelValue': [value: string] }>()
 
 const buttons = ref<HTMLButtonElement[]>([])
@@ -25,7 +33,7 @@ function onKeydown(event: KeyboardEvent, index: number): void {
 </script>
 
 <template>
-  <div class="st-segmented" role="radiogroup" :aria-label="label">
+  <div class="st-segmented" role="radiogroup" :aria-label="label" :data-st-size="size">
     <button
       v-for="(option, index) in options"
       :key="option.value"
@@ -38,6 +46,7 @@ function onKeydown(event: KeyboardEvent, index: number): void {
       @click="emit('update:modelValue', option.value)"
       @keydown="onKeydown($event, index)"
     >
+      <StIcon v-if="option.icon" :name="option.icon" :size="size === 'sm' ? 12 : 16" />
       {{ option.label }}
     </button>
   </div>

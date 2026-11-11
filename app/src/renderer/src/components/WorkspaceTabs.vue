@@ -9,6 +9,7 @@ import {
   type ComponentPublicInstance
 } from 'vue'
 
+import { useFileCatalogStore } from '../stores/file-catalog'
 import { useWorkspaceStore } from '../stores/workspace'
 import {
   isWorkspaceAddressTab,
@@ -32,8 +33,10 @@ import {
   resolveTablistKeyboardAction
 } from './workspace-tab-keyboard'
 import { resolveOverflowEdges, resolveScrollDelta } from './workspace-tab-scroll'
+import { workspaceTabLabel } from './workspace-tab-title'
 
 const workspace = useWorkspaceStore()
+const catalog = useFileCatalogStore()
 const TAB_SCROLL_MARGIN = 8
 
 interface TabFileContextMenu {
@@ -170,9 +173,11 @@ watch(
 
 onMounted(() => {
   window.addEventListener('keydown', onGlobalKeydown, true)
+  void catalog.hydrate()
 })
 
 onUnmounted(() => {
+  catalog.unbind()
   resizeObserver?.disconnect()
   if (scrollFrame !== null) window.cancelAnimationFrame(scrollFrame)
   window.removeEventListener('keydown', onGlobalKeydown, true)
@@ -192,6 +197,24 @@ function tabIndex(tabId: string): 0 | -1 {
 
 function tabAccessibleLabel(title: string, sourcePath: string): string {
   return title === sourcePath ? title : `${title}, ${sourcePath}`
+}
+
+// A note's tab shows its document title. The catalog already holds every note's title, so no file is read here.
+const catalogTitles = computed(() => {
+  const open = new Set(
+    workspace.tabs.flatMap((tab) =>
+      !isWorkspaceAddressTab(tab) && isWorkspaceSourceFileRef(tab) ? [tab.sourcePath] : []
+    )
+  )
+  const titles = new Map<string, string>()
+  for (const file of catalog.files) {
+    if (open.has(file.sourcePath)) titles.set(file.sourcePath, file.title)
+  }
+  return titles
+})
+
+function tabLabel(tab: WorkspaceTab): string {
+  return workspaceTabLabel(tab, (sourcePath) => catalogTitles.value.get(sourcePath) ?? null)
 }
 
 function tabDisplayPath(tab: WorkspaceTab): string {
@@ -464,7 +487,7 @@ function onGlobalKeydown(event: KeyboardEvent): void {
             role="tab"
             :aria-selected="workspace.activeTabId === tab.id"
             :aria-controls="tabPanelId()"
-            :aria-label="tabAccessibleLabel(tab.title, tabDisplayPath(tab))"
+            :aria-label="tabAccessibleLabel(tabLabel(tab), tabDisplayPath(tab))"
             aria-describedby="workspace-tabs-instructions"
             aria-keyshortcuts="ArrowLeft ArrowRight Home End Delete Backspace Enter Space Meta+W Meta+Shift+[ Meta+Shift+]"
             :tabindex="tabIndex(tab.id)"
@@ -473,7 +496,7 @@ function onGlobalKeydown(event: KeyboardEvent): void {
             @keydown="onTabKeydown($event, tab.id)"
           >
             <StIcon v-if="isWorkspaceAddressTab(tab)" class="tab-icon" name="globe" :size="12" />
-            <span class="tab-title">{{ tab.title }}</span>
+            <span class="tab-title">{{ tabLabel(tab) }}</span>
           </button>
           <StIconButton
             class="tab-close"

@@ -100,6 +100,10 @@ select.st-input {
   color: var(--st-color-text-secondary);
   font: var(--st-type-label-md);
   cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--st-space-50);
 }
 
 .st-segmented-option[aria-checked='true'] {
@@ -115,4 +119,48 @@ select.st-input {
 .st-segmented-option:focus-visible {
   outline: var(--st-border-200) solid var(--st-color-focus);
   outline-offset: var(--st-space-25);
+}
+
+/* size="sm": one compact pill, segments joined by a divider. */
+.st-segmented[data-st-size='sm'] {
+  display: inline-flex;
+  box-sizing: border-box;
+  height: var(--st-block-400);
+  gap: 0;
+  border: var(--st-border-100) solid var(--st-color-border-strong);
+  border-radius: var(--st-space-100);
+}
+
+.st-segmented[data-st-size='sm'] .st-segmented-option {
+  flex: 0 0 auto;
+  gap: var(--st-space-75);
+  padding: var(--st-space-75) var(--st-space-150) var(--st-space-75) var(--st-space-100);
+  border: 0;
+  border-radius: 0;
+  background: var(--st-color-surface-sunken);
+  color: var(--st-color-text-tertiary);
+  font: var(--st-type-caption-md);
+  line-height: var(--st-line-height-400);
+  letter-spacing: 0.02em;
+}
+
+.st-segmented[data-st-size='sm'] .st-segmented-option:first-child {
+  border-right: var(--st-border-100) solid var(--st-color-border-strong);
+  border-radius: calc(var(--st-space-100) - var(--st-border-100)) 0 0
+    calc(var(--st-space-100) - var(--st-border-100));
+}
+
+.st-segmented[data-st-size='sm'] .st-segmented-option:last-child {
+  border-radius: 0 calc(var(--st-space-100) - var(--st-border-100))
+    calc(var(--st-space-100) - var(--st-border-100)) 0;
+}
+
+.st-segmented[data-st-size='sm'] .st-segmented-option[aria-checked='true'] {
+  background: transparent;
+  color: var(--st-color-text-primary);
+}
+
+.st-segmented[data-st-size='sm'] .st-segmented-option:hover:not([aria-checked='true']) {
+  background: var(--st-color-surface-hover);
+  color: var(--st-color-text-secondary);
 }

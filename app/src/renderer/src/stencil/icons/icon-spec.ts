@@ -128,6 +128,9 @@ export const ICON_SPEC: Record<string, IconSpec> = {
   bold: {
     strokes: ['M5 7.5H9.25A2.75 2.75 0 0 1 9.25 13H5V3H8.5A2.25 2.25 0 0 1 8.5 7.5H5']
   },
+  brackets: {
+    strokes: [line([6, 4], [2.5, 8], [6, 12]), line([10, 4], [13.5, 8], [10, 12])]
+  },
   check: { strokes: [line([3, 8.5], [6.25, 11.75], [13, 4.5])] },
   checklist: {
     strokes: [
@@ -178,6 +181,10 @@ export const ICON_SPEC: Record<string, IconSpec> = {
   },
   drop: {
     strokes: ['M8 2.5C10.5 5.4 12 7 12 9.5A4 4 0 0 1 4 9.5C4 7 5.5 5.4 8 2.5Z']
+  },
+  eye: {
+    strokes: ['M2.25 8C3.6 5.4 5.6 4 8 4S12.4 5.4 13.75 8C12.4 10.6 10.4 12 8 12S3.6 10.6 2.25 8Z'],
+    dots: [[8, 8, 1.6]]
   },
   file: {
     strokes: [
