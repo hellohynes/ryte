@@ -8,13 +8,23 @@ Ryte follows [Semantic Versioning](https://semver.org). The app version in `app/
 
 ### Highlights
 
+Ryte now opens more of your work, not just notes. **File viewing:** pictures (with a lightbox, and in the file tree), video, code and JSON in a read-only view, and a Preview | Code switch on every note. **Browser tools:** HTML pages open in a locked box, approved local addresses such as a dev server open in a locked tab, and links open only on a real click. There's also a new note header and a tidier tab strip.
+
+#### File viewing
+
 - Pictures in a note open larger in a lightbox when you click them.
 - Pictures show in the file tree and quick open, and open as their own tab.
 - Code and JSON files open in a read-only code view.
 - Videos play in their own tab and inside notes, with the standard controls and seeking.
+- A note has a header: the outline button and the note's path on the left, and a Preview | Code switch on the right. Text fades out as it scrolls under the header.
+
+#### Browser tools
+
 - HTML pages open in a locked box that blocks the network, other files and new windows, tells you what it blocked, and has an "Open in browser (not locked)" button. Links open only on a real click.
 - A link to a local address, such as a dev server, opens in a locked tab after you approve that address once or always. Allowed addresses are listed in Preferences, where you can remove them. Ryte accepts that approval only right after a real click or key press.
-- A note has a header: the outline button and the note's path on the left, and a Preview | Code switch on the right. Text fades out as it scrolls under the header.
+
+#### Also new
+
 - The outline starts at the note's first heading, without an "Overview" entry, and tabs show a note's title instead of its file name.
 - The first tab has a small gap from the edge, and the empty part of the tab strip moves the window. Double-clicking it zooms the window.
 - Fixes: the note cleaner no longer deletes text inside code that mentions `src=`, `href=` or `onclick=`, and the "index ready" status counts only the notes that were indexed.
