@@ -17,6 +17,7 @@ import {
   forwardIndexerStatus,
   forwardRebuildNotice
 } from './contract/indexer-handlers'
+import { createLocalhostHandlers } from './contract/localhost-handlers'
 import { createPageHandlers } from './contract/page-handlers'
 import { createPicturesHandlers } from './contract/pictures-handlers'
 import { createEmitter, registerOperations } from './contract/register'
@@ -32,6 +33,8 @@ import { indexerService } from './indexing/indexer-service'
 import { walkLibrary } from './indexing/walker'
 import { watcher } from './indexing/watcher'
 import { openExternalIfSafe } from './navigation'
+import { createApprovals } from './localhost/approvals'
+import { localhostApprovalsFilePath } from './paths'
 import { createPageBox } from './page/page-box'
 import { OPENABLE_PROTOCOLS } from './page/page-links'
 import { createPageFolders } from './page/page-scheme'
@@ -159,6 +162,9 @@ export function registerIpc(): void {
     indexer: createIndexerHandlers({
       service: indexerService,
       beforeClear: stopSearchesBeforeClear
+    }),
+    localhost: createLocalhostHandlers({
+      approvals: createApprovals(localhostApprovalsFilePath())
     }),
     page: createPageHandlers({
       box: createPageBox({

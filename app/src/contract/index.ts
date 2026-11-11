@@ -3,6 +3,7 @@ import { code } from './code'
 import { dialog } from './dialog'
 import { files } from './files'
 import { indexer } from './indexer'
+import { localhost } from './localhost'
 import { page } from './page'
 import { pictures } from './pictures'
 import { search } from './search'
@@ -18,6 +19,7 @@ export const contract = {
   dialog,
   files,
   indexer,
+  localhost,
   page,
   pictures,
   search,

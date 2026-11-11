@@ -58,6 +58,15 @@ export const manifest = {
       embeddingStatus: 'indexer:embedding-status-event'
     }
   },
+  localhost: {
+    operations: {
+      listApprovals: 'localhost:list-approvals',
+      removeApproval: 'localhost:remove-approval',
+      open: 'localhost:open',
+      release: 'localhost:release'
+    },
+    events: {}
+  },
   page: {
     operations: {
       show: 'page:show',

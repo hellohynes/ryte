@@ -69,6 +69,15 @@ change or remove one.
 | `indexer.rebuildNotice` | `indexer:rebuild-notice-event` | The rebuild notice appeared or was dismissed (null); sent to every open window, so a window that opened before the notice existed still shows it. | `see schema` |
 | `indexer.embeddingStatus` | `indexer:embedding-status-event` | What smart search is doing changed; sent to every open window at once when its state changes and at most a few times a second while it makes progress. | `{ state: 'off' \| 'idle' \| 'running' \| 'paused', total: integer, done: integer, pending: integer, reason?: 'no-key' \| 'no-agreement' \| 'offline' \| 'rate-limit' \| 'service' \| 'auth', retryAt?: string }` |
 
+## localhost
+
+| Operation | Channel | What it does | Input |
+| --- | --- | --- | --- |
+| `localhost.listApprovals` | `localhost:list-approvals` | The local addresses the person chose to always allow, as origins (scheme, host and port), oldest first. | `none` |
+| `localhost.removeApproval` | `localhost:remove-approval` | Forget an always-allowed origin and close any open view of it, so the next open asks again. Returns the remaining origins. | `{ origin: string }` |
+| `localhost.open` | `localhost:open` | Approve opening a local address after the person answered the prompt. `always` remembers the origin; `once` allows it until the tab closes. Refuses anything that is not `http` or `https` on `localhost`, `127.0.0.1` or `[::1]`. Returns the address to open in a tab, or why not. | `{ url: string, choice: 'once' \| 'always' }` |
+| `localhost.release` | `localhost:release` | A tab opened with `once` was closed: forget that one-time allowance. An always-allowed origin is not affected. | `{ url: string }` |
+
 ## page
 
 | Operation | Channel | What it does | Input |
