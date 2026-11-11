@@ -13,8 +13,9 @@ on:
 permissions:
   contents: read
 
-# A newer push to the same pull request replaces the run still going for the older commit. A run on main is never
-# cancelled by the next merge, so every merged commit keeps its result.
+# A newer push to the same pull request replaces the run still going for the older commit. A run on main is not
+# cancelled once it starts, but GitHub keeps only one pending run per group, so when several merges land while one
+# run is going, the ones in between can be skipped.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
