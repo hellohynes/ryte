@@ -2,7 +2,7 @@
   "codeConnect": {
     "include": ["src/renderer/src/stencil/figma/**/*.figma.js"],
     "label": "Vue",
-    "language": "vue",
+    "language": "html",
     "documentUrlSubstitutions": {
       "<STENCIL_FILE>": "https://www.figma.com/design/YOUR_FILE_KEY/Stencil"
     }

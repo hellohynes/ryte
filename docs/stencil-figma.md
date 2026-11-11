@@ -20,7 +20,7 @@ The file is `{ version, collections: [{ name, modes, variables: [{ name, type, v
 ## Sync the variables (an agent, through the Figma connector)
 
 1. Open a session on your Figma file, then run the export with `--stdout --min`.
-2. Paste the JSON over `EXPORT` in `app/scripts/figma/sync-variables.js`. Set `ONLY` to a collection name to sync one per run (the connector returns at most 20 KB), and `DRY_RUN = true` to see what would change first.
+2. Paste the JSON over `EXPORT` in `app/scripts/figma/sync-variables.js`. Set `ONLY` to a collection name to sync one per run (keeps each report small), and `DRY_RUN = true` to see what would change first.
 3. Run the script with `use_figma`. It finds each collection and variable by name, creates what is missing, sets each mode's value and code syntax, and leaves an alias alone when it resolves to the right color.
 4. Read the report: created, updated, unchanged, and "not in code" (variables only in Figma). It never deletes. A second run should create and update nothing.
 
@@ -33,5 +33,6 @@ Code Connect goes from Figma to code only. It shows your snippet in Dev Mode and
 ## Plan needs
 
 - Variables REST API: Enterprise only (the sync above uses the Plugin API through the connector instead).
-- Connector writes (`use_figma`) and Code Connect: Professional and up, with a Full seat.
-- Publishing the library: Professional and up, by hand (Assets > Libraries > Publish). There is no API for it.
+- Connector writes (`use_figma`): Professional and up, with a Full seat to write outside drafts.
+- Code Connect: Professional and up, with a Full or Dev seat.
+- Publishing the library: Professional and up, by hand (Assets > Libraries > Publish). There is no known API for it.

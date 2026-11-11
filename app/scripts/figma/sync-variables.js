@@ -1,9 +1,8 @@
-// Syncs Stencil's tokens into a Figma file. A Plugin API script: run it inside the file through the
-// Figma connector's `use_figma` (see docs/stencil-figma.md). Paste the output of
-// `pnpm stencil:figma-export -- --stdout --min` over EXPORT, one collection per run via ONLY.
-// Finds each collection and variable by name and creates what is missing. Sets each mode's value and
-// the web code syntax. A variable that is an alias resolving to the right value is left alone.
-// Never deletes: variables that exist only in Figma are listed as "not in code".
+// Syncs Stencil's tokens into a Figma file; run it with the connector's `use_figma`
+// (docs/stencil-figma.md). Paste `pnpm stencil:figma-export -- --stdout --min` over EXPORT.
+// Matches collections and variables by name, creates what is missing, sets each mode's value and
+// web code syntax, and keeps an alias that already resolves right. Never deletes: variables only in
+// Figma are listed as "not in code".
 const EXPORT = { collections: [] } // paste here
 const ONLY = null // a collection name, or null for all
 const DRY_RUN = false // true reports what would change without writing
@@ -20,10 +19,13 @@ const byte = (n) =>
     .padStart(2, '0')
 const toHex = (c) => `#${byte(c.r)}${byte(c.g)}${byte(c.b)}${c.a < 1 ? byte(c.a) : ''}`
 
-async function resolved(value) {
+// Follows an alias to its value in the target's mode of the same name (its default mode otherwise).
+async function resolved(value, modeName) {
   while (value && value.type === 'VARIABLE_ALIAS') {
     const target = await figma.variables.getVariableByIdAsync(value.id)
-    value = Object.values(target.valuesByMode)[0]
+    const owner = await figma.variables.getVariableCollectionByIdAsync(target.variableCollectionId)
+    const mode = owner.modes.find((m) => m.name === modeName)
+    value = target.valuesByMode[mode ? mode.modeId : owner.defaultModeId]
   }
   return value
 }
@@ -40,7 +42,14 @@ const collections = await figma.variables.getLocalVariableCollectionsAsync()
 const report = []
 for (const wanted of EXPORT.collections.filter((c) => !ONLY || c.name === ONLY)) {
   let collection = collections.find((c) => c.name === wanted.name)
-  const row = { collection: wanted.name, created: [], updated: [], unchanged: 0, notInCode: [] }
+  const row = {
+    collection: wanted.name,
+    created: [],
+    updated: [],
+    aliasReplaced: [],
+    unchanged: 0,
+    notInCode: []
+  }
   if (!collection && !DRY_RUN) {
     collection = figma.variables.createVariableCollection(wanted.name)
     collection.renameMode(collection.modes[0].modeId, wanted.modes[0])
@@ -52,6 +61,7 @@ for (const wanted of EXPORT.collections.filter((c) => !ONLY || c.name === ONLY))
   for (const item of wanted.variables) {
     let variable = existing.find((v) => v.name === item.name)
     const changes = []
+    const replaced = []
     if (!variable) {
       row.created.push(item.name)
       if (DRY_RUN) continue
@@ -60,9 +70,10 @@ for (const wanted of EXPORT.collections.filter((c) => !ONLY || c.name === ONLY))
     }
     for (const mode of collection.modes) {
       if (!(mode.name in item.values)) continue
-      const current = await resolved(variable.valuesByMode[mode.modeId])
-      if (same(current, item.values[mode.name])) continue
-      changes.push(mode.name)
+      const raw = variable.valuesByMode[mode.modeId]
+      if (same(await resolved(raw, mode.name), item.values[mode.name])) continue
+      if (raw && raw.type === 'VARIABLE_ALIAS') replaced.push(mode.name)
+      else changes.push(mode.name)
       const value = item.type === 'COLOR' ? rgba(item.values[mode.name]) : item.values[mode.name]
       if (!DRY_RUN) variable.setValueForMode(mode.modeId, value)
     }
@@ -70,9 +81,10 @@ for (const wanted of EXPORT.collections.filter((c) => !ONLY || c.name === ONLY))
       changes.push('code syntax')
       if (!DRY_RUN) variable.setVariableCodeSyntax('WEB', item.codeSyntax)
     }
+    if (replaced.length) row.aliasReplaced.push(`${item.name} (${replaced})`)
     if (changes.length && !row.created.includes(item.name))
       row.updated.push(`${item.name} (${changes})`)
-    else if (!changes.length) row.unchanged++
+    else if (!changes.length && !replaced.length) row.unchanged++
   }
   const names = new Set(wanted.variables.map((v) => v.name))
   row.notInCode = existing.filter((v) => !names.has(v.name)).map((v) => v.name)
@@ -80,15 +92,16 @@ for (const wanted of EXPORT.collections.filter((c) => !ONLY || c.name === ONLY))
 }
 const cap = (list) =>
   list.length > 25 ? [...list.slice(0, 25), `... ${list.length} in all`] : list
-return report.map((r) => ({
-  ...r,
-  created: cap(r.created),
-  updated: cap(r.updated),
-  notInCode: cap(r.notInCode),
-  counts: {
-    created: r.created.length,
-    updated: r.updated.length,
-    unchanged: r.unchanged,
-    notInCode: r.notInCode.length
+return report.map((r) => {
+  const counts = { unchanged: r.unchanged }
+  for (const key of ['created', 'updated', 'aliasReplaced', 'notInCode'])
+    counts[key] = r[key].length
+  return {
+    collection: r.collection,
+    counts,
+    created: cap(r.created),
+    updated: cap(r.updated),
+    aliasReplaced: cap(r.aliasReplaced),
+    notInCode: cap(r.notInCode)
   }
-}))
+})

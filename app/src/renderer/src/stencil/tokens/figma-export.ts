@@ -142,6 +142,7 @@ export function buildFigmaExport(manifest: {
       floats('Border', rows('border', 'border', ['STROKE_FLOAT'])),
       floats('Typography', [
         ...rows('font size', 'font-size', ['FONT_SIZE']),
+        // No scopes on purpose: these are percents, and Figma reads a bound line-height number as px.
         ...rows('line height', 'line-height', [], asPercent),
         ...rows('font weight', 'font-weight', ['FONT_WEIGHT'], (token) => Number(token.css))
       ])
