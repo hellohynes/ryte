@@ -20,6 +20,7 @@ import {
 } from '../../../shared/workspace'
 import StIconButton from '../stencil/components/StIconButton.vue'
 import StProse from '../stencil/components/StProse.vue'
+import StSegmented from '../stencil/components/StSegmented.vue'
 import NoteLightbox from './NoteLightbox.vue'
 import { buildLightboxList, type LightboxPicture, type PagePicture } from './lightbox-model'
 import CodeViewer from './CodeViewer.vue'
@@ -51,6 +52,24 @@ const activeOutlineId = ref('overview')
 const lightbox = ref<{ pictures: LightboxPicture[]; start: number } | null>(null)
 
 let _stopOutlineResize: (() => void) | undefined
+
+const NOTE_VIEWS = [
+  { value: 'preview', label: 'Preview' },
+  { value: 'source', label: 'Code' }
+]
+
+// A note has both a rendered view and its text. A picture, a video, a page, a local address and a code
+// file have no source to switch to.
+const isNote = computed(
+  () =>
+    !!viewer.displayPath &&
+    !viewer.error &&
+    !viewer.picturePath &&
+    !viewer.videoPath &&
+    !viewer.pagePath &&
+    !viewer.addressUrl &&
+    !viewer.codePath
+)
 
 const filenameDisplay = computed(() => {
   return viewer.displayPath ?? ''
@@ -186,16 +205,12 @@ async function togglePreservingScroll(): Promise<void> {
 }
 
 function onToggleSourceMode(): void {
-  // A picture, a video, a page, a local address or a code file has no source to switch to.
-  if (
-    viewer.picturePath ||
-    viewer.videoPath ||
-    viewer.pagePath ||
-    viewer.addressUrl ||
-    viewer.codePath
-  )
-    return
+  if (!isNote.value) return
   void togglePreservingScroll()
+}
+
+function onNoteViewChange(value: string): void {
+  if ((value === 'source') !== viewer.sourceMode) onToggleSourceMode()
 }
 
 async function explainFailedPicture(img: HTMLImageElement): Promise<void> {
@@ -440,6 +455,14 @@ onUnmounted(() => {
     :aria-labelledby="activeTabPanelLabelledBy"
     :aria-label="activeTabPanelLabelledBy ? undefined : 'Markdown viewer'"
   >
+    <div v-if="isNote && !viewer.loading && !renderError" class="note-bar">
+      <StSegmented
+        :model-value="viewer.sourceMode ? 'source' : 'preview'"
+        :options="NOTE_VIEWS"
+        label="Note view"
+        @update:model-value="onNoteViewChange"
+      />
+    </div>
     <PictureViewer v-if="viewer.picturePath" :key="viewer.picturePath" :path="viewer.picturePath" />
     <VideoViewer v-else-if="viewer.videoPath" :key="viewer.videoPath" :path="viewer.videoPath" />
     <PageViewer v-else-if="viewer.pagePath" :key="viewer.pagePath" :path="viewer.pagePath" />
@@ -560,6 +583,13 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+}
+
+.note-bar {
+  flex: 0 0 auto;
+  display: flex;
+  padding: var(--st-space-100) var(--st-space-400);
+  border-bottom: var(--st-border-100) solid var(--st-color-border-subtle);
 }
 
 .document-view {
