@@ -124,6 +124,8 @@ select.st-input {
 /* size="sm": one compact pill, segments joined by a divider. */
 .st-segmented[data-st-size='sm'] {
   display: inline-flex;
+  box-sizing: border-box;
+  height: var(--st-block-400);
   gap: 0;
   border: var(--st-border-100) solid var(--st-color-border-strong);
   border-radius: var(--st-space-100);
