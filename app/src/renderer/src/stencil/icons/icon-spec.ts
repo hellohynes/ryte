@@ -137,6 +137,9 @@ export const ICON_SPEC: Record<string, IconSpec> = {
       line([9.25, 11], [13.5, 11])
     ]
   },
+  globe: {
+    strokes: [circle(8, 8, 6), line([2, 8], [14, 8]), 'M8 2A3 6 0 0 1 8 14A3 6 0 0 1 8 2Z']
+  },
   columns: {
     strokes: [rect(2, 2.5, 12, 11, 1.5), line([6, 2.5], [6, 13.5]), line([10, 2.5], [10, 13.5])]
   },

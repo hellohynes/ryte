@@ -4,6 +4,7 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import ryteLogo from './assets/ryte-logo.svg'
 import { applyFont } from './fonts/load-fonts'
 import FileOpenOverlay from './components/FileOpenOverlay.vue'
+import LocalAddressPrompt from './components/LocalAddressPrompt.vue'
 import SearchOverlay from './components/SearchOverlay.vue'
 import PreferencesModal from './components/preferences/PreferencesModal.vue'
 import RebuildNotice from './components/RebuildNotice.vue'
@@ -494,6 +495,7 @@ function onGlobalAppKeyup(event: KeyboardEvent): void {
     <StatusBar />
 
     <FileOpenOverlay v-if="showFileOpen" @close="showFileOpen = false" />
+    <LocalAddressPrompt />
     <SearchOverlay
       v-if="showSearch"
       @close="showSearch = false"

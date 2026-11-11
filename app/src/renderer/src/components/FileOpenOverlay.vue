@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
+import { parseTypedLocalAddress } from '../../../shared/local-address'
 import { useFileCatalogStore } from '../stores/file-catalog'
+import { useLocalAddressStore } from '../stores/local-address'
 import { useWorkspaceStore } from '../stores/workspace'
 // There is no StCombobox yet; this is the only combobox, so it uses the list behavior directly until a
 // second one earns the component.
@@ -16,8 +18,11 @@ import { buildFileOpenResults, type FileOpenResult } from './file-open-model'
 
 const emit = defineEmits<{ close: [] }>()
 
+type OpenRow = ({ kind: 'file' } & FileOpenResult) | { kind: 'address'; url: string; label: string }
+
 const catalog = useFileCatalogStore()
 const workspace = useWorkspaceStore()
+const localAddress = useLocalAddressStore()
 const inputRef = ref<InstanceType<typeof StInput> | null>(null)
 const resultsRef = ref<HTMLElement | null>(null)
 const query = ref('')
@@ -25,7 +30,21 @@ const openingSourcePath = ref<string | null>(null)
 const openError = ref<string | null>(null)
 const resultsListId = 'file-open-results'
 
-const results = computed(() => buildFileOpenResults(catalog.files, query.value))
+// What was typed may be a page on this Mac: its row comes first and opens a tab after the prompt.
+const typedAddress = computed(() => parseTypedLocalAddress(query.value))
+const fileResults = computed(() => buildFileOpenResults(catalog.files, query.value))
+const results = computed<OpenRow[]>(() => [
+  ...(typedAddress.value
+    ? [
+        {
+          kind: 'address' as const,
+          url: typedAddress.value.url,
+          label: typedAddress.value.url.replace(/\/$/, '')
+        }
+      ]
+    : []),
+  ...fileResults.value.map((file) => ({ kind: 'file' as const, ...file }))
+])
 const list = useListNavigation({
   count: () => results.value.length,
   optionId: resultOptionId,
@@ -80,9 +99,15 @@ function scrollSelectedResultIntoView(): void {
   }
 }
 
-async function openResult(result: FileOpenResult | null): Promise<void> {
+async function openResult(result: OpenRow | null): Promise<void> {
   if (openingSourcePath.value) return
   if (!result) return
+
+  if (result.kind === 'address') {
+    emit('close')
+    await localAddress.ask(result.url)
+    return
+  }
 
   openError.value = null
   openingSourcePath.value = result.sourcePath
@@ -146,11 +171,11 @@ function onKeydown(event: KeyboardEvent): void {
         <li
           v-for="(result, index) in results"
           :id="resultOptionId(index)"
-          :key="result.sourcePath"
+          :key="result.kind === 'address' ? result.url : result.sourcePath"
           class="open-result"
           :class="{
             selected: index === selectedIndex,
-            opening: openingSourcePath === result.sourcePath
+            opening: result.kind === 'file' && openingSourcePath === result.sourcePath
           }"
           role="option"
           :aria-selected="index === selectedIndex"
@@ -159,11 +184,19 @@ function onKeydown(event: KeyboardEvent): void {
           @mouseenter="selectedIndex = index"
           @click="openResult(result)"
         >
-          <StIcon :name="resolveFileIconName(result.sourcePath)" :size="12" />
-          <span class="result-copy">
-            <span class="result-title">{{ result.title }}</span>
-            <span class="result-path">{{ result.sourcePath }}</span>
-          </span>
+          <template v-if="result.kind === 'address'">
+            <StIcon name="globe" :size="12" />
+            <span class="result-copy">
+              <span class="result-title" data-open-address>Open {{ result.label }} in Ryte</span>
+            </span>
+          </template>
+          <template v-else>
+            <StIcon :name="resolveFileIconName(result.sourcePath)" :size="12" />
+            <span class="result-copy">
+              <span class="result-title">{{ result.title }}</span>
+              <span class="result-path">{{ result.sourcePath }}</span>
+            </span>
+          </template>
         </li>
       </ul>
     </section>

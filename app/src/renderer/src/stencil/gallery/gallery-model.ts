@@ -25,6 +25,7 @@ export const ICON_GROUPS: Array<{ title: string; names: IconName[] }> = [
       'copy',
       'drop',
       'file',
+      'globe',
       'grid',
       'home',
       'library',

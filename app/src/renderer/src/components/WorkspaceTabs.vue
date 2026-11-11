@@ -20,6 +20,7 @@ import {
 } from '../../../shared/workspace'
 import { supportedKindOf } from '../../../shared/supported-types'
 import StIconButton from '../stencil/components/StIconButton.vue'
+import StIcon from '../stencil/icons/StIcon.vue'
 import FileContextMenu from './FileContextMenu.vue'
 import type { FileContextMenuAction } from './file-context-menu-model'
 import InlineFileRename from './InlineFileRename.vue'
@@ -471,6 +472,7 @@ function onGlobalKeydown(event: KeyboardEvent): void {
             @click="focusTab(tab.id)"
             @keydown="onTabKeydown($event, tab.id)"
           >
+            <StIcon v-if="isWorkspaceAddressTab(tab)" class="tab-icon" name="globe" :size="12" />
             <span class="tab-title">{{ tab.title }}</span>
           </button>
           <StIconButton
@@ -650,6 +652,12 @@ function onGlobalKeydown(event: KeyboardEvent): void {
   background: color-mix(in oklab, var(--st-color-surface-base) 35%, transparent);
   transition-duration: 25ms;
   transition-timing-function: ease-in;
+}
+
+.tab-focus :deep(.tab-icon) {
+  flex: 0 0 auto;
+  margin-right: var(--st-space-75);
+  color: var(--st-color-text-muted);
 }
 
 .tab-title {

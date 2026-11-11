@@ -1,4 +1,4 @@
-export type PageProblem = 'missing' | 'blocked' | 'too-large'
+export type PageProblem = 'missing' | 'blocked' | 'too-large' | 'needs-approval'
 
 export function describePageProblem(problem: PageProblem, path: string): string {
   const name = path.slice(path.lastIndexOf('/') + 1)
@@ -9,6 +9,8 @@ export function describePageProblem(problem: PageProblem, path: string): string 
       return `Ryte can't show ${name}.`
     case 'too-large':
       return `${name} is too large to show here.`
+    case 'needs-approval':
+      return `Ryte needs your OK to open ${name}.`
   }
 }
 

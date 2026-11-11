@@ -279,7 +279,7 @@
         },
         {
           "name": "icon",
-          "type": "'align-center' | 'align-left' | 'align-right' | 'anthropic' | 'archive' | 'arrow-down' | 'arrow-left' | 'arrow-right' | 'arrow-up' | 'bold' | 'check' | 'checklist' | 'chevron-down' | 'chevron-left' | 'chevron-right' | 'chevron-up' | 'close' | 'code' | 'code-block' | 'columns' | 'connector' | 'copy' | 'drop' | 'file' | 'grid' | 'heading' | 'heading-1' | 'heading-2' | 'heading-3' | 'home' | 'image' | 'italic' | 'library' | 'link' | 'list-bullet' | 'list-ordered' | 'moon' | 'more-vertical' | 'openai' | 'page' | 'plus' | 'quote' | 'redo' | 'refresh' | 'rule' | 'search' | 'settings' | 'sidebar' | 'sidebar-close' | 'sidebar-open' | 'sliders' | 'strikethrough' | 'sun' | 'table' | 'type' | 'underline' | 'undo' | 'video'",
+          "type": "'align-center' | 'align-left' | 'align-right' | 'anthropic' | 'archive' | 'arrow-down' | 'arrow-left' | 'arrow-right' | 'arrow-up' | 'bold' | 'check' | 'checklist' | 'chevron-down' | 'chevron-left' | 'chevron-right' | 'chevron-up' | 'close' | 'code' | 'code-block' | 'columns' | 'connector' | 'copy' | 'drop' | 'file' | 'globe' | 'grid' | 'heading' | 'heading-1' | 'heading-2' | 'heading-3' | 'home' | 'image' | 'italic' | 'library' | 'link' | 'list-bullet' | 'list-ordered' | 'moon' | 'more-vertical' | 'openai' | 'page' | 'plus' | 'quote' | 'redo' | 'refresh' | 'rule' | 'search' | 'settings' | 'sidebar' | 'sidebar-close' | 'sidebar-open' | 'sliders' | 'strikethrough' | 'sun' | 'table' | 'type' | 'underline' | 'undo' | 'video'",
           "required": true
         },
         {
@@ -818,7 +818,7 @@
       "props": [
         {
           "name": "name",
-          "type": "'align-center' | 'align-left' | 'align-right' | 'anthropic' | 'archive' | 'arrow-down' | 'arrow-left' | 'arrow-right' | 'arrow-up' | 'bold' | 'check' | 'checklist' | 'chevron-down' | 'chevron-left' | 'chevron-right' | 'chevron-up' | 'close' | 'code' | 'code-block' | 'columns' | 'connector' | 'copy' | 'drop' | 'file' | 'grid' | 'heading' | 'heading-1' | 'heading-2' | 'heading-3' | 'home' | 'image' | 'italic' | 'library' | 'link' | 'list-bullet' | 'list-ordered' | 'moon' | 'more-vertical' | 'openai' | 'page' | 'plus' | 'quote' | 'redo' | 'refresh' | 'rule' | 'search' | 'settings' | 'sidebar' | 'sidebar-close' | 'sidebar-open' | 'sliders' | 'strikethrough' | 'sun' | 'table' | 'type' | 'underline' | 'undo' | 'video'",
+          "type": "'align-center' | 'align-left' | 'align-right' | 'anthropic' | 'archive' | 'arrow-down' | 'arrow-left' | 'arrow-right' | 'arrow-up' | 'bold' | 'check' | 'checklist' | 'chevron-down' | 'chevron-left' | 'chevron-right' | 'chevron-up' | 'close' | 'code' | 'code-block' | 'columns' | 'connector' | 'copy' | 'drop' | 'file' | 'globe' | 'grid' | 'heading' | 'heading-1' | 'heading-2' | 'heading-3' | 'home' | 'image' | 'italic' | 'library' | 'link' | 'list-bullet' | 'list-ordered' | 'moon' | 'more-vertical' | 'openai' | 'page' | 'plus' | 'quote' | 'redo' | 'refresh' | 'rule' | 'search' | 'settings' | 'sidebar' | 'sidebar-close' | 'sidebar-open' | 'sliders' | 'strikethrough' | 'sun' | 'table' | 'type' | 'underline' | 'undo' | 'video'",
           "required": true
         },
         {
@@ -941,6 +941,7 @@
     "copy",
     "drop",
     "file",
+    "globe",
     "grid",
     "heading",
     "heading-1",

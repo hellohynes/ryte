@@ -2,6 +2,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 
 import { DEFAULT_FONT_ID } from '../../../shared/fonts'
+import { parseLocalAddress } from '../../../shared/local-address'
 import { applyFont } from '../fonts/load-fonts'
 import { renderMermaidDiagrams } from '../markdown/mermaid'
 import {
@@ -9,6 +10,7 @@ import {
   type MarkdownOutlineItem,
   type RenderedMarkdownDocument
 } from '../markdown/renderer'
+import { useLocalAddressStore } from '../stores/local-address'
 import { useSettingsStore } from '../stores/settings'
 import { useViewerStore } from '../stores/viewer'
 import { useWorkspaceStore } from '../stores/workspace'
@@ -33,6 +35,7 @@ import {
 import { WORKSPACE_TABPANEL_ID, getWorkspaceTabDomId } from './workspace-tab-keyboard'
 
 const viewer = useViewerStore()
+const localAddress = useLocalAddressStore()
 const settings = useSettingsStore()
 const workspace = useWorkspaceStore()
 const renderedHtml = ref<string>('')
@@ -183,8 +186,15 @@ async function togglePreservingScroll(): Promise<void> {
 }
 
 function onToggleSourceMode(): void {
-  // A picture, a video, a page or a code file has no source to switch to.
-  if (viewer.picturePath || viewer.videoPath || viewer.pagePath || viewer.codePath) return
+  // A picture, a video, a page, a local address or a code file has no source to switch to.
+  if (
+    viewer.picturePath ||
+    viewer.videoPath ||
+    viewer.pagePath ||
+    viewer.addressUrl ||
+    viewer.codePath
+  )
+    return
   void togglePreservingScroll()
 }
 
@@ -260,7 +270,17 @@ function onRenderedClick(event: MouseEvent): void {
     void openVideoInDefaultApp(openVideoButton, openVideoButton.dataset.noteVideoOpen)
     return
   }
-  if (target?.closest('a')) return
+  const link = target?.closest('a')
+  if (link) {
+    // A link to a page on this Mac opens in its own tab, after the prompt unless it is always allowed. Only a
+    // click on the app's own rendered note comes here; every other link behaves as before.
+    const href = link.getAttribute('href')
+    if (href && parseLocalAddress(href) && proseEl.value?.contains(link)) {
+      event.preventDefault()
+      void localAddress.ask(href)
+    }
+    return
+  }
 
   const pictureButton = target?.closest<HTMLButtonElement>('.note-picture-button')
   if (pictureButton && proseEl.value?.contains(pictureButton)) {
@@ -423,6 +443,7 @@ onUnmounted(() => {
     <PictureViewer v-if="viewer.picturePath" :key="viewer.picturePath" :path="viewer.picturePath" />
     <VideoViewer v-else-if="viewer.videoPath" :key="viewer.videoPath" :path="viewer.videoPath" />
     <PageViewer v-else-if="viewer.pagePath" :key="viewer.pagePath" :path="viewer.pagePath" />
+    <PageViewer v-else-if="viewer.addressUrl" :key="viewer.addressUrl" :url="viewer.addressUrl" />
     <CodeViewer v-else-if="viewer.codePath" :key="viewer.codePath" :path="viewer.codePath" />
     <div v-else-if="viewer.error" class="error">
       <p>

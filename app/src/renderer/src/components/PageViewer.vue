@@ -1,11 +1,13 @@
 <script setup lang="ts">
 /**
- * The tab for an HTML page. The page itself is drawn by a separate locked view that the main process places over
+ * The tab for an HTML page, or for a local address (`url`). The page itself is drawn by a separate locked view that the main process places over
  * this tab's content area, so this component only reports where that area is. A native view always draws on
  * top, so while an overlay is open the view is hidden and a still picture of the page shows in its place.
  */
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
+import { describeOrigin, parseLocalAddress } from '../../../shared/local-address'
+import { useLocalAddressStore } from '../stores/local-address'
 import { useViewerStore } from '../stores/viewer'
 import StButton from '../stencil/components/StButton.vue'
 import StNotice from '../stencil/components/StNotice.vue'
@@ -24,13 +26,22 @@ import {
 } from './page-tab-model'
 
 const props = defineProps<{
-  /** The page's path relative to the notes folder. */
-  path: string
+  /** The page's path relative to the notes folder. Not set for a local address. */
+  path?: string
+  /** The local address to show instead of a file. */
+  url?: string
 }>()
 
 const viewer = useViewerStore()
+const local = useLocalAddressStore()
 
-const name = computed(() => props.path.slice(props.path.lastIndexOf('/') + 1))
+const name = computed(() =>
+  props.url
+    ? describeOrigin(parseLocalAddress(props.url)?.origin ?? props.url)
+    : (props.path ?? '').slice((props.path ?? '').lastIndexOf('/') + 1)
+)
+// A local address and an HTML file are shown through the same kind of locked view, by different operations.
+const views = computed(() => (props.url ? window.ryte.localhost : window.ryte.page))
 const stage = ref<HTMLElement | null>(null)
 const problem = ref<PageProblem | null>(null)
 const still = ref<string | null>(null)
@@ -48,7 +59,9 @@ const openFailed = ref(false)
 async function openInBrowser(): Promise<void> {
   openFailed.value = false
   try {
-    const { opened } = await window.ryte.page.openInBrowser({ path: props.path })
+    const { opened } = props.url
+      ? await window.ryte.localhost.openInBrowser({ url: props.url })
+      : await window.ryte.page.openInBrowser({ path: props.path ?? '' })
     openFailed.value = !opened
   } catch {
     openFailed.value = true
@@ -77,7 +90,9 @@ function currentBounds(): ReturnType<typeof pageBoundsOf> | null {
 async function showPage(): Promise<void> {
   const bounds = currentBounds()
   if (!bounds || !alive) return
-  const { status } = await window.ryte.page.show({ path: props.path, bounds })
+  const { status } = props.url
+    ? await window.ryte.localhost.show({ url: props.url, bounds })
+    : await window.ryte.page.show({ path: props.path ?? '', bounds })
   if (!alive) return
   if (status === 'shown') {
     problem.value = null
@@ -91,7 +106,7 @@ async function showPage(): Promise<void> {
 
 function reload(): void {
   enqueue(async () => {
-    await window.ryte.page.close()
+    await views.value.close()
     opened = false
     if (!covered) await showPage()
   })
@@ -100,7 +115,7 @@ function reload(): void {
 function syncBounds(): void {
   if (!opened || covered) return
   const bounds = currentBounds()
-  if (bounds) void window.ryte.page.setBounds({ bounds }).catch(() => undefined)
+  if (bounds) void views.value.setBounds({ bounds }).catch(() => undefined)
 }
 
 function syncOverlay(): void {
@@ -111,7 +126,7 @@ function syncOverlay(): void {
     if (!alive) return
     if (covered) {
       if (!opened) return
-      const result = await window.ryte.page.hide()
+      const result = await views.value.hide()
       if (covered) still.value = result.still
     } else {
       // Also after a reload that was skipped while covered: nothing is open, so show the page again.
@@ -160,10 +175,17 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', syncBounds)
   document.removeEventListener('toggle', scheduleOverlaySync, true)
   if (frame !== null) window.cancelAnimationFrame(frame)
-  void window.ryte.page.close().catch(() => undefined)
+  void views.value.close().catch(() => undefined)
 })
 
 watch(() => viewer.pageVersion, reload)
+// An address that needed approval shows its page once the person allows it.
+watch(
+  () => local.openedVersion,
+  () => {
+    if (props.url && problem.value === 'needs-approval') reload()
+  }
+)
 </script>
 
 <template>
@@ -199,7 +221,18 @@ watch(() => viewer.pageVersion, reload)
     <ul v-if="bannerView && showAddresses" class="page-banner-list" data-page-banner-list>
       <li v-for="(address, index) in bannerView.addresses" :key="index">{{ address }}</li>
     </ul>
-    <p v-if="problem" class="page-problem">{{ describePageProblem(problem, path) }}</p>
+    <p v-if="problem" class="page-problem">
+      {{ describePageProblem(problem, path ?? name) }}
+      <StButton
+        v-if="url && problem === 'needs-approval'"
+        variant="secondary"
+        size="sm"
+        data-local-allow
+        @click="local.ask(url)"
+      >
+        Allow…
+      </StButton>
+    </p>
     <div v-show="!problem" ref="stage" class="page-stage" data-page-stage>
       <img v-if="still" class="page-still" :src="still" alt="" />
     </div>

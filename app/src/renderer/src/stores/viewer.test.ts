@@ -277,6 +277,45 @@ describe('useViewerStore', () => {
     expect(watchWorkspaceTab).not.toHaveBeenCalled()
   })
 
+  it('shows a local address tab without reading it as a note or watching it', async () => {
+    const readWorkspaceTab = vi.fn().mockResolvedValue('not a note')
+    const watchWorkspaceTab = vi.fn().mockResolvedValue(undefined)
+
+    installRyteApi({
+      files: {
+        listTree: vi.fn().mockResolvedValue({ notesRoot: '/notes', paths: [] }),
+        readWorkspaceTab,
+        watchWorkspaceTab
+      },
+      workspace: {
+        getState: vi.fn().mockResolvedValue(
+          workspaceState({
+            tabs: [
+              {
+                id: 'tab-local',
+                url: 'http://localhost:5173/',
+                title: 'localhost:5173',
+                viewMode: 'preview'
+              }
+            ],
+            activeTabId: 'tab-local'
+          })
+        )
+      }
+    })
+
+    const workspace = useWorkspaceStore()
+    await workspace.hydrate()
+    const viewer = useViewerStore()
+    await viewer.hydrate()
+
+    expect(viewer.addressUrl).toBe('http://localhost:5173/')
+    expect(viewer.pagePath).toBeNull()
+    expect(viewer.loading).toBe(false)
+    expect(readWorkspaceTab).not.toHaveBeenCalled()
+    expect(watchWorkspaceTab).not.toHaveBeenCalled()
+  })
+
   it('shows a code tab through code:read, without reading it as a note or watching it', async () => {
     const active = tab({ id: 'tab-code', sourcePath: 'src/Build.TS', title: 'Build.TS' })
     const readWorkspaceTab = vi.fn().mockResolvedValue('not a note')
