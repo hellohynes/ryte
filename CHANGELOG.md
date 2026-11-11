@@ -4,6 +4,17 @@ All notable Ryte changes should be recorded here before a tagged release.
 
 Ryte follows [Semantic Versioning](https://semver.org). The app version in `app/package.json` is the source of truth for packaged builds, Git tags, and DMG filenames. See the [Versioning Policy](#versioning-policy).
 
+## Unreleased
+
+### Highlights
+
+- Pictures in a note open larger in a lightbox when you click them.
+- Pictures show in the file tree and quick open, and open as their own tab.
+- Code and JSON files open in a read-only code view.
+- Videos play in their own tab and inside notes, with the standard controls and seeking.
+- HTML pages open in a locked box that blocks the network, other files and new windows, tells you what it blocked, and has an "Open in browser (not locked)" button. Links open only on a real click.
+- A link to a local address, such as a dev server, opens in a locked tab after you approve that address once or always. Allowed addresses are listed in Preferences, where you can remove them.
+
 ## 0.2.0
 
 ### Highlights

@@ -9,6 +9,7 @@ Local macOS app for searching and browsing a user-selected markdown folder — a
 - **Optionally adds semantic search** using OpenAI embeddings when explicitly enabled in Preferences (AI Tools); it needs your saved agreement to send notes to OpenAI, and turning it on adds embeddings in the background after the keyword index is ready, so search works at once and a note whose embedding failed is retried automatically
 - **Optionally generates answers** using a configured OpenAI or Anthropic model. An answer is a short TL;DR followed by collapsible sections, one per area the notes cover, and newer notes carry more weight than older ones. When the question asks about a plan, timeline, progress or next steps, a Done / In Progress / Backlog timeline comes between the TL;DR and the sections, with consecutive Backlog steps listed under one node. Tickets and pull requests a note gives as a full web address (a GitHub pull request or issue, or an Atlassian Cloud ticket) are copied into the timeline as written and open in your browser; a bare key or number such as `PR #123` shows as plain text.
 - **Browses** your notes in a file tree sidebar with clean markdown rendering and syntax-highlighted code blocks
+- **Opens** more than notes: pictures, videos, code and JSON files (read-only), HTML pages in a locked box, and local addresses you approve one by one
 - **Manages files** from sidebar and tab context menus with copy, inline rename, Finder, path, close, and confirmed Trash actions
 - **Adapts** to light or dark mode (System, Light or Dark) and a font for your notes, summaries and code (the rest of the interface stays in Geist), both set in Preferences > Appearance. Geist is the default; every font ships inside the app, so nothing loads over the network, and their licences are in `app/resources/font-licenses.txt`
 - **Watches** for file changes and updates the file tree, viewer, and local index incrementally
@@ -85,7 +86,7 @@ pnpm test:stencil  # run the keyboard contracts in real Chromium (builds the gal
 
 On macOS, `pnpm dev` and `pnpm launch` run a copy of the Electron bundle with the Ryte name and icon (bundle id `com.joshuahynes.ryte.dev`), so notifications and the Dock look like an installed build. The copy lives in `app/.dev-electron/`, is rebuilt when Electron or `build/icon.icns` changes, and the first notification asks for permission under that id.
 
-Branch and PR expectations are documented in [docs/branch-workflow.md](docs/branch-workflow.md). Phase 0 manual app smoke is tracked in [docs/phase-0-manual-smoke.md](docs/phase-0-manual-smoke.md).
+Branch and PR expectations are documented in [docs/branch-workflow.md](docs/branch-workflow.md). Phase 0 manual app smoke is tracked in [docs/phase-0-manual-smoke.md](docs/phase-0-manual-smoke.md); the manual checks for the other file types are in [docs/manual-smoke-file-types.md](docs/manual-smoke-file-types.md).
 
 ### Website
 
