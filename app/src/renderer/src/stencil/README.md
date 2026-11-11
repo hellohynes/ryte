@@ -11,6 +11,7 @@ gallery/       the page `pnpm stencil` serves: every token, icon, component, and
 manifest.json  each component's props, emits, slots, and keyboard contracts (generated)
 ```
 
+- **Figma:** `docs/stencil-figma.md` explains the Figma library and how it is synced.
 - **Use it:** follow the `stencil-usage` skill (`.agents/skills/stencil-usage/`). Read `manifest.json` for a component's API, or run `pnpm stencil` to see it.
 - **Overlays** use the browser's top layer: `StDialog` on `<dialog>`, `StPopover`, `StMenu`, and `StTooltip` on the Popover API. A shared layer stack makes Escape and outside presses close only the top layer, and focus returns to the opener. The app imports components, not `behaviors/` (an ESLint rule enforces it).
 - **Generated files** (`tokens.css`, `colors.css`, `layout.css`, `text.css`, `button.css`, `input.css`, `notice.css`, `icons.generated.ts`, `manifest.json`) are rewritten by `pnpm stencil:tokens`, `pnpm stencil:icons`, and `pnpm stencil:manifest`; `--check` fails when they are stale. Do not edit them by hand.
