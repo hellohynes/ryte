@@ -37,6 +37,7 @@ describe('real input in a window', () => {
     }
     for (const event of [
       { type: 'keyDown', key: 'Enter' },
+      { type: 'rawKeyDown', key: 'Enter' },
       { type: 'keyUp', key: ' ' }
     ]) {
       input('input-event', event)

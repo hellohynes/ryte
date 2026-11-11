@@ -19,7 +19,7 @@ export function watchRealInput(contents: WebContents): void {
     } else if (!('isAutoRepeat' in input && input.isAutoRepeat) && 'key' in input) {
       const activates = input.key === 'Enter' || input.key === ' '
       if (
-        (input.type === 'keyDown' && activates) ||
+        ((input.type === 'keyDown' || input.type === 'rawKeyDown') && activates) ||
         (input.type === 'keyUp' && input.key === ' ')
       ) {
         gate.note()
