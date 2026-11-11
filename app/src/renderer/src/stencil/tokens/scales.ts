@@ -253,6 +253,13 @@ function buildTokens(): StencilToken[] {
     { name: '--st-radius-pill', css: '999px', px: null, group: 'radius' },
     { name: '--st-radius-circle', css: '50%', px: null, group: 'radius' }
   )
+  // Blur softens what scrolls behind a floating bar. A stop is a multiple of the 8px base, like space.
+  out.push({
+    name: '--st-blur-200',
+    css: 'calc(var(--st-space-base) * 2)',
+    px: 2 * BASE_PX,
+    group: 'blur'
+  })
 
   return out
 }
