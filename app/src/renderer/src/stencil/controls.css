@@ -137,8 +137,8 @@ select.st-input {
   border-radius: 0;
   background: var(--st-color-surface-sunken);
   color: var(--st-color-text-tertiary);
-  font: var(--st-font-weight-normal) var(--st-font-size-75) / var(--st-line-height-400)
-    var(--st-font-ui);
+  font: var(--st-type-caption-md);
+  line-height: var(--st-line-height-400);
   letter-spacing: 0.02em;
 }
 
