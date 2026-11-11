@@ -28,6 +28,7 @@ const EXPECTED = [
   'connector',
   'copy',
   'drop',
+  'eye',
   'file',
   'globe',
   'grid',
