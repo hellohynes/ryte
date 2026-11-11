@@ -1,3 +1,5 @@
+import type { WebContents } from 'electron'
+
 import type { Contract } from '../../contract'
 import { parseLocalAddress } from '../../shared/local-address'
 import type { WorkspaceState } from '../../shared/workspace'
@@ -12,18 +14,21 @@ export interface LocalhostHandlerDependencies {
   openAddressTab: (url: string) => WorkspaceState
   /** Opens an address in the default browser. Resolves to whether it opened. */
   openInBrowser: (url: string) => boolean
+  /** Whether the asking window just had a real click, Enter or Space; using it spends it. */
+  hadRealInput: (sender: WebContents) => boolean
 }
 
 /**
  * Approvals and the locked view for a local address. Main decides every time: an address is checked as local on
- * each call, and an origin may be shown only while it is in the saved list or was allowed once and its tab is still
+ * each call, an answer counts only right after a real click or key in the window, and an origin may be shown only while it is in the saved list or was allowed once and its tab is still
  * open. The view belongs to the window that asked; the box keeps one local page per window.
  */
 export function createLocalhostHandlers({
   approvals,
   box,
   openAddressTab,
-  openInBrowser
+  openInBrowser,
+  hadRealInput
 }: LocalhostHandlerDependencies): Handlers<Contract>['localhost'] {
   const allowedOnce = new Set<string>()
   return {
@@ -35,9 +40,10 @@ export function createLocalhostHandlers({
       box.closeOrigin(origin)
       return approvals.list()
     },
-    open: ({ url, choice }) => {
+    open: ({ url, choice }, { sender }) => {
       const address = parseLocalAddress(url)
-      if (!address) return { status: 'refused' }
+      // The prompt is the person's answer. A call with no real click or key just before it is not one.
+      if (!address || !hadRealInput(sender)) return { status: 'refused' }
       if (choice === 'always') approvals.add(address.origin)
       else allowedOnce.add(address.origin)
       return { status: 'ok', workspace: openAddressTab(address.url) }

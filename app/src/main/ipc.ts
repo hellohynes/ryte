@@ -39,6 +39,7 @@ import { createPageBox } from './page/page-box'
 import { OPENABLE_PROTOCOLS } from './page/page-links'
 import { createPageFolders } from './page/page-scheme'
 import { fileRefForPickedMarkdownFile, resolveExternalMarkdownFile } from './picked-file'
+import { recentRealInput } from './real-input'
 import { SearchService } from './search/search-service'
 import { settingsStore } from './settings/settings-store'
 import { listAuthorizedOpenAIModels, validateProviderKey } from './settings/key-validation'
@@ -167,7 +168,8 @@ export function registerIpc(): void {
       approvals,
       openAddressTab: (url) => workspaceStore.openAddress(url),
       box: createLocalBox({ emitTo: emit.to, openExternal: openPageLink }),
-      openInBrowser: (url) => openExternalIfSafe(url, OPENABLE_PROTOCOLS)
+      openInBrowser: (url) => openExternalIfSafe(url, OPENABLE_PROTOCOLS),
+      hadRealInput: recentRealInput
     }),
     page: createPageHandlers({
       box: createPageBox({

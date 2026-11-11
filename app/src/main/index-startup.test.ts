@@ -91,6 +91,7 @@ vi.mock('./navigation', () => ({
   installNavigationGuards: vi.fn(),
   originForUrl: vi.fn(() => null)
 }))
+vi.mock('./real-input', () => ({ watchRealInput: vi.fn() }))
 vi.mock('./settings/settings-store', () => ({
   settingsStore: { load: vi.fn(() => ({ notesRoot: '/notes', colorMode: 'dark' })) }
 }))

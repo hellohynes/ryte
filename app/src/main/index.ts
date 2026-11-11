@@ -13,6 +13,7 @@ import { registerIpc } from './ipc'
 import { createMenuCommandSender } from './menu-command'
 import { installNavigationGuards, originForUrl } from './navigation'
 import { settingsStore } from './settings/settings-store'
+import { watchRealInput } from './real-input'
 import { workspaceStore } from './workspace/workspace-store'
 import { createNoteFileHandler } from './viewer/note-files'
 import { safeWindowBounds, workAreasFromDisplays } from './window-state'
@@ -80,6 +81,7 @@ function createWindow(): BrowserWindow {
   })
 
   installWindowStatePersistence(mainWindow)
+  watchRealInput(mainWindow.webContents)
 
   mainWindow.on('ready-to-show', () => {
     if (process.platform === 'darwin') {
