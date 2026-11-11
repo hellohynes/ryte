@@ -584,7 +584,7 @@ onUnmounted(() => {
 .note-bar-glass {
   position: absolute;
   inset: 0;
-  background: color-mix(in srgb, var(--st-color-surface-base) 72%, transparent);
+  background: color-mix(in oklab, var(--st-color-shell-tint) 80%, transparent);
   backdrop-filter: blur(var(--st-blur-200));
   mask-image: linear-gradient(
     to bottom,
