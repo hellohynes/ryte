@@ -4,6 +4,7 @@ import { dirname } from 'node:path'
 import { parseLocalAddress } from '../../shared/local-address'
 
 const MAX_APPROVALS = 200
+const FILE_VERSION = 1
 
 export interface Approvals {
   list(): string[]
@@ -15,9 +16,11 @@ export interface Approvals {
 function readOrigins(path: string): string[] {
   try {
     const parsed: unknown = JSON.parse(readFileSync(path, 'utf-8'))
-    if (!Array.isArray(parsed)) return []
+    // The file is `{ version, origins }`. A bare array is the first layout, written before there was a version.
+    const list = Array.isArray(parsed) ? parsed : (parsed as { origins?: unknown } | null)?.origins
+    if (!Array.isArray(list)) return []
     const origins: string[] = []
-    for (const entry of parsed) {
+    for (const entry of list) {
       // Only a real local origin, in the spelling the store writes, is trusted from disk.
       const address = typeof entry === 'string' ? parseLocalAddress(entry) : null
       if (address && address.origin === entry && !origins.includes(entry)) origins.push(entry)
@@ -39,7 +42,7 @@ export function createApprovals(getFilePath: () => string): Approvals {
     const filePath = getFilePath()
     mkdirSync(dirname(filePath), { recursive: true })
     const temp = `${filePath}.tmp`
-    writeFileSync(temp, JSON.stringify(next, null, 2), 'utf-8')
+    writeFileSync(temp, JSON.stringify({ version: FILE_VERSION, origins: next }, null, 2), 'utf-8')
     renameSync(temp, filePath)
     origins = next
   }
