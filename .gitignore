@@ -4,6 +4,7 @@ app/node_modules/
 app/out/
 app/dist/
 app/.eslintcache
+app/*.tsbuildinfo
 
 # Built site (landing page plus the Stencil gallery)
 site-dist/

@@ -1,19 +1,24 @@
 name: CI
 
-# One run per pull request. A push trigger as well gave every commit two macOS jobs that competed for runners: one waited and passed,
-# the other was never assigned a runner and was cancelled after 15 minutes, showing as a failed check. A branch without a pull request
-# is validated locally (`pnpm validate`) or by running this workflow by hand.
+# A pull request runs once, and so does a merge to main. A push trigger on every branch as well gave each pull
+# request commit two macOS jobs that competed for runners: one waited and passed, the other was never assigned a
+# runner and was cancelled after 15 minutes, showing as a failed check. So only main is a push trigger. A branch
+# without a pull request is validated locally (`pnpm validate`) or by running this workflow by hand.
 on:
   pull_request:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# A newer push to the same pull request replaces the run still going for the older commit.
+# A newer push to the same pull request replaces the run still going for the older commit. A run on main is not
+# cancelled once it starts, but GitHub keeps only one pending run per group, so when several merges land while one
+# run is going, the ones in between can be skipped.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
   app:

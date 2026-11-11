@@ -36,7 +36,7 @@ export const removeApproval = defineOperation({
 export const open = defineOperation({
   channel: 'localhost:open',
   description:
-    'Approve opening a local address after the person answered the prompt, and open it in a tab (focusing the tab that has it). `always` remembers the origin and keeps the tab across restarts; `once` allows it until the tab closes. Refuses anything that is not `http` or `https` on `localhost`, `127.0.0.1` or `[::1]`. Returns the new workspace, or `refused`.',
+    'Approve opening a local address after the person answered the prompt, and open it in a tab (focusing the tab that has it). Refused unless the window just had a real click, Enter or Space, each used once, so a script cannot answer the prompt for the person. `always` remembers the origin and keeps the tab across restarts; `once` allows it until the tab closes. Refuses anything that is not `http` or `https` on `localhost`, `127.0.0.1` or `[::1]`. Returns the new workspace, or `refused`.',
   input: z.strictObject({ url: address, choice: z.enum(['once', 'always']) }),
   output: z.discriminatedUnion('status', [
     z.object({ status: z.literal('ok'), workspace: workspaceState }),

@@ -27,7 +27,8 @@ describe('localhost handlers', () => {
       approvals,
       box,
       openAddressTab,
-      openInBrowser: () => true
+      openInBrowser: () => true,
+      hadRealInput: () => true
     })
     for (const url of ['http://example.com', 'http://0.0.0.0:5173', 'file:///etc/hosts']) {
       expect(await handlers.open({ url, choice: 'always' }, ctx)).toEqual({ status: 'refused' })
@@ -41,7 +42,8 @@ describe('localhost handlers', () => {
       approvals,
       box,
       openAddressTab,
-      openInBrowser: () => true
+      openInBrowser: () => true,
+      hadRealInput: () => true
     })
     await handlers.open({ url: 'http://localhost:3000', choice: 'once' }, ctx)
     expect(approvals.saved).toEqual([])
@@ -58,7 +60,8 @@ describe('localhost handlers', () => {
       approvals,
       box: { show, closeOrigin } as unknown as LocalBox,
       openAddressTab,
-      openInBrowser: () => true
+      openInBrowser: () => true,
+      hadRealInput: () => true
     })
     const bounds = { x: 0, y: 0, width: 100, height: 100 }
     const showUrl = async (url: string): Promise<unknown> => handlers.show({ url, bounds }, ctx)
@@ -72,5 +75,25 @@ describe('localhost handlers', () => {
     expect(await showUrl('http://localhost:3000/')).toEqual({ status: 'shown' })
     await handlers.release({ url: 'http://localhost:3000/' }, ctx)
     expect(await showUrl('http://localhost:3000/')).toEqual({ status: 'needs-approval' })
+  })
+
+  it('refuses an answer with no real click or key behind it, and counts one input once', async () => {
+    const approvals = fakeApprovals()
+    let inputs = 0
+    const handlers = createLocalhostHandlers({
+      approvals,
+      box,
+      openAddressTab,
+      openInBrowser: () => true,
+      hadRealInput: () => inputs-- > 0
+    })
+    const call = (): Promise<unknown> =>
+      Promise.resolve(handlers.open({ url: 'http://localhost:5173', choice: 'always' }, ctx))
+    expect(await call()).toEqual({ status: 'refused' })
+    expect(approvals.saved).toEqual([])
+    inputs = 1
+    expect(await call()).toMatchObject({ status: 'ok' })
+    expect(await call()).toEqual({ status: 'refused' })
+    expect(approvals.saved).toEqual(['http://localhost:5173'])
   })
 })

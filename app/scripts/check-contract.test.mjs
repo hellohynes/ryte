@@ -486,3 +486,34 @@ test('every script block of a .vue file is scanned, not only the first', () => {
     /renderer must not value-import/
   )
 })
+
+test('a custom scheme is registered or handled only in the app entry and the page box', () => {
+  for (const code of [
+    `import { protocol } from 'electron'\nprotocol.handle('ryte-x', () => new Response())\n`,
+    `export const f = (ses: any): void => { ses.protocol.handle('ryte-x', () => new Response()) }\n`,
+    `export const f = (ses: any): void => { ses.protocol.unhandle('ryte-x') }\n`,
+    `export const f = (ses: any): void => { ses.protocol.interceptHttpProtocol('http', () => 1) }\n`,
+    `import { protocol } from 'electron'\nprotocol.registerSchemesAsPrivileged([])\n`
+  ]) {
+    expectViolation({ 'src/main/new-scheme.ts': code }, 'schemes', /custom scheme outside/)
+  }
+  for (const file of ['src/main/index.ts', 'src/main/page/page-box.ts']) {
+    assert.deepEqual(
+      run({
+        [file]: `import { protocol } from 'electron'\nprotocol.registerSchemesAsPrivileged([])\nprotocol.handle('ryte-x', () => new Response())\n`
+      }),
+      [],
+      file
+    )
+  }
+})
+
+test('a URL protocol and ipcMain.handle are not custom schemes', () => {
+  assert.deepEqual(
+    run({
+      'src/main/url.ts': `export const secure = (u: string): boolean => new URL(u).protocol === 'https:'\n`,
+      'src/main/ipc.ts': `import { ipcMain } from 'electron'\nipcMain.handle(name, () => 1)\n`
+    }),
+    []
+  )
+})
