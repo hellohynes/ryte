@@ -36,6 +36,7 @@
     "stencil:tokens": "node --import tsx scripts/generate-stencil-tokens.ts",
     "stencil:icons": "node --import tsx scripts/generate-stencil-icons.ts",
     "stencil:manifest": "node --import tsx scripts/generate-stencil-manifest.ts",
+    "stencil:figma-export": "node --import tsx scripts/generate-stencil-figma-export.ts",
     "qa:local": "pnpm validate && pnpm smoke:indexer && pnpm launch",
     "launch": "node scripts/dev-electron.mjs node scripts/start-preview.mjs",
     "start": "pnpm build && pnpm launch",

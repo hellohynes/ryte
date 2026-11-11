@@ -22,3 +22,7 @@ spikes/
 # Secrets
 .env
 .env.*
+
+# Stencil Figma export (generated, local)
+app/.stencil-figma/
+app/figma.local.json
