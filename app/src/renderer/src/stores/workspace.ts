@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 
 import type { FileRenameInput } from '../../../shared/files'
+import { parseLocalAddress } from '../../../shared/local-address'
 import {
   SIDEBAR_DEFAULT_WIDTH,
   SIDEBAR_MIN_WIDTH,
@@ -10,6 +11,7 @@ import {
   DOCUMENT_OUTLINE_DEFAULT_WIDTH,
   clampDocumentOutlineWidth,
   clampSidebarWidth,
+  isWorkspaceAddressTab,
   isWorkspaceSourceFileRef,
   shouldAutoCollapseSidebar,
   workspaceFileKey,
@@ -259,7 +261,10 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
   async function openOrFocusFile(input: WorkspaceOpenFileInput): Promise<void> {
     const existingTab = tabs.value.findLast(
-      (tab) => isWorkspaceSourceFileRef(tab) && tab.sourcePath === input.sourcePath
+      (tab) =>
+        !isWorkspaceAddressTab(tab) &&
+        isWorkspaceSourceFileRef(tab) &&
+        tab.sourcePath === input.sourcePath
     )
     if (existingTab) {
       await focusTab({ tabId: existingTab.id })
@@ -270,7 +275,10 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
   async function openExplicitFile(input: WorkspaceOpenFileInput): Promise<void> {
     const existingTab = tabs.value.findLast(
-      (tab) => isWorkspaceSourceFileRef(tab) && tab.sourcePath === input.sourcePath
+      (tab) =>
+        !isWorkspaceAddressTab(tab) &&
+        isWorkspaceSourceFileRef(tab) &&
+        tab.sourcePath === input.sourcePath
     )
     if (existingTab) {
       await focusTab({ tabId: existingTab.id })
@@ -279,6 +287,20 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     }
 
     await openFile(input)
+  }
+
+  /** Opens a local address in a tab after the person answered the prompt. Returns false when it was refused. */
+  async function openLocalAddress(url: string, choice: 'once' | 'always'): Promise<boolean> {
+    error.value = null
+    try {
+      const result = await window.ryte.localhost.open({ url, choice })
+      if (result.status !== 'ok') return false
+      state.value = result.workspace
+      return true
+    } catch (e) {
+      error.value = messageFromError(e)
+      throw e
+    }
   }
 
   async function openNativeFile(): Promise<void> {
@@ -322,6 +344,20 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   }
 
   async function closeTab(input: WorkspaceCloseTabInput): Promise<void> {
+    const closing = tabs.value.find((tab) => tab.id === input.tabId)
+    // A page opened with "Open once" is allowed only while a tab on its origin is open.
+    if (closing && isWorkspaceAddressTab(closing)) {
+      const origin = parseLocalAddress(closing.url)?.origin
+      const sharedByAnotherTab = tabs.value.some(
+        (tab) =>
+          tab.id !== closing.id &&
+          isWorkspaceAddressTab(tab) &&
+          parseLocalAddress(tab.url)?.origin === origin
+      )
+      if (!sharedByAnotherTab) {
+        void window.ryte.localhost.release({ url: closing.url }).catch(() => undefined)
+      }
+    }
     await runOptimisticWorkspaceOperation(
       (base) => closeTabInState(base, input.tabId),
       () => window.ryte.workspace.closeTab(input)
@@ -330,7 +366,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
 
   async function closeTabToRecent(input: WorkspaceCloseTabInput): Promise<void> {
     const closingTab = tabs.value.find((tab) => tab.id === input.tabId)
-    if (closingTab && isWorkspaceSourceFileRef(closingTab)) {
+    if (closingTab && !isWorkspaceAddressTab(closingTab) && isWorkspaceSourceFileRef(closingTab)) {
       try {
         await recordRecent({ sourcePath: closingTab.sourcePath })
       } catch {
@@ -473,6 +509,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     openOrFocusFile,
     openExplicitFile,
     openNativeFile,
+    openLocalAddress,
     openRecentFile,
     updateTabViewMode,
     recordRecent,

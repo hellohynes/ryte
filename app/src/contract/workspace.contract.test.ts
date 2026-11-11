@@ -220,7 +220,7 @@ describe('workspace output', () => {
   })
 
   const state = {
-    schemaVersion: 6,
+    schemaVersion: 7,
     shell: { sidebarCollapsed: true, sidebarWidth: 164, activeSidebar: 'files' },
     library: {
       expandedFolders: ['docs', 'docs/plans'],
@@ -234,7 +234,8 @@ describe('workspace output', () => {
     },
     tabs: [
       { id: 'a', sourcePath: 'docs/a.md', title: 'a.md', viewMode: 'source' },
-      { id: 'b', externalPath: '/tmp/outside.md', title: 'outside.md', viewMode: 'preview' }
+      { id: 'b', externalPath: '/tmp/outside.md', title: 'outside.md', viewMode: 'preview' },
+      { id: 'c', url: 'http://localhost:5173/', title: 'localhost:5173', viewMode: 'preview' }
     ],
     activeTabId: 'b',
     recents: [

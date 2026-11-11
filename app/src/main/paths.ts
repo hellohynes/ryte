@@ -16,3 +16,7 @@ export function workspaceFilePath(): string {
 export function defaultNotesRoot(): string {
   return join(app.getPath('documents'), 'Ryte')
 }
+
+export function localhostApprovalsFilePath(): string {
+  return join(userDataDir(), 'localhost-approvals.json')
+}

@@ -4,7 +4,9 @@ import { computed, ref, watch } from 'vue'
 import { supportedKindOf } from '../../../shared/supported-types'
 import type { CodeReadResult } from '../components/code-view-model'
 import {
+  isWorkspaceAddressTab,
   isWorkspaceSourceFileRef,
+  type WorkspaceTab,
   workspaceFileDisplayPath,
   workspaceFileKey,
   type WorkspaceViewMode
@@ -98,6 +100,11 @@ function taskToggleFailureMessage(reason: string): string {
   }
 }
 
+/** What makes one tab the same as another across a load: its file, or its address. */
+function tabKey(tab: WorkspaceTab): string {
+  return isWorkspaceAddressTab(tab) ? `address:${tab.url}` : workspaceFileKey(tab)
+}
+
 export const useViewerStore = defineStore('viewer', () => {
   const workspace = useWorkspaceStore()
   const tree = ref<string[]>([])
@@ -109,7 +116,15 @@ export const useViewerStore = defineStore('viewer', () => {
   const activeTab = computed(() => workspace.activeTab)
   const activeTabId = computed(() => activeTab.value?.id ?? null)
   const sourcePath = computed(() =>
-    activeTab.value && isWorkspaceSourceFileRef(activeTab.value) ? activeTab.value.sourcePath : null
+    activeTab.value &&
+    !isWorkspaceAddressTab(activeTab.value) &&
+    isWorkspaceSourceFileRef(activeTab.value)
+      ? activeTab.value.sourcePath
+      : null
+  )
+  // A local address tab shows the page in a locked view over the tab; it is never read as a file or watched.
+  const addressUrl = computed(() =>
+    activeTab.value && isWorkspaceAddressTab(activeTab.value) ? activeTab.value.url : null
   )
   // A picture tab shows the picture itself; it is never read as text or watched.
   const picturePath = computed(() =>
@@ -139,7 +154,11 @@ export const useViewerStore = defineStore('viewer', () => {
   const pageVersion = ref(0)
   const codeFile = ref<CodeReadResult | null>(null)
   const displayPath = computed(() =>
-    activeTab.value ? workspaceFileDisplayPath(activeTab.value) : null
+    !activeTab.value
+      ? null
+      : isWorkspaceAddressTab(activeTab.value)
+        ? activeTab.value.url
+        : workspaceFileDisplayPath(activeTab.value)
   )
   const viewMode = computed<WorkspaceViewMode>(() => activeTab.value?.viewMode ?? 'preview')
   const sourceMode = computed(() => viewMode.value === 'source')
@@ -154,7 +173,7 @@ export const useViewerStore = defineStore('viewer', () => {
 
   function sourcePathExists(paths: string[]): boolean {
     const tab = activeTab.value
-    if (!tab || !isWorkspaceSourceFileRef(tab)) return true
+    if (!tab || isWorkspaceAddressTab(tab) || !isWorkspaceSourceFileRef(tab)) return true
     return paths.includes(tab.sourcePath)
   }
 
@@ -164,7 +183,7 @@ export const useViewerStore = defineStore('viewer', () => {
 
   function isCurrentActiveTab(tabId: string, requestedFileKey: string): boolean {
     const tab = activeTab.value
-    return tab?.id === tabId && workspaceFileKey(tab) === requestedFileKey
+    return tab?.id === tabId && tabKey(tab) === requestedFileKey
   }
 
   async function refreshTree(): Promise<void> {
@@ -201,7 +220,12 @@ export const useViewerStore = defineStore('viewer', () => {
       return
     }
 
-    if (picturePath.value !== null || videoPath.value !== null || pagePath.value !== null) {
+    if (
+      picturePath.value !== null ||
+      videoPath.value !== null ||
+      pagePath.value !== null ||
+      addressUrl.value !== null
+    ) {
       loading.value = false
       content.value = ''
       error.value = null
@@ -227,7 +251,7 @@ export const useViewerStore = defineStore('viewer', () => {
     if (isOptimisticWorkspaceTabId(tab.id)) return
 
     try {
-      const requestedFileKey = workspaceFileKey(tab)
+      const requestedFileKey = tabKey(tab)
       const nextContent = await window.ryte.files.readWorkspaceTab({ tabId: tab.id })
       if (!isCurrentRequest(requestId, tab.id, requestedFileKey)) return
 
@@ -237,7 +261,7 @@ export const useViewerStore = defineStore('viewer', () => {
       content.value = nextContent
       error.value = null
     } catch (e) {
-      if (!isCurrentRequest(requestId, tab.id, workspaceFileKey(tab))) return
+      if (!isCurrentRequest(requestId, tab.id, tabKey(tab))) return
       error.value = e instanceof Error ? e.message : String(e)
       content.value = ''
       try {
@@ -306,12 +330,13 @@ export const useViewerStore = defineStore('viewer', () => {
       picturePath.value !== null ||
       videoPath.value !== null ||
       pagePath.value !== null ||
+      addressUrl.value !== null ||
       codePath.value !== null
     ) {
       return
     }
 
-    const requestedFileKey = workspaceFileKey(tab)
+    const requestedFileKey = tabKey(tab)
     const mutationId = renderedTaskMutationId
 
     try {
@@ -463,6 +488,7 @@ export const useViewerStore = defineStore('viewer', () => {
     picturePath,
     videoPath,
     pagePath,
+    addressUrl,
     pageVersion,
     codePath,
     codeFile,

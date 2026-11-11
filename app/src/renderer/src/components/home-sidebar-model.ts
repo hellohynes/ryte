@@ -2,8 +2,9 @@ import type { FileCatalogEntry } from '../../../shared/files'
 import { supportedKindOf } from '../../../shared/supported-types'
 import type { MarkdownTaskFact } from '../../../shared/tasks'
 import {
+  isWorkspaceAddressTab,
   isWorkspaceSourceFileRef,
-  type WorkspaceFileTab,
+  type WorkspaceTab,
   type WorkspaceRecentFile,
   type WorkspaceSourceFileRef
 } from '../../../shared/workspace'
@@ -42,7 +43,7 @@ export interface HomeSidebarModel {
 interface HomeSidebarModelInput {
   catalogFiles: FileCatalogEntry[]
   recents: WorkspaceRecentFile[]
-  tabs: WorkspaceFileTab[]
+  tabs: WorkspaceTab[]
   activeTabId: string | null
   taskFacts?: MarkdownTaskFact[]
   activeTaskFingerprint?: string | null
@@ -267,7 +268,9 @@ const HOME_SMART_GROUP_DEFINITIONS: HomeSmartGroupDefinition[] = [
 export function buildHomeSidebarModel(input: HomeSidebarModelInput): HomeSidebarModel {
   const activeTab = input.tabs.find((tab) => tab.id === input.activeTabId) ?? null
   const activeSourcePath =
-    activeTab && isWorkspaceSourceFileRef(activeTab) ? activeTab.sourcePath : null
+    activeTab && !isWorkspaceAddressTab(activeTab) && isWorkspaceSourceFileRef(activeTab)
+      ? activeTab.sourcePath
+      : null
   const sourceRecents = input.recents
     .filter(isSourceWorkspaceRecentFile)
     .filter((recent) => supportedKindOf(recent.sourcePath) === 'note')

@@ -15,7 +15,9 @@ import {
 import { randomUUID } from 'node:crypto'
 
 import type { FileRenameInput, FileRenameResult } from '../../shared/files'
+import { describeOrigin, parseLocalAddress } from '../../shared/local-address'
 import { walkLibrary } from '../indexing/walker'
+import { approvals } from '../localhost/approvals-store'
 import { workspaceFilePath } from '../paths'
 import { settingsStore } from '../settings/settings-store'
 import { renameWorkspaceFile, resolveWorkspaceFilePath } from './workspace-file-actions'
@@ -26,6 +28,7 @@ import {
   WORKSPACE_SCHEMA_VERSION,
   DOCUMENT_OUTLINE_DEFAULT_WIDTH,
   clampDocumentOutlineWidth,
+  isWorkspaceAddressTab,
   isWorkspaceExternalFileRef,
   isWorkspaceSourceFileRef,
   workspaceFileKey,
@@ -43,6 +46,7 @@ import {
   type WorkspaceRecentFile,
   type WorkspaceRecordRecentInput,
   type WorkspaceSidebarMode,
+  type WorkspaceTab,
   type WorkspaceSetOutlineCollapsedInput,
   type WorkspaceSetOutlineWidthInput,
   type WorkspaceShellState,
@@ -251,16 +255,41 @@ function isWorkspaceSidebarMode(value: unknown): value is WorkspaceSidebarMode {
   return value === 'files'
 }
 
-function normalizeTabs(value: unknown): WorkspaceFileTab[] {
+/** A saved address tab comes back only when it is still a local address and its origin is always allowed. */
+function normalizeAddressTab(
+  item: Record<string, unknown>,
+  id: string,
+  isApproved: (origin: string) => boolean
+): WorkspaceTab | null {
+  if (typeof item.url !== 'string') return null
+  const address = parseLocalAddress(item.url)
+  if (!address || !isApproved(address.origin)) return null
+  return {
+    id,
+    title: describeOrigin(address.origin),
+    viewMode: 'preview',
+    url: address.url
+  }
+}
+
+function normalizeTabs(value: unknown, isApproved: (origin: string) => boolean): WorkspaceTab[] {
   if (!Array.isArray(value)) return []
-  const tabs: WorkspaceFileTab[] = []
+  const tabs: WorkspaceTab[] = []
   const seenIds = new Set<string>()
 
   for (const item of value) {
     if (!isObject(item)) continue
     const id = normalizeTabId(item.id)
+    if (!id || !isWorkspaceViewMode(item.viewMode) || seenIds.has(id)) continue
     const fileRef = normalizeFileRef(item)
-    if (!id || !fileRef || !isWorkspaceViewMode(item.viewMode) || seenIds.has(id)) continue
+    if (!fileRef) {
+      const addressTab = normalizeAddressTab(item, id, isApproved)
+      if (addressTab) {
+        seenIds.add(id)
+        tabs.push(addressTab)
+      }
+      continue
+    }
     seenIds.add(id)
     tabs.push({
       id,
@@ -354,7 +383,12 @@ function normalizeFolderSortModes(value: unknown): Record<string, WorkspaceFolde
   return modes
 }
 
-function repairActiveTabId(value: unknown, tabs: WorkspaceFileTab[]): string | null {
+/** The tabs that are files; the file actions (rename, trash, outline) never apply to an address tab. */
+function fileTabs(tabs: WorkspaceTab[]): WorkspaceFileTab[] {
+  return tabs.filter((tab): tab is WorkspaceFileTab => !isWorkspaceAddressTab(tab))
+}
+
+function repairActiveTabId(value: unknown, tabs: WorkspaceTab[]): string | null {
   if (typeof value === 'string' && tabs.some((tab) => tab.id === value)) return value
   return tabs[0]?.id ?? null
 }
@@ -374,12 +408,15 @@ function recordRecentInState(
   ].slice(0, WORKSPACE_RECENTS_LIMIT)
 }
 
-function normalizeWorkspace(parsed: LegacyWorkspaceFile): WorkspaceState {
+function normalizeWorkspace(
+  parsed: LegacyWorkspaceFile,
+  isApproved: (origin: string) => boolean
+): WorkspaceState {
   const defaults = defaultWorkspaceState()
   const shell: Partial<WorkspaceShellState> = isObject(parsed.shell) ? parsed.shell : {}
   const library: Partial<WorkspaceLibraryState> = isObject(parsed.library) ? parsed.library : {}
   const window: Partial<WorkspaceWindowState> = isObject(parsed.window) ? parsed.window : {}
-  const tabs = normalizeTabs(parsed.tabs)
+  const tabs = normalizeTabs(parsed.tabs, isApproved)
 
   return {
     ...defaults,
@@ -431,7 +468,9 @@ export class WorkspaceStore {
 
   constructor(
     private readonly path?: string,
-    private readonly notesRootProvider: () => string = () => settingsStore.load().notesRoot
+    private readonly notesRootProvider: () => string = () => settingsStore.load().notesRoot,
+    private readonly isApprovedOrigin: (origin: string) => boolean = (origin) =>
+      approvals.has(origin)
   ) {}
 
   private filePath(): string {
@@ -451,7 +490,7 @@ export class WorkspaceStore {
       this.persistSync(this.cache)
       return this.cache
     }
-    const normalized = normalizeWorkspace(parsed)
+    const normalized = normalizeWorkspace(parsed, this.isApprovedOrigin)
     this.cache = normalized
     if (
       parsed.schemaVersion !== WORKSPACE_SCHEMA_VERSION ||
@@ -550,7 +589,7 @@ export class WorkspaceStore {
     }
 
     const existingTab = options.focusExisting
-      ? current.tabs.find((tab) => workspaceFileKey(tab) === workspaceFileKey(fileRef))
+      ? fileTabs(current.tabs).find((tab) => workspaceFileKey(tab) === workspaceFileKey(fileRef))
       : null
     if (existingTab) {
       const next: WorkspaceState = {
@@ -578,10 +617,32 @@ export class WorkspaceStore {
     return this.publicState()
   }
 
+  /** Opens a local address in a tab, focusing the tab that already has it. Refuses anything that is not local. */
+  openAddress(url: string): WorkspaceState {
+    const address = parseLocalAddress(url)
+    if (!address) throw new Error('Invalid local address')
+    const current = this.load()
+    const existing = current.tabs.find(
+      (tab) => isWorkspaceAddressTab(tab) && tab.url === address.url
+    )
+    if (existing) {
+      this.persist({ ...current, activeTabId: existing.id })
+      return this.publicState()
+    }
+    const tab: WorkspaceTab = {
+      id: randomUUID(),
+      title: describeOrigin(address.origin),
+      viewMode: 'preview',
+      url: address.url
+    }
+    this.persist({ ...current, tabs: [...current.tabs, tab], activeTabId: tab.id })
+    return this.publicState()
+  }
+
   fileRefForTab(tabIdInput: string): WorkspaceFileRef | null {
     const tabId = requireTabId(tabIdInput)
     const tab = this.load().tabs.find((candidate) => candidate.id === tabId)
-    if (!tab) return null
+    if (!tab || isWorkspaceAddressTab(tab)) return null
     return isWorkspaceSourceFileRef(tab)
       ? { sourcePath: tab.sourcePath }
       : { externalPath: tab.externalPath }
@@ -606,12 +667,13 @@ export class WorkspaceStore {
     const key = workspaceFileKey(file)
     const current = this.load()
     const activeIndex = current.tabs.findIndex((tab) => tab.id === current.activeTabId)
-    const activeFileRemoved =
-      activeIndex !== -1 && workspaceFileKey(current.tabs[activeIndex]!) === key
+    const isRemoved = (tab: WorkspaceTab): boolean =>
+      !isWorkspaceAddressTab(tab) && workspaceFileKey(tab) === key
+    const activeFileRemoved = activeIndex !== -1 && isRemoved(current.tabs[activeIndex]!)
     const remainingBeforeActive = current.tabs
       .slice(0, Math.max(0, activeIndex))
-      .filter((tab) => workspaceFileKey(tab) !== key).length
-    const tabs = current.tabs.filter((tab) => workspaceFileKey(tab) !== key)
+      .filter((tab) => !isRemoved(tab)).length
+    const tabs = current.tabs.filter((tab) => !isRemoved(tab))
     const activeTabId = activeFileRemoved
       ? (tabs[remainingBeforeActive]?.id ?? tabs[remainingBeforeActive - 1]?.id ?? null)
       : repairActiveTabId(current.activeTabId, tabs)
@@ -721,11 +783,13 @@ export class WorkspaceStore {
   async pruneMissingFileRefs(): Promise<WorkspaceState> {
     const current = this.load()
     const existingPaths = await this.currentSourcePathSet()
-    const tabs: WorkspaceFileTab[] = []
+    const tabs: WorkspaceTab[] = []
     const recents: WorkspaceRecentFile[] = []
 
     for (const tab of current.tabs) {
-      if (await this.fileRefExists(tab, existingPaths)) tabs.push(tab)
+      // An address tab has no file to go missing.
+      if (isWorkspaceAddressTab(tab) || (await this.fileRefExists(tab, existingPaths)))
+        tabs.push(tab)
     }
 
     for (const recent of current.recents) {
@@ -753,7 +817,9 @@ export class WorkspaceStore {
     const previousKey = workspaceFileKey(previousFile)
     const current = this.load()
     const tabs = current.tabs.map((tab) =>
-      workspaceFileKey(tab) === previousKey ? tabWithFileRef(tab, file) : tab
+      !isWorkspaceAddressTab(tab) && workspaceFileKey(tab) === previousKey
+        ? tabWithFileRef(tab, file)
+        : tab
     )
     const seenRecentKeys = new Set<string>()
     const recents = current.recents
@@ -880,7 +946,7 @@ export class WorkspaceStore {
     if (isWorkspaceSourceFileRef(fileRef)) return
     const key = workspaceFileKey(fileRef)
     const current = this.load()
-    const known = [...current.tabs, ...current.recents].some(
+    const known = [...fileTabs(current.tabs), ...current.recents].some(
       (file) => workspaceFileKey(file) === key
     )
     if (!known) throw new Error(`Workspace file not found: ${fileRef.externalPath}`)

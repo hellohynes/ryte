@@ -73,10 +73,22 @@ export const storedFileRef = z.union([
   z.object({ externalPath: z.string(), sourcePath: z.undefined().optional() })
 ])
 
-const workspaceTab = z.intersection(
+const workspaceFileTab = z.intersection(
   storedFileRef,
   z.object({ id: z.string(), title: z.string(), viewMode })
 )
+
+/** A tab for a local address: no file, only the address. */
+const workspaceAddressTab = z.object({
+  id: z.string(),
+  title: z.string(),
+  viewMode,
+  url: z.string(),
+  sourcePath: z.undefined().optional(),
+  externalPath: z.undefined().optional()
+})
+
+const workspaceTab = z.union([workspaceFileTab, workspaceAddressTab])
 
 const recentFile = z.intersection(
   storedFileRef,

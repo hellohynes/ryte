@@ -13,7 +13,7 @@ import {
   resolveNotePicturePath
 } from './note-pictures'
 import { renderNoteVideo, isWebVideoTarget, renderWebVideoLink } from './note-videos'
-import { isSafeLinkTarget, sanitizeRenderedHtml } from './sanitizer'
+import { isLocalLinkTarget, isSafeLinkTarget, sanitizeRenderedHtml } from './sanitizer'
 import { isSupportedNoteVideo } from '../../../shared/note-videos'
 
 const FRONTMATTER_RE = /^---\n[\s\S]*?\n---\n?/
@@ -289,12 +289,12 @@ async function getMd(): Promise<MarkdownIt> {
         engine: createJavaScriptRegexEngine()
       })
       const md = new MarkdownIt({ html: false, linkify: true, typographer: true })
-      md.validateLink = isSafeLinkTarget
+      md.validateLink = (url) => isSafeLinkTarget(url) || isLocalLinkTarget(url)
       // Picture targets may also be paths in the notes folder. Links keep the strict check, so a
-      // relative link still renders as plain text.
+      // relative link still renders as plain text. A local address is a link only, never a picture.
       md.inline.ruler.at('image', (state, silent) => {
         const validateLink = state.md.validateLink
-        state.md.validateLink = (url) => validateLink(url) || isNoteRelativeTarget(url)
+        state.md.validateLink = (url) => isSafeLinkTarget(url) || isNoteRelativeTarget(url)
         try {
           return imageRule(state, silent)
         } finally {

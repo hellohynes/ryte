@@ -29,6 +29,7 @@ const EXPECTED = [
   'copy',
   'drop',
   'file',
+  'globe',
   'grid',
   'heading',
   'heading-1',
