@@ -358,14 +358,15 @@ export const scenarios = [
     name: 'Segmented control moves and selects with arrows, Home and End; one tab stop',
     covers: ['StSegmented'],
     async run(d) {
-      const checked =
-        "document.querySelector('.st-segmented [aria-checked=true]').textContent.trim()"
+      // The gallery has more than one segmented control; this check drives the "Color mode" group.
+      const group = '.st-segmented[aria-label="Color mode"]'
+      const checked = `document.querySelector('${group} [aria-checked=true]').textContent.trim()`
       assertEqual(
-        await d.eval('document.querySelectorAll(\'.st-segmented [tabindex="0"]\').length'),
+        await d.eval(`document.querySelectorAll('${group} [tabindex="0"]').length`),
         1,
         'tab stops in the group'
       )
-      await d.focus('.st-segmented [aria-checked=true]')
+      await d.focus(`${group} [aria-checked=true]`)
       const first = await d.eval(checked)
       await d.key('ArrowRight')
       assert((await d.eval(checked)) !== first, 'ArrowRight did not change the selection')
