@@ -11,16 +11,13 @@ import StText from '../stencil/components/StText.vue'
 import StIcon from '../stencil/icons/StIcon.vue'
 import type { IconName } from '../stencil/icons/icons.generated'
 import InlineFileRename from './InlineFileRename.vue'
-import {
-  buildSidebarTree,
-  modifiedAtMsBySourcePath,
-  type SidebarTreeNode as TreeNode
-} from './sidebar-tree-model'
+import type { SidebarTreeNode as TreeNode } from './sidebar-tree-model'
 import { supportedKindOf } from '../../../shared/supported-types'
 import type { WorkspaceFolderSortMode } from '../../../shared/workspace'
 import { useFileCatalogStore } from '../stores/file-catalog'
 import { useViewerStore } from '../stores/viewer'
 import { useWorkspaceStore } from '../stores/workspace'
+import { useSidebarTree } from './sidebar-tree'
 
 interface TreeConnector {
   key: string
@@ -75,14 +72,7 @@ let libraryScrollRestored = false
 let restoringLibraryScroll = false
 let scrollPersistTimer: number | null = null
 
-const tree = computed<TreeNode[]>(() => {
-  if (!viewer.notesRoot || viewer.tree.length === 0) return []
-  return buildSidebarTree(
-    viewer.tree,
-    workspace.library.folderSortModes,
-    modifiedAtMsBySourcePath(catalog.files)
-  )
-})
+const tree = useSidebarTree()
 
 function flatten(nodes: TreeNode[], out: TreeNode[] = []): TreeNode[] {
   for (const node of nodes) {

@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { computed, ref, watch } from 'vue'
+import { computed, ref, shallowRef, watch } from 'vue'
 
 import { supportedKindOf } from '../../../shared/supported-types'
 import type { CodeReadResult } from '../components/code-view-model'
@@ -107,7 +107,8 @@ function tabKey(tab: WorkspaceTab): string {
 
 export const useViewerStore = defineStore('viewer', () => {
   const workspace = useWorkspaceStore()
-  const tree = ref<string[]>([])
+  // Every path in the notes folder, often tens of thousands: replaced whole, never changed in place, so not deep.
+  const tree = shallowRef<string[]>([])
   const notesRoot = ref<string | null>(null)
   const content = ref<string>('')
   const loading = ref(false)

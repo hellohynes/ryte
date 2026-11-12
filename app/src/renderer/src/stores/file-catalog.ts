@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref, watch } from 'vue'
+import { ref, shallowRef, watch } from 'vue'
 
 import type { FileCatalogChangeEvent, FileCatalogEntry } from '../../../shared/files'
 import { useSettingsStore } from './settings'
@@ -8,7 +8,8 @@ const CATALOG_REFRESH_DEBOUNCE_MS = 100
 
 export const useFileCatalogStore = defineStore('file-catalog', () => {
   const settings = useSettingsStore()
-  const files = ref<FileCatalogEntry[]>([])
+  // One entry per file, often tens of thousands: replaced whole, never changed in place, so not deep.
+  const files = shallowRef<FileCatalogEntry[]>([])
   const notesRoot = ref<string | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
