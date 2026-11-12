@@ -82,22 +82,28 @@ export function createLocalBox({ emitTo, openExternal }: LocalBoxDependencies): 
 
   const kept = createKeptViews<OpenLocal>({ destroy })
 
-  const watchWindow = (senderId: number, host: BrowserWindow): void => {
-    if (watchedWindows.has(senderId)) return
-    watchedWindows.add(senderId)
-    host.once('closed', () => {
-      kept.dropWindow(senderId)
-      latest.delete(senderId)
-      watchedWindows.delete(senderId)
-    })
+  // The window a call came from, with its bookkeeping set to be dropped when it closes. Every call that keeps
+  // something per window goes through this first, so a window that never shows a page leaves nothing behind.
+  const watchedHost = (sender: WebContents): BrowserWindow | null => {
+    const host = BrowserWindow.fromWebContents(sender)
+    if (!host) return null
+    const senderId = sender.id
+    if (!watchedWindows.has(senderId)) {
+      watchedWindows.add(senderId)
+      host.once('closed', () => {
+        kept.dropWindow(senderId)
+        latest.delete(senderId)
+        watchedWindows.delete(senderId)
+      })
+    }
+    return host
   }
 
   return {
     async show(sender, address, bounds) {
-      const turn = bump(sender.id)
-      const host = BrowserWindow.fromWebContents(sender)
+      const host = watchedHost(sender)
       if (!host) return 'blocked'
-      watchWindow(sender.id, host)
+      const turn = bump(sender.id)
       kept.claim(sender.id, address.url)
 
       if (kept.present(sender.id, address.url, rounded(bounds))) return 'shown'
@@ -150,10 +156,12 @@ export function createLocalBox({ emitTo, openExternal }: LocalBoxDependencies): 
       kept.park(sender.id, url)
     },
     close(sender, url) {
+      if (!watchedHost(sender)) return
       bump(sender.id)
       kept.remove(sender.id, url)
     },
     retain(sender, urls) {
+      if (!watchedHost(sender)) return
       kept.retain(sender.id, urls)
     },
     closeOrigin(origin) {

@@ -190,8 +190,11 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', syncBounds)
   document.removeEventListener('toggle', scheduleOverlaySync, true)
   if (frame !== null) window.cancelAnimationFrame(frame)
-  // Behind any show still waiting in the queue, so it cannot attach a view after the tab has left.
+  // Behind any show still waiting in the queue, so it cannot attach a view after the tab has left. If the person
+  // has come back to this page by then (a quick A, B, A), the newer tab shows it and a park would hide it.
   enqueue(async () => {
+    const backAgain = props.url ? viewer.addressUrl === props.url : viewer.pagePath === props.path
+    if (backAgain) return
     await parkView().catch(() => undefined)
   })
 })

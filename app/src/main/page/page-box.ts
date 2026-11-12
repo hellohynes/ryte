@@ -57,7 +57,7 @@ export interface PageBoxDependencies {
 interface OpenPage {
   id: string
   realPath: string
-  /** Size and modification time when the page loaded: a different file on return means a fresh load. */
+  /** Size, modification time and file identity when the page loaded: a different file on return means a fresh load. */
   version: string
   view: WebContentsView
   host: BrowserWindow
@@ -107,15 +107,22 @@ export function createPageBox({
 
   const kept = createKeptViews<OpenPage>({ destroy })
 
-  const watchWindow = (senderId: number, host: BrowserWindow): void => {
-    if (watchedWindows.has(senderId)) return
-    watchedWindows.add(senderId)
-    host.once('closed', () => {
-      kept.dropWindow(senderId)
-      scrolls.delete(senderId)
-      latest.delete(senderId)
-      watchedWindows.delete(senderId)
-    })
+  // The window a call came from, with its bookkeeping set to be dropped when it closes. Every call that keeps
+  // something per window goes through this first, so a window that never shows a page leaves nothing behind.
+  const watchedHost = (sender: WebContents): BrowserWindow | null => {
+    const host = BrowserWindow.fromWebContents(sender)
+    if (!host) return null
+    const senderId = sender.id
+    if (!watchedWindows.has(senderId)) {
+      watchedWindows.add(senderId)
+      host.once('closed', () => {
+        kept.dropWindow(senderId)
+        scrolls.delete(senderId)
+        latest.delete(senderId)
+        watchedWindows.delete(senderId)
+      })
+    }
+    return host
   }
 
   const rememberScroll = (senderId: number, path: string, scroll: PageScroll): void => {
@@ -180,6 +187,8 @@ export function createPageBox({
 
   return {
     async show(sender, path, bounds) {
+      const host = watchedHost(sender)
+      if (!host) return 'blocked'
       const turn = bump(sender.id)
       const isCurrent = (): boolean => latest.get(sender.id) === turn
       kept.claim(sender.id, path)
@@ -195,11 +204,9 @@ export function createPageBox({
         kept.remove(sender.id, path)
         return 'too-large'
       }
-      const host = BrowserWindow.fromWebContents(sender)
-      if (!host) return 'blocked'
-      watchWindow(sender.id, host)
 
-      const version = `${located.size}:${located.mtimeMs}`
+      // Size, modification time and file identity: a copy that keeps the size and the time is still another file.
+      const version = `${located.size}:${located.mtimeMs}:${located.dev}:${located.ino}`
       const current = kept.get(sender.id, path)
       if (current && current.realPath === located.realPath && current.version === version) {
         kept.present(sender.id, path, rounded(bounds))
@@ -245,11 +252,13 @@ export function createPageBox({
       if (scroll && kept.get(sender.id, path) === page) rememberScroll(sender.id, path, scroll)
     },
     close(sender, path) {
+      if (!watchedHost(sender)) return
       bump(sender.id)
       kept.remove(sender.id, path)
       scrolls.get(sender.id)?.delete(path)
     },
     retain(sender, paths) {
+      if (!watchedHost(sender)) return
       kept.retain(sender.id, paths)
       const forWindow = scrolls.get(sender.id)
       if (!forWindow) return

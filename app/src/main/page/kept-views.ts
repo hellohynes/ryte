@@ -1,4 +1,6 @@
-import type { WebContentsView } from 'electron'
+import type { WebContents, WebContentsView } from 'electron'
+
+import type { BlockedLog } from './page-blocked'
 
 /** How many locked views one window keeps alive at once, shown or hidden. */
 export const MAX_KEPT_VIEWS = 4
@@ -11,7 +13,10 @@ interface ViewBounds {
 }
 
 export interface KeptView {
-  view: Pick<WebContentsView, 'setBounds' | 'setVisible'>
+  view: Pick<WebContentsView, 'setBounds' | 'setVisible'> & {
+    webContents: Pick<WebContents, 'setAudioMuted' | 'isDestroyed'>
+  }
+  log: Pick<BlockedLog, 'pause' | 'resume'>
 }
 
 interface WindowViews<T> {
@@ -59,6 +64,13 @@ export interface KeptViews<T extends KeptView> {
   size(senderId: number): number
 }
 
+/** A view in the background shows nothing, makes no sound and reports nothing to the page in front. */
+function hold(item: KeptView): void {
+  item.view.setVisible(false)
+  item.log.pause()
+  if (!item.view.webContents.isDestroyed()) item.view.webContents.setAudioMuted(true)
+}
+
 export function createKeptViews<T extends KeptView>({
   cap = MAX_KEPT_VIEWS,
   destroy
@@ -93,7 +105,7 @@ export function createKeptViews<T extends KeptView>({
 
     /** Notes that a tab for this key is open, ahead of the window's next report. */
     claim: (senderId: number, key: string): void => {
-      windowOf(senderId).wanted?.add(key)
+      windows.get(senderId)?.wanted?.add(key)
     },
 
     /** False once the window has reported its tabs and this key is not among them. */
@@ -119,10 +131,12 @@ export function createKeptViews<T extends KeptView>({
       const item = views?.items.get(key)
       if (!views || !item) return false
       for (const [other, kept] of views.items) {
-        if (other !== key) kept.view.setVisible(false)
+        if (other !== key) hold(kept)
       }
       item.view.setBounds(bounds)
       item.view.setVisible(true)
+      item.log.resume()
+      if (!item.view.webContents.isDestroyed()) item.view.webContents.setAudioMuted(false)
       views.items.delete(key)
       views.items.set(key, item)
       views.shown = key
@@ -134,7 +148,7 @@ export function createKeptViews<T extends KeptView>({
       const views = windows.get(senderId)
       const item = views?.items.get(key)
       if (!views || !item) return undefined
-      item.view.setVisible(false)
+      hold(item)
       if (views.shown === key) views.shown = null
       return item
     },
