@@ -26,7 +26,25 @@ The file is `{ version, collections: [{ name, modes, variables: [{ name, type, v
 
 ## Code Connect
 
-`app/figma.config.json` points at `src/renderer/src/stencil/figma/*.figma.js`, one template per component, labelled Vue. Each reads the Figma properties and writes an `<StButton variant="..." size="...">` snippet. The templates use the placeholder `<STENCIL_FILE>`; copy the config to a gitignored `figma.local.json`, put your file's URL in `documentUrlSubstitutions`, and run `npx figma connect publish --config figma.local.json` with a personal access token in the shell (never in the repo).
+`app/figma.config.json` points at `src/renderer/src/stencil/figma/*.figma.js`, one template per component, labelled Vue. Each reads the Figma properties and writes an `<StButton variant="..." size="...">` snippet. The templates use the placeholder `<STENCIL_FILE>`; copy the config to a gitignored `figma.local.json`, and set `documentUrlSubstitutions` to your file's **base URL only**: `https://www.figma.com/design/<file key>/<file name>`, with no `?node-id=` or `&t=`. Each template adds its own `?node-id=…`, so a pasted URL that already has a query string turns into `…?node-id=0-1&t=…?node-id=8-114`. The CLI then reads the page (`0-1`) and rejects every template with "node is not a component or component set". For example:
+
+```json
+"documentUrlSubstitutions": {
+  "<STENCIL_FILE>": "https://www.figma.com/design/YOUR_FILE_KEY/Stencil-design-system"
+}
+```
+
+Then publish from `app/` with a personal access token in the shell (never in the repo):
+
+```bash
+export FIGMA_ACCESS_TOKEN=...   # this shell only
+npx --package=@figma/code-connect@latest figma connect publish --config figma.local.json --dry-run
+npx --package=@figma/code-connect@latest figma connect publish --config figma.local.json
+```
+
+`@figma/code-connect` isn't a dependency of the app. `--package` makes `npx` run Figma's CLI rather than an unrelated package named `figma`. Figma's quickstart installs it globally instead (`npm install --global @figma/code-connect@latest`, then `figma connect publish`). Either works.
+
+On Professional and up, the Figma MCP server can also save mappings without a token (`add_code_connect_map`), once the components are published.
 
 Code Connect goes from Figma to code only. It shows your snippet in Dev Mode and in the Figma MCP server; it does not change components or variables. The components must be published as a library first.
 
