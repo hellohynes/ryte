@@ -1,4 +1,4 @@
-import type { WebContents } from 'electron'
+import type { InputEvent, WebContents } from 'electron'
 
 import { createRealInputGate, type RealInputGate } from './page/page-links'
 
@@ -14,18 +14,20 @@ export function watchRealInput(contents: WebContents): void {
   // `input-event` sees every click and key the window is sent, real or injected through the debugging port, and
   // cannot prevent any of them. (`before-input-event` is not raised for keys injected that way.)
   contents.on('input-event', (_event, input) => {
-    if (input.type === 'mouseUp') {
-      gate.note()
-    } else if (!('isAutoRepeat' in input && input.isAutoRepeat) && 'key' in input) {
-      const activates = input.key === 'Enter' || input.key === ' '
-      if (
-        ((input.type === 'keyDown' || input.type === 'rawKeyDown') && activates) ||
-        (input.type === 'keyUp' && input.key === ' ')
-      ) {
-        gate.note()
-      }
-    }
+    if (isRealPress(input)) gate.note()
   })
+}
+
+/** A mouse-up, or the key press that activates a control: Enter or Space (a physical key arrives as rawKeyDown). */
+export function isRealPress(input: InputEvent): boolean {
+  if (input.type === 'mouseUp') return true
+  if ('isAutoRepeat' in input && input.isAutoRepeat) return false
+  if (!('key' in input)) return false
+  const activates = input.key === 'Enter' || input.key === ' '
+  return (
+    ((input.type === 'keyDown' || input.type === 'rawKeyDown') && activates) ||
+    (input.type === 'keyUp' && input.key === ' ')
+  )
 }
 
 /** Whether the window just had a real click, Enter or Space that no call has used yet. Using it spends it. */

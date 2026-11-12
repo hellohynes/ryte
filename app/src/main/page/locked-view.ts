@@ -11,6 +11,7 @@ import {
 } from './page-links'
 import { isPagePermissionAllowed } from './page-permissions'
 import { appKeyFor } from './page-keys'
+import { isRealPress } from '../real-input'
 
 export interface PageBounds {
   x: number
@@ -105,7 +106,7 @@ export function createLockedView({
   gates.set(contents, gate)
   const openLink = createPageLinkOpener(gate, openExternal)
   contents.on('input-event', (_event, input) => {
-    if (input.type === 'mouseUp') gate.note()
+    if (isRealPress(input)) gate.note()
   })
   contents.setWindowOpenHandler(({ url }) => {
     if (!openLink(url)) log.add(url)
@@ -122,7 +123,6 @@ export function createLockedView({
   })
   contents.on('before-input-event', (event, input) => {
     if (input.type !== 'keyDown') return
-    if (input.key === 'Enter' && !input.isAutoRepeat) gate.note()
     const appKey = appKeyFor(input, process.platform)
     if (!appKey) return
     event.preventDefault()
