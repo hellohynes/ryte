@@ -97,12 +97,20 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
           RELEASE_VERSION: ${{ steps.release.outputs.version }}
         run: |
+          notes="$RUNNER_TEMP/release-notes.md"
+          section="$RUNNER_TEMP/changelog-section.md"
+          if node ../scripts/changelog-section.mjs "$RELEASE_VERSION" > "$section" && [ -s "$section" ]; then
+            { cat "$section"; echo; } > "$notes"
+          else
+            echo "::error::No CHANGELOG section for $RELEASE_VERSION; publishing with the install notes only."
+            : > "$notes"
+          fi
           printf '%s\n' \
             'Signed with an Apple Developer ID and notarized by Apple. Apple Silicon (arm64) only.' \
             '' \
             'Open the DMG and drag Ryte to Applications.' \
             'To check the download, compare `shasum -a 256 <the DMG>` with the hash in the `.sha256` file.' \
-            > "$RUNNER_TEMP/release-notes.md"
+            >> "$notes"
           gh release create "$RELEASE_TAG" \
             "dist/ryte-${RELEASE_VERSION}-arm64.dmg" \
             "dist/ryte-${RELEASE_VERSION}-arm64.dmg.sha256" \
