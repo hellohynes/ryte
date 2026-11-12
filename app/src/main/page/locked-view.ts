@@ -1,9 +1,15 @@
-import { type BrowserWindow, WebContentsView, type Session } from 'electron'
+import { type BrowserWindow, WebContentsView, type Session, type WebContents } from 'electron'
 
 import { contract } from '../../contract'
 import type { EmitTo } from '../contract/register'
 import type { BlockedLog } from './page-blocked'
-import { createPageLinkOpener, createRealInputGate, isOpenablePageLink } from './page-links'
+import {
+  createPageLinkOpener,
+  createRealInputGate,
+  isOpenablePageLink,
+  type RealInputGate
+} from './page-links'
+import { isPagePermissionAllowed } from './page-permissions'
 import { appKeyFor } from './page-keys'
 
 export interface PageBounds {
@@ -20,13 +26,28 @@ export const rounded = (bounds: PageBounds): PageBounds => ({
   height: Math.max(0, Math.round(bounds.height))
 })
 
-/** Refuses every permission, device and download the page asks for, and records each refusal. */
+// The real-input gate of each locked view, so a permission request can ask whether the person just clicked in it.
+const gates = new WeakMap<WebContents, RealInputGate>()
+const recentInput = (contents: WebContents | null): boolean =>
+  (contents && gates.get(contents)?.recent()) ?? false
+
+/**
+ * Refuses every permission, device and download the page asks for, and records each refusal. The one exception is
+ * a clipboard write right after a real click in the page: decision pages copy their answers that way. Reading the
+ * clipboard is never allowed.
+ */
 export function lockSession(ses: Session, log: BlockedLog): void {
-  ses.setPermissionRequestHandler((_contents, permission, callback) => {
+  ses.setPermissionRequestHandler((contents, permission, callback) => {
+    if (isPagePermissionAllowed(permission, recentInput(contents))) {
+      callback(true)
+      return
+    }
     log.add(`permission: ${permission}`)
     callback(false)
   })
-  ses.setPermissionCheckHandler(() => false)
+  ses.setPermissionCheckHandler((contents, permission) =>
+    isPagePermissionAllowed(permission, recentInput(contents))
+  )
   ses.setDevicePermissionHandler(() => false)
   ses.on('will-download', (event, item) => {
     event.preventDefault()
@@ -81,6 +102,7 @@ export function createLockedView({
   contents.setWebRTCIPHandlingPolicy('disable_non_proxied_udp')
   // A link opens in the browser only when the person just clicked it, and the box itself never loads it.
   const gate = createRealInputGate()
+  gates.set(contents, gate)
   const openLink = createPageLinkOpener(gate, openExternal)
   contents.on('input-event', (_event, input) => {
     if (input.type === 'mouseUp') gate.note()

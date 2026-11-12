@@ -18,6 +18,8 @@ export interface RealInputGate {
   note(): void
   /** Whether a recent real input has not been used yet; using it spends it. */
   consume(): boolean
+  /** Whether a real input was recent, without spending it. */
+  recent(): boolean
 }
 
 /**
@@ -35,7 +37,8 @@ export function createRealInputGate(now: () => number = Date.now): RealInputGate
       const recent = now() - lastInputAt <= REAL_INPUT_WINDOW_MS
       lastInputAt = Number.NEGATIVE_INFINITY
       return recent
-    }
+    },
+    recent: () => now() - lastInputAt <= REAL_INPUT_WINDOW_MS
   }
 }
 
