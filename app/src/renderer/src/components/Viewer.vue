@@ -20,6 +20,7 @@ import StProse from '../stencil/components/StProse.vue'
 import StSegmented from '../stencil/components/StSegmented.vue'
 import NoteLightbox from './NoteLightbox.vue'
 import { buildLightboxList, type LightboxPicture, type PagePicture } from './lightbox-model'
+import { rememberedTabScroll, rememberTabScroll } from './tab-scroll'
 import CodeViewer from './CodeViewer.vue'
 import { currentSectionId, sectionOutlineOf } from './document-outline-model'
 import PageViewer from './PageViewer.vue'
@@ -44,6 +45,45 @@ const renderCache = new Map<string, RenderedMarkdownDocument>()
 const proseRef = ref<InstanceType<typeof StProse> | null>(null)
 const proseEl = computed<HTMLElement | null>(() => (proseRef.value?.$el as HTMLElement) ?? null)
 const sourceEl = ref<HTMLElement | null>(null)
+// The note whose rendered text is in the view now. The text of the tab just switched to arrives a moment later.
+const renderedFor = ref<string | null>(null)
+
+// A note tab keeps where it was scrolled to while the app runs. The position is saved as the tab is left, while
+// the old text is still on screen, and put back once the text of the tab that returns has been drawn.
+const scrollKeyOf = (path: string, source: boolean): string =>
+  `note:${path}:${source ? 'source' : 'preview'}`
+let displayedKey: string | null = null
+let restoreKey: string | null = null
+const scrollerOf = (key: string): HTMLElement | null =>
+  key.endsWith(':source') ? sourceEl.value : proseEl.value
+
+watch(
+  [() => viewer.sourcePath, () => viewer.sourceMode] as const,
+  ([path, source], [previousPath]) => {
+    if (displayedKey) {
+      const el = scrollerOf(displayedKey)
+      if (el) rememberTabScroll(displayedKey, el.scrollTop)
+    }
+    displayedKey = null
+    // Switching between Preview and Code keeps its own proportional position (see togglePreservingScroll).
+    restoreKey = path && path !== previousPath ? scrollKeyOf(path, source) : null
+  },
+  { flush: 'sync' }
+)
+
+function settleScroll(): void {
+  const path = viewer.sourcePath
+  if (!path || viewer.loading || viewer.error) return
+  if (!viewer.sourceMode && renderedFor.value !== path) return
+  const key = scrollKeyOf(path, viewer.sourceMode)
+  const el = scrollerOf(key)
+  if (!el) return
+  displayedKey = key
+  if (restoreKey !== key) return
+  restoreKey = null
+  const top = rememberedTabScroll(key)
+  if (top > 0) el.scrollTop = top
+}
 const fallbackOutlineCollapsed = ref(false)
 const dragOutlineWidth = ref<number | null>(null)
 const activeOutlineId = ref('')
@@ -132,6 +172,7 @@ async function updateRender(text: string): Promise<void> {
     const cached = renderCache.get(cacheKey)!
     renderedHtml.value = cached.html
     documentOutline.value = cached.outline
+    renderedFor.value = notePath ?? null
     return
   }
   const document = await renderDocument(text, { interactiveTasks: true, breaks: true, notePath })
@@ -146,6 +187,7 @@ async function updateRender(text: string): Promise<void> {
   if (text === viewer.content && notePath === (viewer.sourcePath ?? undefined)) {
     renderedHtml.value = document.html
     documentOutline.value = document.outline
+    renderedFor.value = notePath ?? null
   }
 }
 
@@ -178,12 +220,17 @@ watch(
   [renderedHtml, () => viewer.sourceMode],
   () => {
     lightbox.value = null
-    hydrateRenderedContent().catch((err) => {
-      renderError.value = err instanceof Error ? err.message : String(err)
-    })
+    hydrateRenderedContent()
+      .catch((err) => {
+        renderError.value = err instanceof Error ? err.message : String(err)
+      })
+      .finally(settleScroll)
   },
   { flush: 'post' }
 )
+
+// Also when the text of a tab has loaded without changing what is drawn (the same words under another name).
+watch([renderedFor, () => viewer.loading], settleScroll, { flush: 'post' })
 
 async function togglePreservingScroll(): Promise<void> {
   // Capture scroll percentage of the current view before the DOM swap.

@@ -7,6 +7,7 @@ import { useViewerStore } from '../stores/viewer'
 import StButton from '../stencil/components/StButton.vue'
 import StNotice from '../stencil/components/StNotice.vue'
 import { openCodeEditor, type CodeEditorHandle } from './code-editor'
+import { rememberedTabScroll, rememberTabScroll } from './tab-scroll'
 import {
   CODE_VIEW_NOTICE_TEXT,
   describeCodeProblem,
@@ -40,6 +41,19 @@ const foldAllUnavailable = ref(false)
 let handle: CodeEditorHandle | null = null
 let mountId = 0
 
+const scrollKey = (): string => `code:${props.path}`
+
+// The text starts where the person left it. The view measures the lines it has not drawn yet as it goes, so the
+// position is set once now and again after the next frame.
+function restoreScroll(opened: CodeEditorHandle): void {
+  const top = rememberedTabScroll(scrollKey())
+  if (top <= 0) return
+  opened.scrollTo(top)
+  requestAnimationFrame(() => {
+    if (handle === opened) opened.scrollTo(top)
+  })
+}
+
 function closeEditor(): void {
   mountId += 1
   handle?.destroy()
@@ -69,6 +83,7 @@ watch(
         return
       }
       handle = opened
+      restoreScroll(opened)
       // The file may have changed while the view was loading.
       const latest = prepared.value
       if (latest && latest !== view) void opened.update(latest)
@@ -84,7 +99,10 @@ watch(prepared, (next) => {
   if (next && handle) void handle.update(next)
 })
 
-onBeforeUnmount(closeEditor)
+onBeforeUnmount(() => {
+  if (handle) rememberTabScroll(scrollKey(), handle.scrollTop())
+  closeEditor()
+})
 
 async function openInDefaultApp(): Promise<void> {
   openFailed.value = false

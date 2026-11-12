@@ -6,6 +6,9 @@ import { loadCodeLanguage } from './code-editor-languages'
 export interface CodeEditorHandle {
   /** Shows new text for the same file, keeping the scroll position. */
   update: (next: { text: string; language: CodeLanguageId | null }) => Promise<void>
+  /** How far the text is scrolled, and a way to scroll it back. */
+  scrollTop: () => number
+  scrollTo: (top: number) => void
   destroy: () => void
 }
 
@@ -47,6 +50,10 @@ export async function openCodeEditor(
         shownLanguage = next.language
       }
       if (!destroyed) core.replaceCodeText(editor, next.text, extension)
+    },
+    scrollTop: () => editor.view.scrollDOM.scrollTop,
+    scrollTo: (top) => {
+      editor.view.scrollDOM.scrollTop = top
     },
     destroy: () => {
       destroyed = true
