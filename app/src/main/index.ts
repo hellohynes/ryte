@@ -22,6 +22,9 @@ import { NOTE_FILE_SCHEME } from '../shared/note-pictures'
 import { PAGE_SCHEME } from '../shared/page-box'
 
 const macOSVibrancyMaterial = 'hud' as const
+// A test launch sets RYTE_TEST_HIDDEN=1 to keep the window unshown, off the Dock and without notifications, so it
+// never takes focus or covers the screen. It has no effect in a packaged build.
+const hiddenForTest = !app.isPackaged && process.env['RYTE_TEST_HIDDEN'] === '1'
 let hasInitializedIndexing = false
 
 // An explicit profile override keeps automated launch verification isolated
@@ -91,7 +94,7 @@ function createWindow(): BrowserWindow {
     const state = workspaceStore.publicState().window
     if (state.maximized) mainWindow.maximize()
     if (state.fullscreen) mainWindow.setFullScreen(true)
-    mainWindow.show()
+    if (!hiddenForTest) mainWindow.show()
   })
 
   installNavigationGuards(mainWindow, allowedAppOrigins)
@@ -154,9 +157,8 @@ function initializeIndexingAfterFirstPaint(): void {
 // Some APIs can only be used after this event occurs.
 function startApp(): void {
   electronApp.setAppUserModelId('com.joshuahynes.ryte')
-  if (process.platform === 'darwin') {
-    app.dock?.setIcon(icon)
-  }
+  if (hiddenForTest) app.dock?.hide()
+  else if (process.platform === 'darwin') app.dock?.setIcon(icon)
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
@@ -178,7 +180,7 @@ function startApp(): void {
   let lastNotifiedPhase: string | null = null
   indexerService.subscribe((status) => {
     if (status.phase === 'done' && lastNotifiedPhase === 'indexing') {
-      if (Notification.isSupported()) {
+      if (!hiddenForTest && Notification.isSupported()) {
         new Notification({
           title: 'Ryte',
           body: `Index ready: ${status.chunksTotal} chunks across ${status.filesTotal} files`
