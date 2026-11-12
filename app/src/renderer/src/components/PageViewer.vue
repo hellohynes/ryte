@@ -104,9 +104,24 @@ async function showPage(): Promise<void> {
   }
 }
 
+// Closes this tab's view, shown or hidden, and forgets its page.
+function closeView(): Promise<void> {
+  return props.url
+    ? window.ryte.localhost.close({ url: props.url })
+    : window.ryte.page.close({ path: props.path ?? '' })
+}
+
+// The tab is going to the background: its view is hidden and kept, so the page is as it was when the tab returns.
+// A tab that is closed, renamed or deleted is cleaned up by the store, which reports the tabs that are open.
+function parkView(): Promise<void> {
+  return props.url
+    ? window.ryte.localhost.park({ url: props.url })
+    : window.ryte.page.park({ path: props.path ?? '' })
+}
+
 function reload(): void {
   enqueue(async () => {
-    await views.value.close()
+    await closeView()
     opened = false
     if (!covered) await showPage()
   })
@@ -175,7 +190,10 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', syncBounds)
   document.removeEventListener('toggle', scheduleOverlaySync, true)
   if (frame !== null) window.cancelAnimationFrame(frame)
-  void views.value.close().catch(() => undefined)
+  // Behind any show still waiting in the queue, so it cannot attach a view after the tab has left.
+  enqueue(async () => {
+    await parkView().catch(() => undefined)
+  })
 })
 
 watch(() => viewer.pageVersion, reload)

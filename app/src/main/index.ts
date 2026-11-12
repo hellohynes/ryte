@@ -22,8 +22,9 @@ import { NOTE_FILE_SCHEME } from '../shared/note-pictures'
 import { PAGE_SCHEME } from '../shared/page-box'
 
 const macOSVibrancyMaterial = 'hud' as const
-// A test launch sets RYTE_TEST_HIDDEN=1 to keep the window unshown, off the Dock and without notifications, so it
-// never takes focus or covers the screen. It has no effect in a packaged build.
+// A test launch sets RYTE_TEST_HIDDEN=1 so it never takes focus or covers the screen: no Dock icon, no notifications,
+// and a fully transparent window that ignores the mouse and is shown without focus. It can't stay unshown, because an
+// unshown window paints no frames and a page view's tab switch never finishes. It has no effect in a packaged build.
 const hiddenForTest = !app.isPackaged && process.env['RYTE_TEST_HIDDEN'] === '1'
 let hasInitializedIndexing = false
 
@@ -94,7 +95,14 @@ function createWindow(): BrowserWindow {
     const state = workspaceStore.publicState().window
     if (state.maximized) mainWindow.maximize()
     if (state.fullscreen) mainWindow.setFullScreen(true)
-    if (!hiddenForTest) mainWindow.show()
+    if (hiddenForTest) {
+      // An unshown window paints no frames, and a page view's tab switch then waits on a frame forever.
+      mainWindow.setOpacity(0)
+      mainWindow.setIgnoreMouseEvents(true)
+      mainWindow.showInactive()
+    } else {
+      mainWindow.show()
+    }
   })
 
   installNavigationGuards(mainWindow, allowedAppOrigins)

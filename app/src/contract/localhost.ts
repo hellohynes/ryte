@@ -86,12 +86,31 @@ export const hide = defineOperation({
   example: { input: undefined, output: { still: null } }
 })
 
+export const park = defineOperation({
+  channel: 'localhost:park',
+  description:
+    "A local address's tab went to the background: hide its view but keep it, and its session, alive. A window keeps at most 4 local views alive; showing another pushes out the one shown longest ago.",
+  input: z.strictObject({ url: address }),
+  output: z.void(),
+  example: { input: { url: 'http://localhost:5173/' }, output: undefined }
+})
+
 export const close = defineOperation({
   channel: 'localhost:close',
-  description: 'Close the open local view. The page keeps nothing.',
-  input: z.undefined(),
+  description:
+    "Close this address's local view, shown or hidden. The page keeps nothing. The next show loads it again.",
+  input: z.strictObject({ url: address }),
   output: z.void(),
-  example: { input: undefined, output: undefined }
+  example: { input: { url: 'http://localhost:5173/' }, output: undefined }
+})
+
+export const retain = defineOperation({
+  channel: 'localhost:retain',
+  description:
+    'The local addresses that have a tab open in this window. The view of any other address is closed.',
+  input: z.strictObject({ urls: z.array(address).max(1000) }),
+  output: z.void(),
+  example: { input: { urls: ['http://localhost:5173/'] }, output: undefined }
 })
 
 export const openInBrowser = defineOperation({
@@ -112,7 +131,9 @@ export const localhost = defineArea('localhost', {
     show,
     setBounds,
     hide,
+    park,
     close,
+    retain,
     openInBrowser
   },
   events: {}

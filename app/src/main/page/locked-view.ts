@@ -141,12 +141,19 @@ export function createLockedView({
   return view
 }
 
+const STILL_TIMEOUT_MS = 1000
+
 /** Hides the view and returns a still picture of it to show in its place, or null when there is none. */
 export async function hideWithStill(view: WebContentsView): Promise<string | null> {
   let still: string | null = null
   try {
-    const image = await view.webContents.capturePage()
-    if (!image.isEmpty()) still = `data:image/jpeg;base64,${image.toJPEG(75).toString('base64')}`
+    // A window that is not painting (minimised, or hidden) may never answer, and the caller waits for this.
+    const image = await Promise.race([
+      view.webContents.capturePage(),
+      new Promise<null>((resolve) => setTimeout(() => resolve(null), STILL_TIMEOUT_MS))
+    ])
+    if (image && !image.isEmpty())
+      still = `data:image/jpeg;base64,${image.toJPEG(75).toString('base64')}`
   } catch {
     // No still picture: the tab shows its plain background while an overlay is open.
   }

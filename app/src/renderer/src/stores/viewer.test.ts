@@ -97,6 +97,9 @@ describe('useViewerStore', () => {
     vi.unstubAllGlobals()
   })
 
+  let pageRetain = vi.fn()
+  let localhostRetain = vi.fn()
+
   function installRyteApi({
     files,
     code,
@@ -108,8 +111,12 @@ describe('useViewerStore', () => {
     tasks?: Partial<Window['ryte']['tasks']>
     workspace?: Partial<Window['ryte']['workspace']>
   }): void {
+    pageRetain = vi.fn().mockResolvedValue(undefined)
+    localhostRetain = vi.fn().mockResolvedValue(undefined)
     vi.stubGlobal('window', {
       ryte: {
+        page: { retain: pageRetain },
+        localhost: { retain: localhostRetain },
         files: {
           listTree: vi.fn().mockResolvedValue({ notesRoot: '/notes', paths: ['a.md', 'b.md'] }),
           readWorkspaceTab: vi.fn().mockResolvedValue('# A\n'),
@@ -272,6 +279,9 @@ describe('useViewerStore', () => {
     await viewer.hydrate()
 
     expect(viewer.pagePath).toBe('review/Index.HTML')
+    // The main process keeps a page view alive only while its tab is open, so it is told which tabs are.
+    expect(pageRetain).toHaveBeenLastCalledWith({ paths: ['review/Index.HTML'] })
+    expect(localhostRetain).toHaveBeenLastCalledWith({ urls: [] })
     expect(viewer.loading).toBe(false)
     expect(readWorkspaceTab).not.toHaveBeenCalled()
     expect(watchWorkspaceTab).not.toHaveBeenCalled()

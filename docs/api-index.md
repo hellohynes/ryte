@@ -80,17 +80,21 @@ change or remove one.
 | `localhost.show` | `localhost:show` | Show an approved local address in a locked view over the given area of the window. The page can reach only its own origin, including its live-reload connection, and cannot reach the internet, other ports, other spellings of this Mac, the notes folder, new windows, downloads or permissions. Showing the address that is already open only moves and reveals it. Returns `shown`, `needs-approval` (not approved, or the approval was removed) or `blocked` (not a local address). | `{ url: string, bounds: { x: number, y: number, width: number, height: number } }` |
 | `localhost.setBounds` | `localhost:set-bounds` | Move and resize the open local view to a new area of the window. | `{ bounds: { x: number, y: number, width: number, height: number } }` |
 | `localhost.hide` | `localhost:hide` | Hide the open local view, for example while an overlay is open, because a native view always draws on top. Returns a still picture of the page (a data URL) to show in its place, or null when there is none. | `none` |
-| `localhost.close` | `localhost:close` | Close the open local view. The page keeps nothing. | `none` |
+| `localhost.park` | `localhost:park` | A local address's tab went to the background: hide its view but keep it, and its session, alive. A window keeps at most 4 local views alive; showing another pushes out the one shown longest ago. | `{ url: string }` |
+| `localhost.close` | `localhost:close` | Close this address's local view, shown or hidden. The page keeps nothing. The next show loads it again. | `{ url: string }` |
+| `localhost.retain` | `localhost:retain` | The local addresses that have a tab open in this window. The view of any other address is closed. | `{ urls: string[] }` |
 | `localhost.openInBrowser` | `localhost:open-in-browser` | Open a local address in the default browser, outside the locked view, after checking again that it is a local address. The page runs unlocked there, so this is only for the button the person presses. Returns whether it opened. | `{ url: string }` |
 
 ## page
 
 | Operation | Channel | What it does | Input |
 | --- | --- | --- | --- |
-| `page.show` | `page:show` | Show an HTML page from the notes folder in a locked view over the given area of the window. The page loads only from its own folder and cannot reach the network, other files, new windows, downloads or permissions. Showing the page that is already open only moves and reveals it. Returns `shown`, or why not: `missing`, `blocked` (outside the notes folder, or not an HTML page) or `too-large` (over 10 MB). | `{ path: string, bounds: { x: number, y: number, width: number, height: number } }` |
+| `page.show` | `page:show` | Show an HTML page from the notes folder in a locked view over the given area of the window. The page loads only from its own folder and cannot reach the network, other files, new windows, downloads or permissions. Showing a page whose view is still alive, and whose file has not changed, only moves and reveals it, and hides the window's other page views. Returns `shown`, or why not: `missing`, `blocked` (outside the notes folder, or not an HTML page) or `too-large` (over 10 MB). | `{ path: string, bounds: { x: number, y: number, width: number, height: number } }` |
 | `page.setBounds` | `page:set-bounds` | Move and resize the open page view to a new area of the window. | `{ bounds: { x: number, y: number, width: number, height: number } }` |
-| `page.hide` | `page:hide` | Hide the open page view, for example while an overlay is open, because a native view always draws on top. Returns a still picture of the page (a data URL) to show in its place, or null when there is none. | `none` |
-| `page.close` | `page:close` | Close the open page view and forget its folder. The page keeps nothing. | `none` |
+| `page.hide` | `page:hide` | Hide the page view that is showing, for example while an overlay is open, because a native view always draws on top. Returns a still picture of the page (a data URL) to show in its place, or null when there is none. | `none` |
+| `page.park` | `page:park` | A page's tab went to the background: hide its view but keep it, and its session, alive, so the page is as it was when the tab comes back. A window keeps at most 4 page views alive; showing another pushes out the one shown longest ago. | `{ path: string }` |
+| `page.close` | `page:close` | Close this page's view, shown or hidden, and forget its folder. The page keeps nothing. The next show loads it again. | `{ path: string }` |
+| `page.retain` | `page:retain` | The pages that have a tab open in this window. The view of any other page is closed, so a closed, renamed or deleted tab does not leave a page running. | `{ paths: string[] }` |
 | `page.openInBrowser` | `page:open-in-browser` | Open an HTML page from the notes folder in the default browser, outside the locked view, after checking again that it is inside the notes folder and an HTML page. The page runs unlocked there, so this is only for the button the person presses. Returns whether it opened. | `{ path: string }` |
 
 | Event | Channel | What it means | Payload |

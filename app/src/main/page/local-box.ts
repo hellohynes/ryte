@@ -18,6 +18,7 @@ import {
   rounded,
   type PageBounds
 } from './locked-view'
+import { createKeptViews } from './kept-views'
 import { createBlockedLog, type BlockedLog } from './page-blocked'
 import { isAllowedLocalRequest, isSameLocalOrigin } from './local-rules'
 
@@ -27,7 +28,12 @@ export interface LocalBox {
   show(sender: WebContents, address: LocalAddress, bounds: PageBounds): Promise<LocalShowResult>
   setBounds(sender: WebContents, bounds: PageBounds): void
   hide(sender: WebContents): Promise<string | null>
-  close(sender: WebContents): void
+  /** The address's tab went to the background: hides its view and keeps it, and its session, alive. */
+  park(sender: WebContents, url: string): void
+  /** Destroys the address's view, if it has one. */
+  close(sender: WebContents, url: string): void
+  /** The addresses that have a tab open in this window: the view of any other address is destroyed. */
+  retain(sender: WebContents, urls: readonly string[]): void
   /** Closes every open view of this origin, in any window. */
   closeOrigin(origin: string): void
 }
@@ -45,16 +51,15 @@ interface OpenLocal {
   host: BrowserWindow
   ses: Session
   log: BlockedLog
-  onHostClosed: () => void
 }
 
 /**
  * The locked view for an approved local address: the same sandboxed view as an HTML page, in its own in-memory
- * session that can reach only that origin (and its live-reload socket). One local page is open per app window.
- * The caller has already checked that the origin is approved.
+ * session that can reach only that origin (and its live-reload socket). A window shows one local page at a time
+ * and keeps the pages of its other tabs alive, hidden, up to a cap, until their tabs close or an approval is
+ * removed. The caller has already checked that the origin is approved.
  */
 export function createLocalBox({ emitTo, openExternal }: LocalBoxDependencies): LocalBox {
-  const open = new Map<number, OpenLocal>()
   // Each show and close takes a new number for its window, so a show overtaken while it waited attaches nothing.
   const latest = new Map<number, number>()
   const bump = (senderId: number): number => {
@@ -62,14 +67,11 @@ export function createLocalBox({ emitTo, openExternal }: LocalBoxDependencies): 
     latest.set(senderId, next)
     return next
   }
+  const watchedWindows = new Set<number>()
 
-  const destroy = (senderId: number): void => {
-    const page = open.get(senderId)
-    if (!page) return
-    open.delete(senderId)
+  const destroy = (page: OpenLocal): void => {
     const { view, host, ses, log } = page
     log.stop()
-    host.removeListener('closed', page.onHostClosed)
     if (!host.isDestroyed()) host.contentView.removeChildView(view)
     if (!view.webContents.isDestroyed()) view.webContents.close()
     // Electron cannot destroy a session, so its storage is cleared by hand. The filter stays, denying everything,
@@ -78,19 +80,27 @@ export function createLocalBox({ emitTo, openExternal }: LocalBoxDependencies): 
     void ses.clearStorageData()
   }
 
+  const kept = createKeptViews<OpenLocal>({ destroy })
+
+  const watchWindow = (senderId: number, host: BrowserWindow): void => {
+    if (watchedWindows.has(senderId)) return
+    watchedWindows.add(senderId)
+    host.once('closed', () => {
+      kept.dropWindow(senderId)
+      latest.delete(senderId)
+      watchedWindows.delete(senderId)
+    })
+  }
+
   return {
     async show(sender, address, bounds) {
       const turn = bump(sender.id)
       const host = BrowserWindow.fromWebContents(sender)
       if (!host) return 'blocked'
+      watchWindow(sender.id, host)
+      kept.claim(sender.id, address.url)
 
-      const current = open.get(sender.id)
-      if (current && current.url === address.url) {
-        current.view.setBounds(rounded(bounds))
-        current.view.setVisible(true)
-        return 'shown'
-      }
-      destroy(sender.id)
+      if (kept.present(sender.id, address.url, rounded(bounds))) return 'shown'
 
       // No `persist:` prefix and a new name every time, so the session lives in memory, is shared with no other
       // page, and is gone with this one.
@@ -118,30 +128,36 @@ export function createLocalBox({ emitTo, openExternal }: LocalBoxDependencies): 
         // The page may move around its own origin, as local apps change pages; anything else is a link.
         allowNavigation: (url) => isSameLocalOrigin(url, origin)
       })
-      const onHostClosed = (): void => {
-        destroy(sender.id)
-        latest.delete(sender.id)
+      kept.add(sender.id, address.url, { url: address.url, origin, view, host, ses, log })
+      // The tab closed while the view was being made.
+      if (!kept.isWanted(sender.id, address.url)) {
+        kept.remove(sender.id, address.url)
+        return 'blocked'
       }
-      host.once('closed', onHostClosed)
-      open.set(sender.id, { url: address.url, origin, view, host, ses, log, onHostClosed })
+      kept.present(sender.id, address.url, rounded(bounds))
       void view.webContents.loadURL(address.url).catch(() => undefined)
       return 'shown'
     },
     setBounds(sender, bounds) {
-      open.get(sender.id)?.view.setBounds(rounded(bounds))
+      kept.setBounds(sender.id, rounded(bounds))
     },
     async hide(sender) {
-      const page = open.get(sender.id)
+      // Only the page that is showing has a picture to give; a page in the background has nothing to cover.
+      const page = kept.shown(sender.id)
       return page ? hideWithStill(page.view) : null
     },
-    close(sender) {
+    park(sender, url) {
+      kept.park(sender.id, url)
+    },
+    close(sender, url) {
       bump(sender.id)
-      destroy(sender.id)
+      kept.remove(sender.id, url)
+    },
+    retain(sender, urls) {
+      kept.retain(sender.id, urls)
     },
     closeOrigin(origin) {
-      for (const [senderId, page] of [...open]) {
-        if (page.origin === origin) destroy(senderId)
-      }
+      kept.removeWhere((page) => page.origin === origin)
     }
   }
 }
