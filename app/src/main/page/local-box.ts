@@ -19,6 +19,7 @@ import {
   type PageBounds
 } from './locked-view'
 import { createKeptViews } from './kept-views'
+import { appKeptViewPool } from './sleep-limits'
 import { createBlockedLog, type BlockedLog } from './page-blocked'
 import { isAllowedLocalRequest, isSameLocalOrigin } from './local-rules'
 
@@ -56,8 +57,8 @@ interface OpenLocal {
 /**
  * The locked view for an approved local address: the same sandboxed view as an HTML page, in its own in-memory
  * session that can reach only that origin (and its live-reload socket). A window shows one local page at a time
- * and keeps the pages of its other tabs alive, hidden, up to a cap, until their tabs close or an approval is
- * removed. The caller has already checked that the origin is approved.
+ * and keeps the pages of its other tabs alive, hidden, until their tabs close, an approval is removed, or they
+ * are put to sleep to stay within the memory budget. The caller has already checked that the origin is approved.
  */
 export function createLocalBox({ emitTo, openExternal }: LocalBoxDependencies): LocalBox {
   // Each show and close takes a new number for its window, so a show overtaken while it waited attaches nothing.
@@ -80,7 +81,7 @@ export function createLocalBox({ emitTo, openExternal }: LocalBoxDependencies): 
     void ses.clearStorageData()
   }
 
-  const kept = createKeptViews<OpenLocal>({ destroy })
+  const kept = createKeptViews<OpenLocal>({ destroy, pool: appKeptViewPool })
 
   // The window a call came from, with its bookkeeping set to be dropped when it closes. Every call that keeps
   // something per window goes through this first, so a window that never shows a page leaves nothing behind.

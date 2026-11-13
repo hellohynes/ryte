@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { createKeptViews, MAX_KEPT_VIEWS, type KeptViews } from './kept-views'
+import { createKeptViews, type KeptViews } from './kept-views'
 
 const bounds = { x: 0, y: 0, width: 10, height: 10 }
 
@@ -9,7 +9,11 @@ interface TestItem {
   view: {
     setBounds: () => void
     setVisible: (visible: boolean) => void
-    webContents: { setAudioMuted: (muted: boolean) => void; isDestroyed: () => boolean }
+    webContents: {
+      setAudioMuted: (muted: boolean) => void
+      isDestroyed: () => boolean
+      getOSProcessId: () => number
+    }
   }
   log: { pause: () => void; resume: () => void }
 }
@@ -26,7 +30,7 @@ function setup(): {
     view: {
       setBounds: vi.fn(),
       setVisible: vi.fn(),
-      webContents: { setAudioMuted: vi.fn(), isDestroyed: () => false }
+      webContents: { setAudioMuted: vi.fn(), isDestroyed: () => false, getOSProcessId: () => 0 }
     },
     log: { pause: vi.fn(), resume: vi.fn() }
   })
@@ -34,22 +38,6 @@ function setup(): {
 }
 
 describe('kept views', () => {
-  it('keeps up to the cap and destroys the view shown longest ago beyond it', () => {
-    const { kept, destroyed, make } = setup()
-    const names = ['a', 'b', 'c', 'd', 'e']
-    expect(MAX_KEPT_VIEWS).toBe(4)
-    for (const name of names.slice(0, 4)) {
-      kept.add(1, name, make(name))
-      kept.present(1, name, bounds)
-    }
-    // Showing "a" again makes "b" the one shown longest ago.
-    kept.present(1, 'a', bounds)
-    kept.add(1, 'e', make('e'))
-    kept.present(1, 'e', bounds)
-    expect(destroyed).toEqual(['b'])
-    expect(kept.size(1)).toBe(4)
-  })
-
   it('hides a view when its tab goes to the background without destroying it', () => {
     const { kept, destroyed, make } = setup()
     const a = make('a')

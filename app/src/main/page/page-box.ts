@@ -21,6 +21,7 @@ import {
   type PageBounds
 } from './locked-view'
 import { createKeptViews } from './kept-views'
+import { appKeptViewPool } from './sleep-limits'
 import { isOwnPageAddress, isOwnPageMove } from './page-moves'
 import {
   parseScroll,
@@ -69,8 +70,8 @@ interface OpenPage {
  * The locked view for an HTML page: a separate sandboxed view in its own in-memory session, with no preload and
  * no Node. It loads only from the page's folder through `ryte-page`, never `ryte-file`, and refuses the
  * network, other files, windows, downloads and permissions. A window shows one page at a time and keeps the
- * pages of its other tabs alive, hidden, up to a cap, so each keeps its scroll position and its storage (each
- * page has its own session, shared with nothing) until its tab closes or it is pushed out.
+ * pages of its other tabs alive, hidden, so each keeps its scroll position and its storage (each page has its
+ * own session, shared with nothing) until its tab closes or it is put to sleep to stay within the memory budget.
  */
 export function createPageBox({
   folders,
@@ -88,7 +89,7 @@ export function createPageBox({
   }
 
   // Where a page was scrolled to when its tab went to the background, for a page that has to load again after
-  // being pushed out. Kept per window and only for pages that still have a tab.
+  // being put to sleep. Kept per window and only for pages that still have a tab.
   const scrolls = new Map<number, Map<string, PageScroll>>()
   const watchedWindows = new Set<number>()
 
@@ -105,7 +106,7 @@ export function createPageBox({
     void ses.clearStorageData()
   }
 
-  const kept = createKeptViews<OpenPage>({ destroy })
+  const kept = createKeptViews<OpenPage>({ destroy, pool: appKeptViewPool })
 
   // The window a call came from, with its bookkeeping set to be dropped when it closes. Every call that keeps
   // something per window goes through this first, so a window that never shows a page leaves nothing behind.

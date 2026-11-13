@@ -43,7 +43,7 @@ export const hide = defineOperation({
 export const park = defineOperation({
   channel: 'page:park',
   description:
-    "A page's tab went to the background: hide its view but keep it, and its session, alive, so the page is as it was when the tab comes back. A window keeps at most 4 page views alive; showing another pushes out the one shown longest ago.",
+    "A page's tab went to the background: hide its view but keep it, and its session, alive, so the page is as it was when the tab comes back. The app keeps page and other kept views alive until they use more than about 1.5 GB together or there are more than 24; then the ones shown longest ago go to sleep and load again when their tab returns.",
   input: z.strictObject({ path: sourcePath }),
   output: z.void(),
   example: { input: { path: 'review/index.html' }, output: undefined }

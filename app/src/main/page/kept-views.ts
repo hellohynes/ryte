@@ -1,9 +1,7 @@
 import type { WebContents, WebContentsView } from 'electron'
 
 import type { BlockedLog } from './page-blocked'
-
-/** How many locked views one window keeps alive at once, shown or hidden. */
-export const MAX_KEPT_VIEWS = 4
+import { createKeptViewPool, type KeptViewPool, type PoolMember } from './kept-view-pool'
 
 interface ViewBounds {
   x: number
@@ -14,30 +12,34 @@ interface ViewBounds {
 
 export interface KeptView {
   view: Pick<WebContentsView, 'setBounds' | 'setVisible'> & {
-    webContents: Pick<WebContents, 'setAudioMuted' | 'isDestroyed'>
+    webContents: Pick<WebContents, 'setAudioMuted' | 'isDestroyed' | 'getOSProcessId'>
   }
   log: Pick<BlockedLog, 'pause' | 'resume'>
 }
 
 interface WindowViews<T> {
-  /** Least recently shown first. */
   items: Map<string, T>
+  /** When each view was last shown, in the pool's shared order. */
+  stamps: Map<string, number>
   shown: string | null
   /** The keys that have a tab open, as last reported by the window. Null until it has reported. */
   wanted: Set<string> | null
 }
 
 export interface KeptViewsOptions<T> {
-  cap?: number
+  /** The budget and ceiling these views count toward, shared with the other boxes. Default: a pool of their own. */
+  pool?: KeptViewPool
   /** Tears one view down for good. Called once per view, never for a view that is only hidden. */
   destroy: (item: T) => void
 }
 
 /**
  * The locked views a window keeps alive while their tabs are in the background, so a page keeps its scroll
- * position and its storage across a tab switch. At most one is shown. Past the cap the least recently shown
- * view is destroyed; a view is also destroyed when its tab is gone. This only does the bookkeeping: what a view
- * is made of, and how it is torn down, belongs to the caller.
+ * position and its storage across a tab switch. At most one is shown per window. When all the views in the
+ * pool together use more memory than its budget, or there are more than its ceiling, the least recently shown
+ * ones go to sleep (are destroyed, and load again when their tab comes back); a view is also destroyed when its
+ * tab is gone. This only does the bookkeeping: what a view is made of, and how it is torn down, belongs to the
+ * caller.
  */
 export interface KeptViews<T extends KeptView> {
   get(senderId: number, key: string): T | undefined
@@ -47,7 +49,7 @@ export interface KeptViews<T extends KeptView> {
   claim(senderId: number, key: string): void
   /** False once the window has reported its tabs and this key is not among them. */
   isWanted(senderId: number, key: string): boolean
-  /** Keeps a new view as the most recently shown and destroys what the cap pushes out. */
+  /** Keeps a new view as the most recently shown and puts to sleep what the budget or the ceiling pushes out. */
   add(senderId: number, key: string, item: T): void
   /** Shows this view over `bounds`, hides every other one of the window. */
   present(senderId: number, key: string, bounds: ViewBounds): boolean
@@ -72,7 +74,7 @@ function hold(item: KeptView): void {
 }
 
 export function createKeptViews<T extends KeptView>({
-  cap = MAX_KEPT_VIEWS,
+  pool = createKeptViewPool(),
   destroy
 }: KeptViewsOptions<T>): KeptViews<T> {
   const windows = new Map<number, WindowViews<T>>()
@@ -80,7 +82,7 @@ export function createKeptViews<T extends KeptView>({
   const windowOf = (senderId: number): WindowViews<T> => {
     let views = windows.get(senderId)
     if (!views) {
-      views = { items: new Map(), shown: null, wanted: null }
+      views = { items: new Map(), stamps: new Map(), shown: null, wanted: null }
       windows.set(senderId, views)
     }
     return views
@@ -90,8 +92,28 @@ export function createKeptViews<T extends KeptView>({
     const item = views.items.get(key)
     if (!item) return
     views.items.delete(key)
+    views.stamps.delete(key)
     if (views.shown === key) views.shown = null
     destroy(item)
+    pool.sync()
+  }
+
+  const member: PoolMember = {
+    size: () => [...windows.values()].reduce((sum, views) => sum + views.items.size, 0),
+    collect(out, protect) {
+      for (const views of windows.values()) {
+        for (const [key, item] of views.items) {
+          const contents = item.view.webContents
+          out.push({
+            key: String(out.length),
+            pid: contents.isDestroyed() ? 0 : contents.getOSProcessId(),
+            order: views.stamps.get(key) ?? 0,
+            shown: key === views.shown || item === protect,
+            sleep: () => drop(views, key)
+          })
+        }
+      }
+    }
   }
 
   return {
@@ -114,15 +136,14 @@ export function createKeptViews<T extends KeptView>({
       return !wanted || wanted.has(key)
     },
 
-    /** Keeps a new view as the most recently shown and destroys what the cap pushes out. */
+    /** Keeps a new view as the most recently shown and puts to sleep what the budget or the ceiling pushes out. */
     add(senderId: number, key: string, item: T): void {
       const views = windowOf(senderId)
       views.items.set(key, item)
-      while (views.items.size > cap) {
-        const victim = [...views.items.keys()].find((k) => k !== key && k !== views.shown)
-        if (victim === undefined) break
-        drop(views, victim)
-      }
+      views.stamps.set(key, pool.stamp())
+      pool.join(member)
+      pool.sweep(item)
+      pool.sync()
     },
 
     /** Shows this view over `bounds`, hides every other one of the window. */
@@ -137,8 +158,7 @@ export function createKeptViews<T extends KeptView>({
       item.view.setVisible(true)
       item.log.resume()
       if (!item.view.webContents.isDestroyed()) item.view.webContents.setAudioMuted(false)
-      views.items.delete(key)
-      views.items.set(key, item)
+      views.stamps.set(key, pool.stamp())
       views.shown = key
       return true
     },
@@ -150,6 +170,7 @@ export function createKeptViews<T extends KeptView>({
       if (!views || !item) return undefined
       hold(item)
       if (views.shown === key) views.shown = null
+      pool.sweep(item)
       return item
     },
 
@@ -188,6 +209,7 @@ export function createKeptViews<T extends KeptView>({
       if (!views) return
       for (const key of [...views.items.keys()]) drop(views, key)
       windows.delete(senderId)
+      pool.sync()
     },
 
     size: (senderId: number): number => windows.get(senderId)?.items.size ?? 0

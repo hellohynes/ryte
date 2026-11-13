@@ -139,7 +139,14 @@ async function main() {
   const { root, userData } = makeFixtures()
   const electron = spawn(require('electron'), ['.', `--remote-debugging-port=${PORT}`], {
     cwd: appRoot,
-    env: { ...process.env, RYTE_TEST_HIDDEN: '1', RYTE_USER_DATA_DIR: userData },
+    env: {
+      ...process.env,
+      RYTE_TEST_HIDDEN: '1',
+      RYTE_USER_DATA_DIR: userData,
+      // A few synthetic pages never come near the memory budget, so a low ceiling makes the oldest views sleep.
+      RYTE_TEST_KEPT_CEILING: '4',
+      RYTE_TEST_KEPT_BUDGET_MB: process.env.RYTE_TEST_KEPT_BUDGET_MB ?? ''
+    },
     stdio: 'ignore'
   })
   let exited = false
@@ -295,18 +302,22 @@ async function main() {
       )
     }
 
-    // 3. Six HTML tabs: at most four views alive; the oldest is pushed out and loads again where it was.
+    // 3. Six HTML tabs with the test ceiling of four: at most four views alive; the oldest sleeps and loads again where it was.
     for (const name of ['p3.html', 'p4.html', 'p5.html', 'p6.html']) await show(name)
     const alive = await pageTargets()
-    check('at most 4 page views alive with 6 HTML tabs', alive.length <= 4, `${alive.length} alive`)
+    check(
+      'at most 4 page views alive with 6 HTML tabs and a ceiling of 4',
+      alive.length <= 4,
+      `${alive.length} alive`
+    )
     const fourViews = rssOfAppProcesses(electron.pid)
-    check('the view shown longest ago was pushed out', !(await viewOf('p1.html')))
+    check('the view shown longest ago went to sleep', !(await viewOf('p1.html')))
     await goTo('p1.html')
     const back = await settled('p1.html')
     await sleep(500)
     const restored = await readState('p1.html')
     check(
-      'a pushed-out page loads again at its scroll position',
+      'a page that went to sleep loads again at its scroll position',
       Math.abs(restored.scroll - 900) <= 2,
       `scroll ${restored.scroll}, marker changed: ${back.marker !== before.marker}`
     )

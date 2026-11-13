@@ -89,7 +89,7 @@ export const hide = defineOperation({
 export const park = defineOperation({
   channel: 'localhost:park',
   description:
-    "A local address's tab went to the background: hide its view but keep it, and its session, alive. A window keeps at most 4 local views alive; showing another pushes out the one shown longest ago.",
+    "A local address's tab went to the background: hide its view but keep it, and its session, alive. The app keeps local and other kept views alive until they use more than about 1.5 GB together or there are more than 24; then the ones shown longest ago go to sleep and load again when their tab returns.",
   input: z.strictObject({ url: address }),
   output: z.void(),
   example: { input: { url: 'http://localhost:5173/' }, output: undefined }
