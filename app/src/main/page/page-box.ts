@@ -57,6 +57,8 @@ interface OpenPage {
   view: WebContentsView
   host: BrowserWindow
   log: BlockedLog
+  /** The key of what the page showed, made when the page was: the notes folder may change while it lives. */
+  memoryKey: string
   stopTracking: () => void
 }
 
@@ -132,11 +134,7 @@ export function createPageBox({
 
   // Keeps what the page shows, unless its tab has been closed or the page put to sleep by the time it answers.
   const keep = (senderId: number, path: string, page: OpenPage): Promise<void> =>
-    memory().capture(
-      memoryKey(path),
-      page.view.webContents,
-      () => kept.get(senderId, path) === page
-    )
+    memory().capture(page.memoryKey, page.view.webContents, () => kept.get(senderId, path) === page)
 
   const create = (
     sender: WebContents,
@@ -163,13 +161,14 @@ export function createPageBox({
           ? pageMoveVerdict(url, (file) => tokenOfNotesFolder(getNotesRoot(), file, getSalt()))
           : isSubframeAllowed(url)
     })
+    const key = memoryKey(path)
     const stopTracking = memory().track(
-      memoryKey(path),
+      key,
       view.webContents,
       () => kept.get(sender.id, path)?.view === view,
       () => kept.shown(sender.id)?.view === view
     )
-    return { realPath, version, view, host, log, stopTracking }
+    return { realPath, version, view, host, log, memoryKey: key, stopTracking }
   }
 
   return {

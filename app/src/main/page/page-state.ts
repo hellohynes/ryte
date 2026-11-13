@@ -112,8 +112,7 @@ const ELEMENT_HELPERS = `
  * password (a "show password" button turns one into text).
  */
 export const CAPTURE_SCRIPT = `(() => {${ELEMENT_HELPERS}
-  const seen = (globalThis.rytePasswordInputs ??= new WeakSet())
-  for (const el of document.querySelectorAll('input[type=password]')) seen.add(el)
+  const seen = globalThis.rytePasswordInputs ??= new WeakSet()
   const ids = new Map()
   const all = document.getElementsByTagName('*')
   for (const e of all) if (e.id) ids.set(e.id, (ids.get(e.id) || 0) + 1)
@@ -147,6 +146,28 @@ export const CAPTURE_SCRIPT = `(() => {${ELEMENT_HELPERS}
   scrolled.sort((a, b) => b.clientWidth * b.clientHeight - a.clientWidth * a.clientHeight)
   const areas = scrolled.slice(0, ${MAX_AREAS}).map((el) => ({ key: keyOf(el), x: el.scrollLeft, y: el.scrollTop }))
   return { path: location.pathname, scroll: { x: window.scrollX, y: window.scrollY }, areas, fields }
+})()`
+
+/**
+ * Runs when a page has loaded, before anything is captured: notes every password input, and keeps watching for an
+ * input that becomes or stops being one, so a "show password" button used before the first capture is still seen.
+ */
+export const SEED_SCRIPT = `(() => {
+  const seen = globalThis.rytePasswordInputs ??= new WeakSet()
+  const note = (node) => {
+    if (node.nodeType !== 1) return
+    if (node.matches('input[type=password]')) seen.add(node)
+    for (const el of node.querySelectorAll('input[type=password]')) seen.add(el)
+  }
+  note(document.documentElement)
+  if (globalThis.rytePasswordWatch) return
+  globalThis.rytePasswordWatch = new MutationObserver((records) => {
+    for (const r of records) {
+      r.addedNodes.forEach(note)
+      if (r.type === 'attributes' && (r.target.type === 'password' || String(r.oldValue).toLowerCase() === 'password')) seen.add(r.target)
+    }
+  })
+  globalThis.rytePasswordWatch.observe(document, { subtree: true, childList: true, attributes: true, attributeFilter: ['type'], attributeOldValue: true })
 })()`
 
 /** The world the capture and restore scripts run in. Any number above Electron's own (999) is free. */

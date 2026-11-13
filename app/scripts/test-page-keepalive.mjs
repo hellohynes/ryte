@@ -85,6 +85,7 @@ function makeFixtures(port) {
   mkdirSync(notes)
   mkdirSync(userData)
   for (let i = 1; i <= 6; i += 1) writeFileSync(join(notes, `p${i}.html`), tall(`p${i}`))
+  writeFileSync(join(notes, 'q.html'), tall('q'))
   mkdirSync(join(notes, 'pages'))
   mkdirSync(join(notes, 'shared'))
   writeFileSync(join(notes, 'pages', 's.html'), sibling)
@@ -542,7 +543,18 @@ async function main() {
           Math.abs(reloaded.scroll - 1200) <= 2,
         JSON.stringify(reloaded)
       )
-      // 7. A password box that shows its text ("show password") is never kept; a page left showing is read on quit.
+      // 7a. A password revealed before Ryte's first read of the page is not kept either: type into the box, turn it
+      // into text at once, and leave the tab.
+      await show('q.html')
+      await withView('q.html', (client) =>
+        client.evaluate(
+          `(() => { const pw = document.getElementById('pw2'); pw.value = 'seed-secret'; pw.type = 'text'; document.getElementById('answer').value = 'q-answer'; return true })()`
+        )
+      )
+      await sleep(200)
+      await goTo('n.md')
+      await sleep(300)
+      // 7b. A password box that shows its text ("show password") is never kept; a page left showing is read on quit.
       await show('p3.html')
       await withView('p3.html', (client) =>
         client.evaluate(
@@ -568,7 +580,10 @@ async function main() {
     const kept = readFileSync(join(userData, 'page-state.json'), 'utf8')
     check(
       'no password, shown as text or not, was written to the kept state',
-      kept.includes('left showing') && !kept.includes('hunter2'),
+      kept.includes('left showing') &&
+        kept.includes('q-answer') &&
+        !kept.includes('hunter2') &&
+        !kept.includes('seed-secret'),
       `${kept.length} bytes`
     )
     // The same profile again, with a local address already approved and open that the server redirects away.

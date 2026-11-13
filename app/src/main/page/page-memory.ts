@@ -7,6 +7,7 @@ import {
   isEmptyState,
   parsePageState,
   restoreScript,
+  SEED_SCRIPT,
   STATE_WORLD_ID,
   type PageState
 } from './page-state'
@@ -20,7 +21,7 @@ const QUIT_CAPTURE_MS = 300
 
 type Contents = Pick<
   WebContents,
-  'executeJavaScriptInIsolatedWorld' | 'isDestroyed' | 'isLoading' | 'once'
+  'executeJavaScriptInIsolatedWorld' | 'isDestroyed' | 'isLoading' | 'on'
 >
 
 export interface PageMemory {
@@ -103,17 +104,20 @@ export function createPageMemory(file: string): PageMemory {
           .executeJavaScriptInIsolatedWorld(STATE_WORLD_ID, [{ code }])
           .catch(() => undefined)
       }
-      if (state) {
-        restoring.add(key)
-        contents.once('did-finish-load', () => {
-          run(restoreScript(state))
-          setTimeout(() => {
-            if (contents.isDestroyed()) return
-            run(restoreScript(state, true))
-            restoring.delete(key)
-          }, RESTORE_RETRY_MS).unref()
-        })
-      }
+      let pending: PageState | undefined = state
+      if (state) restoring.add(key)
+      contents.on('did-finish-load', () => {
+        // Before anything is read or put back, note which inputs are passwords (and watch for new ones).
+        run(SEED_SCRIPT)
+        if (!state || pending !== state) return
+        pending = undefined
+        run(restoreScript(state))
+        setTimeout(() => {
+          if (contents.isDestroyed()) return
+          run(restoreScript(state, true))
+          restoring.delete(key)
+        }, RESTORE_RETRY_MS).unref()
+      })
       const entry = { run: () => capture(key, contents, isLive), isShown }
       tracked.add(entry)
       const every = setInterval(() => {
