@@ -16,20 +16,21 @@ export function indexingChanged(paths) {
   return paths.some((path) => INDEXING_PATHS.some((prefix) => path.startsWith(prefix)))
 }
 
-function git(args) {
-  const result = spawnSync('git', args, { encoding: 'utf8' })
+function git(args, cwd) {
+  const result = spawnSync('git', args, { encoding: 'utf8', cwd })
   if (result.error || result.status !== 0) throw new Error(`git ${args.join(' ')} failed`)
   return result.stdout.split('\n').filter(Boolean)
 }
 
 // Commits since the merge-base with origin/main, plus the working tree and untracked files.
 // When that cannot be worked out, assume indexing changed so nothing is skipped by mistake.
-export function changedPaths() {
+export function changedPaths(cwd = process.cwd()) {
   try {
-    const base = git(['merge-base', 'HEAD', 'origin/main'])[0]
+    const base = git(['merge-base', 'HEAD', 'origin/main'], cwd)[0]
     return [
-      ...git(['diff', '--name-only', base]),
-      ...git(['ls-files', '--others', '--exclude-standard'])
+      ...git(['diff', '--name-only', base], cwd),
+      // --full-name: paths from the repository root like `diff`, not relative to the current folder
+      ...git(['ls-files', '--others', '--exclude-standard', '--full-name'], cwd)
     ]
   } catch {
     return null
@@ -51,7 +52,9 @@ function main() {
   if (!withIndexing) skipped.push('the watcher scenarios', 'the indexer smoke')
   console.log(
     `Fast path: skips ${skipped.join(', ')}. Run \`pnpm validate\` for everything.` +
-      (withIndexing ? ' Indexing code changed (or could not be checked), so the watcher scenarios and the indexer smoke run.' : '')
+      (withIndexing
+        ? ' Indexing code changed (or could not be checked), so the watcher scenarios and the indexer smoke run.'
+        : '')
   )
 
   step('check:node', ['check:node'])
