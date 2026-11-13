@@ -28,7 +28,7 @@ pnpm validate
 pnpm smoke:indexer
 ```
 
-`pnpm validate` runs Node version validation, the Stencil and site checks, the API contract checks (`pnpm contract:generate --check`, `pnpm check:contract`), lint, typecheck, tests, and production build. After editing a contract definition, run `pnpm contract:generate` and commit the generated files. `pnpm smoke:indexer` is the explicit native SQLite/indexer smoke using synthetic fixtures.
+`pnpm validate` runs Node version validation, the Stencil and site checks, the API contract checks (`pnpm contract:generate --check`, `pnpm check:contract`), lint, typecheck, tests, and the production bundle build (`pnpm build:bundle`, without repeating the type check; `pnpm build` is the standalone form that type checks first). `pnpm qa:local` is a faster subset for trying a build; it is not a substitute for `pnpm validate` before a PR. After editing a contract definition, run `pnpm contract:generate` and commit the generated files. `pnpm smoke:indexer` is the explicit native SQLite/indexer smoke using synthetic fixtures.
 
 The individual validation commands are:
 

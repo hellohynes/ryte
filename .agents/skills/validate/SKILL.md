@@ -35,7 +35,7 @@ git diff --check
 
 2. **Run Checks**
    - Run `pnpm guard:branch`.
-   - Run `pnpm validate`.
+   - Run `pnpm validate`. (`pnpm qa:local` is a fast subset for trying a build; it does not replace this.)
    - Run `pnpm smoke:indexer`; this is the explicit native SQLite/indexer smoke with synthetic fixtures.
    - Run `git diff --check` from the repo root.
    - When the changed scope includes Electron Builder, native dependencies, startup, release workflows, or icon assets, also run `pnpm dmg:local` and report that it is an unsigned local package check.
