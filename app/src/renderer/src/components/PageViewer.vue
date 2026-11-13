@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * The tab for an HTML page, or for a local address (`url`). The page itself is drawn by a separate locked view that the main process places over
+ * The tab for an HTML page, or for a local address (`url`). The page itself is drawn by a separate view that the main process places over
  * this tab's content area, so this component only reports where that area is. A native view always draws on
  * top, so while an overlay is open the view is hidden and a still picture of the page shows in its place.
  */
@@ -40,7 +40,7 @@ const name = computed(() =>
     ? describeOrigin(parseLocalAddress(props.url)?.origin ?? props.url)
     : (props.path ?? '').slice((props.path ?? '').lastIndexOf('/') + 1)
 )
-// A local address and an HTML file are shown through the same kind of locked view, by different operations.
+// A local address and an HTML file are shown through the same kind of view, by different operations.
 const views = computed(() => (props.url ? window.ryte.localhost : window.ryte.page))
 const stage = ref<HTMLElement | null>(null)
 const problem = ref<PageProblem | null>(null)
@@ -104,9 +104,24 @@ async function showPage(): Promise<void> {
   }
 }
 
+// Closes this tab's view, shown or hidden, and forgets its page.
+function closeView(): Promise<void> {
+  return props.url
+    ? window.ryte.localhost.close({ url: props.url })
+    : window.ryte.page.close({ path: props.path ?? '' })
+}
+
+// The tab is going to the background: its view is hidden and kept, so the page is as it was when the tab returns.
+// A tab that is closed, renamed or deleted is cleaned up by the store, which reports the tabs that are open.
+function parkView(): Promise<void> {
+  return props.url
+    ? window.ryte.localhost.park({ url: props.url })
+    : window.ryte.page.park({ path: props.path ?? '' })
+}
+
 function reload(): void {
   enqueue(async () => {
-    await views.value.close()
+    await closeView()
     opened = false
     if (!covered) await showPage()
   })
@@ -175,7 +190,22 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', syncBounds)
   document.removeEventListener('toggle', scheduleOverlaySync, true)
   if (frame !== null) window.cancelAnimationFrame(frame)
-  void views.value.close().catch(() => undefined)
+  // Behind any show still waiting in the queue, so it cannot attach a view after the tab has left. If the person
+  // has come back to this page by then (a quick A, B, A), the newer tab shows it and a park would hide it. A frame
+  // later, so the show of the tab that replaces this one reaches the main process first and the stage is never
+  // left empty; a timer covers a window that draws no frames.
+  let parked = false
+  const parkAfterFrame = (): void => {
+    if (parked) return
+    parked = true
+    enqueue(async () => {
+      const backAgain = props.url ? viewer.addressUrl === props.url : viewer.pagePath === props.path
+      if (backAgain) return
+      await parkView().catch(() => undefined)
+    })
+  }
+  window.requestAnimationFrame(parkAfterFrame)
+  window.setTimeout(parkAfterFrame, 100)
 })
 
 watch(() => viewer.pageVersion, reload)
@@ -200,7 +230,7 @@ watch(
         data-page-open-browser
         @click="openInBrowser"
       >
-        {{ openFailed ? "Couldn't open it" : 'Open in browser (not locked)' }}
+        {{ openFailed ? "Couldn't open it" : 'Open in browser' }}
       </StButton>
     </header>
     <StNotice

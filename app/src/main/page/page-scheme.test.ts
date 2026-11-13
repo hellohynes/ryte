@@ -1,66 +1,76 @@
-import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, realpathSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { createPageFolderHandler, createPageFolders } from './page-scheme'
+import { createPageHandler, folderToken, pageAddress } from './page-scheme'
 
-const ID = 'a'.repeat(32)
-const OTHER_ID = 'b'.repeat(32)
+const TOKEN = 'a'.repeat(32)
+const SALT = 'test-salt'
 const PNG_BYTES = Buffer.from('89504e470d0a1a0a', 'hex')
 
-describe('the ryte-page folder handler', () => {
-  let folder: string
+describe('the ryte-page handler', () => {
+  let root: string
   let outside: string
   let get: (url: string) => Promise<Response>
 
   beforeEach(() => {
-    folder = mkdtempSync(join(tmpdir(), 'ryte-page-'))
+    root = realpathSync(mkdtempSync(join(tmpdir(), 'ryte-page-')))
     outside = mkdtempSync(join(tmpdir(), 'ryte-page-outside-'))
-    mkdirSync(join(folder, 'media'))
-    mkdirSync(join(folder, '.obsidian'))
-    mkdirSync(join(folder, 'node_modules', 'pkg'), { recursive: true })
-    writeFileSync(join(folder, '.obsidian', 'data.json'), '{"token":"x"}')
-    writeFileSync(join(folder, 'node_modules', 'pkg', 'index.js'), 'x')
-    writeFileSync(join(folder, 'index.html'), '<h1>hi</h1>')
-    writeFileSync(join(folder, 'media', 'shot.png'), PNG_BYTES)
+    mkdirSync(join(root, 'pages'))
+    mkdirSync(join(root, 'shared'))
+    mkdirSync(join(root, '.obsidian'))
+    writeFileSync(join(root, '.obsidian', 'data.json'), '{"token":"x"}')
+    writeFileSync(join(root, 'pages', 'index.html'), '<h1>hi</h1>')
+    writeFileSync(join(root, 'shared', 'style.css'), 'body{}')
+    writeFileSync(join(root, 'shared', 'shot.png'), PNG_BYTES)
+    writeFileSync(join(root, 'shared', 'note.md'), '# A note')
+    writeFileSync(join(root, 'shared', 'data.bin'), 'bytes')
+    writeFileSync(join(root, 'shared', 'logo.svg'), '<svg xmlns="http://www.w3.org/2000/svg"/>')
+    symlinkSync(join(root, 'pages', 'index.html'), join(root, 'shared', 'page.x'))
     writeFileSync(join(outside, 'secret.html'), 'secret')
-    symlinkSync(join(outside, 'secret.html'), join(folder, 'link.html'))
-
-    const registered = createPageFolders(() => ID)
-    registered.open(folder)
-    const handler = createPageFolderHandler(registered)
+    symlinkSync(join(outside, 'secret.html'), join(root, 'pages', 'link.html'))
+    symlinkSync(outside, join(root, 'pages', 'out'))
+    const handler = createPageHandler(
+      () => root,
+      () => SALT
+    )
     get = (url) => handler({ method: 'GET', url })
   })
 
   afterEach(() => {
-    rmSync(folder, { recursive: true, force: true })
+    rmSync(root, { recursive: true, force: true })
     rmSync(outside, { recursive: true, force: true })
   })
 
-  it('serves a page and a picture from its media folder', async () => {
-    const page = await get(`ryte-page://${ID}/index.html`)
-    expect(page.status).toBe(200)
-    expect(await page.text()).toBe('<h1>hi</h1>')
-    expect(page.headers.get('content-type')).toBe('text/html; charset=utf-8')
+  it('serves a file of a sibling folder, whatever the token', async () => {
+    const style = await get(`ryte-page://${TOKEN}/shared/style.css`)
+    expect(style.status).toBe(200)
+    expect(await style.text()).toBe('body{}')
+    expect(style.headers.get('content-type')).toBe('text/css; charset=utf-8')
 
-    const picture = await get(`ryte-page://${ID}/media/shot.png`)
-    expect(picture.status).toBe(200)
+    const picture = await get(`ryte-page://${'b'.repeat(32)}/shared/shot.png`)
     expect(Buffer.from(await picture.arrayBuffer())).toEqual(PNG_BYTES)
-    expect(picture.headers.get('content-type')).toBe('image/png')
   })
 
-  it('refuses everything outside the folder with a bare 404', async () => {
+  it('serves a Markdown note and a file of any other type', async () => {
+    const note = await get(`ryte-page://${TOKEN}/shared/note.md`)
+    expect(note.status).toBe(200)
+    expect(await note.text()).toBe('# A note')
+    const other = await get(`ryte-page://${TOKEN}/shared/data.bin`)
+    expect(other.status).toBe(200)
+    expect(await other.text()).toBe('bytes')
+  })
+
+  it('refuses everything outside the notes folder with a bare 404', async () => {
     const refused = [
-      `ryte-page://${ID}/../secret.html`,
-      `ryte-page://${ID}/%2e%2e/secret.html`,
-      `ryte-page://${ID}/media/%2E%2E/%2E%2E/secret.html`,
-      `ryte-page://${ID}/link.html`,
-      `ryte-page://${OTHER_ID}/index.html`,
-      `ryte-page://${ID}/missing.html`,
-      `ryte-page://${ID}/.obsidian/data.json`,
-      `ryte-page://${ID}/node_modules/pkg/index.js`
+      `ryte-page://${TOKEN}/../secret.html`,
+      `ryte-page://${TOKEN}/%2e%2e/secret.html`,
+      `ryte-page://${TOKEN}/pages/link.html`,
+      `ryte-page://${TOKEN}/pages/out/secret.html`,
+      `ryte-page://${TOKEN}/missing.html`,
+      `ryte-page://${TOKEN}/.obsidian/data.json`
     ]
     for (const url of refused) {
       const response = await get(url)
@@ -69,10 +79,28 @@ describe('the ryte-page folder handler', () => {
     }
   })
 
-  it('sends the content policy that keeps the page on its own origin', async () => {
-    const response = await get(`ryte-page://${ID}/index.html`)
-    const policy = response.headers.get('content-security-policy')!
-    expect(policy).toContain("connect-src 'none'")
-    expect(policy).toContain(`default-src ryte-page://${ID}`)
+  it('serves an HTML page only under the token of its own folder', async () => {
+    const own = folderToken(join(root, 'pages'), SALT)
+    expect((await get(`ryte-page://${own}/pages/index.html`)).status).toBe(200)
+    expect((await get(`ryte-page://${TOKEN}/pages/index.html`)).status).toBe(404)
+  })
+
+  it('serves a link to an HTML page only under the token of its own folder', async () => {
+    const own = folderToken(join(root, 'shared'), SALT)
+    expect((await get(`ryte-page://${own}/shared/page.x`)).status).toBe(200)
+    expect((await get(`ryte-page://${TOKEN}/shared/page.x`)).status).toBe(404)
+  })
+
+  it('serves an SVG to another folder sandboxed, so a picture works and nothing runs as that origin', async () => {
+    const other = await get(`ryte-page://${TOKEN}/shared/logo.svg`)
+    expect(other.status).toBe(200)
+    expect(other.headers.get('content-security-policy')).toBe('sandbox')
+    const own = await get(`ryte-page://${folderToken(join(root, 'shared'), SALT)}/shared/logo.svg`)
+    expect(own.headers.get('content-security-policy')).toBeNull()
+  })
+
+  it('builds the address of a page from its folder token and its path from the notes folder', async () => {
+    const address = await pageAddress(root, join(root, 'pages', 'index.html'), SALT)
+    expect(address).toBe(`ryte-page://${folderToken(join(root, 'pages'), SALT)}/pages/index.html`)
   })
 })

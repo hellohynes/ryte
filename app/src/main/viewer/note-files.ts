@@ -28,7 +28,15 @@ function isInside(root: string, target: string): boolean {
 }
 
 export type LocatedNoteFile =
-  | { ok: true; realPath: string; extension: string; size: number; dev: number; ino: number }
+  | {
+      ok: true
+      realPath: string
+      extension: string
+      size: number
+      mtimeMs: number
+      dev: number
+      ino: number
+    }
   | { ok: false; reason: 'blocked' | 'missing' }
 
 /**
@@ -61,7 +69,15 @@ export async function locateNoteFile(
   const stats = await lstat(target).catch(() => null)
   if (!stats) return { ok: false, reason: 'missing' }
   if (!stats.isFile()) return { ok: false, reason: 'blocked' }
-  return { ok: true, realPath: target, extension, size: stats.size, dev: stats.dev, ino: stats.ino }
+  return {
+    ok: true,
+    realPath: target,
+    extension,
+    size: stats.size,
+    mtimeMs: stats.mtimeMs,
+    dev: stats.dev,
+    ino: stats.ino
+  }
 }
 
 const isPictureExtension = (extension: string): boolean =>

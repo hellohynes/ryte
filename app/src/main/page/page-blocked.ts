@@ -6,6 +6,9 @@ export interface BlockedLog {
   add(address: string): void
   /** Drops a report still waiting and ignores later ones, so a closed page cannot reach the next page's banner. */
   stop(): void
+  /** A page in the background: drops what is counted and waiting, and ignores reports until `resume`. */
+  pause(): void
+  resume(): void
 }
 
 /**
@@ -19,10 +22,11 @@ export function createBlockedLog(
   let addresses: string[] = []
   let scheduled = false
   let stopped = false
+  let paused = false
   let timer: ReturnType<typeof setTimeout> | undefined
   return {
     add(address) {
-      if (stopped) return
+      if (stopped || paused) return
       count += 1
       addresses = [...addresses, address.slice(0, MAX_ADDRESS_LENGTH)].slice(-MAX_ADDRESSES)
       if (scheduled) return
@@ -35,6 +39,16 @@ export function createBlockedLog(
     stop() {
       stopped = true
       clearTimeout(timer)
+    },
+    pause() {
+      paused = true
+      clearTimeout(timer)
+      scheduled = false
+      count = 0
+      addresses = []
+    },
+    resume() {
+      paused = false
     }
   }
 }

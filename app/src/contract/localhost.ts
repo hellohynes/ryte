@@ -60,7 +60,7 @@ export const release = defineOperation({
 export const show = defineOperation({
   channel: 'localhost:show',
   description:
-    'Show an approved local address in a locked view over the given area of the window. The page can reach only its own origin, including its live-reload connection, and cannot reach the internet, other ports, other spellings of this Mac, the notes folder, new windows, downloads or permissions. Showing the address that is already open only moves and reveals it. Returns `shown`, `needs-approval` (not approved, or the approval was removed) or `blocked` (not a local address).',
+    'Show an approved local address in its own view over the given area of the window. The view is sandboxed, with no Node and no Ryte API, and otherwise opens like a normal browser tab: the page can use the internet, the clipboard, downloads (the macOS save dialog) and alert boxes, and keeps what it saves per origin across restarts. Camera, microphone, location, other devices and notifications are refused, and a link or a new window opens in the browser only on a real click. It cannot move itself, or be redirected by its server, to another origin. Showing the address that is already open only moves and reveals it. Returns `shown`, `needs-approval` (not approved, or the approval was removed) or `blocked` (not a local address).',
   input: z.strictObject({ url: address, bounds }),
   output: z.object({ status: z.enum(['shown', 'needs-approval', 'blocked']) }),
   example: {
@@ -86,18 +86,37 @@ export const hide = defineOperation({
   example: { input: undefined, output: { still: null } }
 })
 
+export const park = defineOperation({
+  channel: 'localhost:park',
+  description:
+    "A local address's tab went to the background: hide its view but keep it alive. The app keeps local and other kept views alive until they use more than about 1.5 GB together or there are more than 24; then the ones shown longest ago go to sleep and load again when their tab returns.",
+  input: z.strictObject({ url: address }),
+  output: z.void(),
+  example: { input: { url: 'http://localhost:5173/' }, output: undefined }
+})
+
 export const close = defineOperation({
   channel: 'localhost:close',
-  description: 'Close the open local view. The page keeps nothing.',
-  input: z.undefined(),
+  description:
+    "Close this address's local view, shown or hidden. What the page saved stays. The next show loads it again.",
+  input: z.strictObject({ url: address }),
   output: z.void(),
-  example: { input: undefined, output: undefined }
+  example: { input: { url: 'http://localhost:5173/' }, output: undefined }
+})
+
+export const retain = defineOperation({
+  channel: 'localhost:retain',
+  description:
+    'The local addresses that have a tab open in this window. The view of any other address is closed.',
+  input: z.strictObject({ urls: z.array(address).max(1000) }),
+  output: z.void(),
+  example: { input: { urls: ['http://localhost:5173/'] }, output: undefined }
 })
 
 export const openInBrowser = defineOperation({
   channel: 'localhost:open-in-browser',
   description:
-    'Open a local address in the default browser, outside the locked view, after checking again that it is a local address. The page runs unlocked there, so this is only for the button the person presses. Returns whether it opened.',
+    'Open a local address in the default browser, in a browser outside Ryte, after checking again that it is a local address. This is for the button the person presses. Returns whether it opened.',
   input: z.strictObject({ url: address }),
   output: z.object({ opened: z.boolean() }),
   example: { input: { url: 'http://localhost:5173/' }, output: { opened: true } }
@@ -112,7 +131,9 @@ export const localhost = defineArea('localhost', {
     show,
     setBounds,
     hide,
+    park,
     close,
+    retain,
     openInBrowser
   },
   events: {}

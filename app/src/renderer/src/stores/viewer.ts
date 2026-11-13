@@ -123,7 +123,7 @@ export const useViewerStore = defineStore('viewer', () => {
       ? activeTab.value.sourcePath
       : null
   )
-  // A local address tab shows the page in a locked view over the tab; it is never read as a file or watched.
+  // A local address tab shows the page in a view over the tab; it is never read as a file or watched.
   const addressUrl = computed(() =>
     activeTab.value && isWorkspaceAddressTab(activeTab.value) ? activeTab.value.url : null
   )
@@ -145,7 +145,7 @@ export const useViewerStore = defineStore('viewer', () => {
       ? sourcePath.value
       : null
   )
-  // An HTML tab shows the page in a locked view over the tab; it is never read as text or watched here.
+  // An HTML tab shows the page in a view over the tab; it is never read as text or watched here.
   const pagePath = computed(() =>
     sourcePath.value !== null && supportedKindOf(sourcePath.value) === 'html'
       ? sourcePath.value
@@ -171,6 +171,7 @@ export const useViewerStore = defineStore('viewer', () => {
   let unsubscribeTreeChange: (() => void) | null = null
   let unsubscribeCatalogChange: (() => void) | null = null
   let stopActiveTabWatch: (() => void) | null = null
+  let stopPageRetainWatch: (() => void) | null = null
 
   function sourcePathExists(paths: string[]): boolean {
     const tab = activeTab.value
@@ -360,6 +361,35 @@ export const useViewerStore = defineStore('viewer', () => {
     unsubscribeTreeChange?.()
     unsubscribeCatalogChange?.()
     stopActiveTabWatch?.()
+    stopPageRetainWatch?.()
+
+    // The main process keeps the view of a page in a background tab alive. It is told which tabs are open, so
+    // closing, renaming or deleting one ends its page.
+    stopPageRetainWatch = watch(
+      () =>
+        JSON.stringify(
+          workspace.tabs.map((tab) =>
+            isWorkspaceAddressTab(tab)
+              ? { url: tab.url }
+              : isWorkspaceSourceFileRef(tab) && supportedKindOf(tab.sourcePath) === 'html'
+                ? { path: tab.sourcePath }
+                : null
+          )
+        ),
+      () => {
+        const paths: string[] = []
+        const urls: string[] = []
+        for (const tab of workspace.tabs) {
+          if (isWorkspaceAddressTab(tab)) urls.push(tab.url)
+          else if (isWorkspaceSourceFileRef(tab) && supportedKindOf(tab.sourcePath) === 'html') {
+            paths.push(tab.sourcePath)
+          }
+        }
+        void window.ryte.page.retain({ paths }).catch(() => undefined)
+        void window.ryte.localhost.retain({ urls }).catch(() => undefined)
+      },
+      { immediate: true }
+    )
 
     unsubscribeSourceChange = window.ryte.files.onSourceChange((changedSourcePath) => {
       if (changedSourcePath === sourcePath.value) {
@@ -408,6 +438,7 @@ export const useViewerStore = defineStore('viewer', () => {
     const originalStopActiveTabWatch = stopActiveTabWatch
     stopActiveTabWatch = () => {
       originalStopActiveTabWatch?.()
+      stopPageRetainWatch?.()
       unsubscribeWorkspaceTabChange()
     }
 

@@ -13,7 +13,7 @@ export interface PageHandlerDependencies {
 
 const isHtmlExtension = (extension: string): boolean => isHtmlPagePath(`x.${extension}`)
 
-/** The locked page view. The view belongs to the window that asked; the box keeps one page per window. */
+/** The HTML page view. The view belongs to the window that asked; the box shows one page per window and keeps the others alive, hidden. */
 export function createPageHandlers({
   box,
   getNotesRoot,
@@ -25,7 +25,9 @@ export function createPageHandlers({
     }),
     setBounds: ({ bounds }, { sender }) => box.setBounds(sender, bounds),
     hide: async (_input, { sender }) => ({ still: await box.hide(sender) }),
-    close: (_input, { sender }) => box.close(sender),
+    park: ({ path }, { sender }) => box.park(sender, path),
+    close: ({ path }, { sender }) => box.close(sender, path),
+    retain: ({ paths }, { sender }) => box.retain(sender, paths),
     openInBrowser: async ({ path }) => {
       const located = await locateNoteFile(path, getNotesRoot(), isHtmlExtension)
       if (!located.ok) return { opened: false }

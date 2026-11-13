@@ -240,7 +240,7 @@ Two custom schemes carry data to the window outside the contract. Neither is IPC
 
 - `ryte-file` serves a note's files (pictures, video) to the main window. It is handled on the default session by
   `createNoteFileHandler`.
-- `ryte-page` serves a folder of a locked HTML page. It is handled only on the page view's own in-memory session, never
+- `ryte-page` serves the notes folder to HTML pages. It is handled only on the pages' own session, never
   on the default one.
 
 A scheme is a second way for a page to reach the main process, so a new one is a review decision, not a side effect.

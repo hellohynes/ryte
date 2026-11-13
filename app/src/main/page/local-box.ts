@@ -1,25 +1,20 @@
-import { randomBytes } from 'node:crypto'
-
-import {
-  BrowserWindow,
-  session,
-  type Session,
-  type WebContents,
-  type WebContentsView
-} from 'electron'
+import { BrowserWindow, type Session, type WebContents, type WebContentsView } from 'electron'
 
 import { contract } from '../../contract'
-import type { LocalAddress } from '../../shared/local-address'
+import { parseLocalAddress, type LocalAddress } from '../../shared/local-address'
 import type { EmitTo } from '../contract/register'
 import {
-  createLockedView,
+  createPageView,
   hideWithStill,
-  lockSession,
+  lastingSession,
   rounded,
+  setUpPageSession,
   type PageBounds
-} from './locked-view'
+} from './page-view'
+import { createKeptViews } from './kept-views'
+import { appKeptViewPool } from './sleep-limits'
 import { createBlockedLog, type BlockedLog } from './page-blocked'
-import { isAllowedLocalRequest, isSameLocalOrigin } from './local-rules'
+import { isSubframeAllowed } from './page-moves'
 
 export type LocalShowResult = 'shown' | 'blocked'
 
@@ -27,7 +22,12 @@ export interface LocalBox {
   show(sender: WebContents, address: LocalAddress, bounds: PageBounds): Promise<LocalShowResult>
   setBounds(sender: WebContents, bounds: PageBounds): void
   hide(sender: WebContents): Promise<string | null>
-  close(sender: WebContents): void
+  /** The address's tab went to the background: hides its view and keeps it, and its session, alive. */
+  park(sender: WebContents, url: string): void
+  /** Destroys the address's view, if it has one. */
+  close(sender: WebContents, url: string): void
+  /** The addresses that have a tab open in this window: the view of any other address is destroyed. */
+  retain(sender: WebContents, urls: readonly string[]): void
   /** Closes every open view of this origin, in any window. */
   closeOrigin(origin: string): void
 }
@@ -38,110 +38,116 @@ export interface LocalBoxDependencies {
   openExternal: (url: string) => void
 }
 
+/** The name of the one lasting session of every local address: storage is kept per origin, as in a browser. */
+const LOCAL_SESSION = 'ryte-local'
+
 interface OpenLocal {
   url: string
   origin: string
   view: WebContentsView
   host: BrowserWindow
-  ses: Session
   log: BlockedLog
-  onHostClosed: () => void
 }
 
 /**
- * The locked view for an approved local address: the same sandboxed view as an HTML page, in its own in-memory
- * session that can reach only that origin (and its live-reload socket). One local page is open per app window.
- * The caller has already checked that the origin is approved.
+ * The view for an approved local address: the same sandboxed view as an HTML page, in its own lasting session,
+ * and otherwise a normal browser tab. A window shows one local page at a time and keeps the pages of its other
+ * tabs alive, hidden, until their tabs close, an approval is removed, or they are put to sleep to stay within the
+ * memory budget. The caller has already checked that the origin is approved.
  */
 export function createLocalBox({ emitTo, openExternal }: LocalBoxDependencies): LocalBox {
-  const open = new Map<number, OpenLocal>()
-  // Each show and close takes a new number for its window, so a show overtaken while it waited attaches nothing.
-  const latest = new Map<number, number>()
-  const bump = (senderId: number): number => {
-    const next = (latest.get(senderId) ?? 0) + 1
-    latest.set(senderId, next)
-    return next
+  const watchedWindows = new Set<number>()
+
+  // The session is shared and lasting, so closing or sleeping a page only closes its view. The session is made
+  // the first time a local page opens.
+  let localSession: Session | null = null
+  const sessionForPages = (): Session => {
+    if (localSession) return localSession
+    const ses = lastingSession(LOCAL_SESSION)
+    setUpPageSession(ses)
+    return (localSession = ses)
   }
 
-  const destroy = (senderId: number): void => {
-    const page = open.get(senderId)
-    if (!page) return
-    open.delete(senderId)
-    const { view, host, ses, log } = page
+  const destroy = (page: OpenLocal): void => {
+    const { view, host, log } = page
     log.stop()
-    host.removeListener('closed', page.onHostClosed)
     if (!host.isDestroyed()) host.contentView.removeChildView(view)
     if (!view.webContents.isDestroyed()) view.webContents.close()
-    // Electron cannot destroy a session, so its storage is cleared by hand. The filter stays, denying everything,
-    // because a closing page can still send a request while it unloads.
-    ses.webRequest.onBeforeRequest((_details, callback) => callback({ cancel: true }))
-    void ses.clearStorageData()
+    // What the page saved must reach the disk before its view is gone.
+    void sessionForPages().flushStorageData()
+  }
+
+  const kept = createKeptViews<OpenLocal>({ destroy, pool: appKeptViewPool })
+
+  // The window a call came from, with its bookkeeping set to be dropped when it closes. Every call that keeps
+  // something per window goes through this first, so a window that never shows a page leaves nothing behind.
+  const watchedHost = (sender: WebContents): BrowserWindow | null => {
+    const host = BrowserWindow.fromWebContents(sender)
+    if (!host) return null
+    const senderId = sender.id
+    if (!watchedWindows.has(senderId)) {
+      watchedWindows.add(senderId)
+      host.once('closed', () => {
+        kept.dropWindow(senderId)
+        watchedWindows.delete(senderId)
+      })
+    }
+    return host
   }
 
   return {
     async show(sender, address, bounds) {
-      const turn = bump(sender.id)
-      const host = BrowserWindow.fromWebContents(sender)
+      const host = watchedHost(sender)
       if (!host) return 'blocked'
+      kept.claim(sender.id, address.url)
 
-      const current = open.get(sender.id)
-      if (current && current.url === address.url) {
-        current.view.setBounds(rounded(bounds))
-        current.view.setVisible(true)
-        return 'shown'
-      }
-      destroy(sender.id)
-
-      // No `persist:` prefix and a new name every time, so the session lives in memory, is shared with no other
-      // page, and is gone with this one.
-      const ses = session.fromPartition(`ryte-local-${randomBytes(8).toString('hex')}`)
-      // Connection hints that `webRequest` never sees (preconnect, WebRTC over TCP) go to a closed local port.
-      // Chromium never sends loopback through a proxy, so the approved origin is not affected.
-      await ses.setProxy({ proxyRules: 'http://127.0.0.1:9' })
-      if (latest.get(sender.id) !== turn) return 'blocked'
+      if (kept.present(sender.id, address.url, rounded(bounds))) return 'shown'
 
       const { origin } = address
       const log = createBlockedLog((state) => emitTo(sender, contract.page.events.blocked, state))
-      ses.webRequest.onBeforeRequest((details, callback) => {
-        const allowed = isAllowedLocalRequest(details.url, origin)
-        if (!allowed) log.add(details.url)
-        callback({ cancel: !allowed })
-      })
-      lockSession(ses, log)
-      const view = createLockedView({
-        ses,
+      const view = createPageView({
+        ses: sessionForPages(),
         host,
         bounds,
         log,
         emitTo,
         openExternal,
-        // The page may move around its own origin, as local apps change pages; anything else is a link.
-        allowNavigation: (url) => isSameLocalOrigin(url, origin)
+        // The page may move around its own origin, as local apps change pages; anything else is a link. A frame
+        // may load anything but Ryte's own surfaces.
+        allowNavigation: (url, isMainFrame) =>
+          isMainFrame ? parseLocalAddress(url)?.origin === origin : isSubframeAllowed(url)
       })
-      const onHostClosed = (): void => {
-        destroy(sender.id)
-        latest.delete(sender.id)
+      kept.add(sender.id, address.url, { url: address.url, origin, view, host, log })
+      // The tab closed while the view was being made.
+      if (!kept.isWanted(sender.id, address.url)) {
+        kept.remove(sender.id, address.url)
+        return 'blocked'
       }
-      host.once('closed', onHostClosed)
-      open.set(sender.id, { url: address.url, origin, view, host, ses, log, onHostClosed })
+      kept.present(sender.id, address.url, rounded(bounds))
       void view.webContents.loadURL(address.url).catch(() => undefined)
       return 'shown'
     },
     setBounds(sender, bounds) {
-      open.get(sender.id)?.view.setBounds(rounded(bounds))
+      kept.setBounds(sender.id, rounded(bounds))
     },
     async hide(sender) {
-      const page = open.get(sender.id)
+      // Only the page that is showing has a picture to give; a page in the background has nothing to cover.
+      const page = kept.shown(sender.id)
       return page ? hideWithStill(page.view) : null
     },
-    close(sender) {
-      bump(sender.id)
-      destroy(sender.id)
+    park(sender, url) {
+      kept.park(sender.id, url)
+    },
+    close(sender, url) {
+      if (!watchedHost(sender)) return
+      kept.remove(sender.id, url)
+    },
+    retain(sender, urls) {
+      if (!watchedHost(sender)) return
+      kept.retain(sender.id, urls)
     },
     closeOrigin(origin) {
-      for (const [senderId, page] of [...open]) {
-        if (page.origin === origin) destroy(senderId)
-      }
+      kept.removeWhere((page) => page.origin === origin)
     }
   }
 }

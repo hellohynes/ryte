@@ -67,7 +67,9 @@ export const manifest = {
       show: 'localhost:show',
       setBounds: 'localhost:set-bounds',
       hide: 'localhost:hide',
+      park: 'localhost:park',
       close: 'localhost:close',
+      retain: 'localhost:retain',
       openInBrowser: 'localhost:open-in-browser'
     },
     events: {}
@@ -77,7 +79,9 @@ export const manifest = {
       show: 'page:show',
       setBounds: 'page:set-bounds',
       hide: 'page:hide',
+      park: 'page:park',
       close: 'page:close',
+      retain: 'page:retain',
       openInBrowser: 'page:open-in-browser'
     },
     events: {

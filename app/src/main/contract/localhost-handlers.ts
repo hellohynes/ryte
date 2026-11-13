@@ -21,7 +21,7 @@ export interface LocalhostHandlerDependencies {
 /**
  * Approvals and the locked view for a local address. Main decides every time: an address is checked as local on
  * each call, an answer counts only right after a real click or key in the window, and an origin may be shown only while it is in the saved list or was allowed once and its tab is still
- * open. The view belongs to the window that asked; the box keeps one local page per window.
+ * open. The view belongs to the window that asked; the box shows one local page per window and keeps the others alive, hidden.
  */
 export function createLocalhostHandlers({
   approvals,
@@ -62,7 +62,19 @@ export function createLocalhostHandlers({
     },
     setBounds: ({ bounds }, { sender }) => box.setBounds(sender, bounds),
     hide: async (_input, { sender }) => ({ still: await box.hide(sender) }),
-    close: (_input, { sender }) => box.close(sender),
+    park: ({ url }, { sender }) => {
+      const address = parseLocalAddress(url)
+      if (address) box.park(sender, address.url)
+    },
+    close: ({ url }, { sender }) => {
+      const address = parseLocalAddress(url)
+      if (address) box.close(sender, address.url)
+    },
+    retain: ({ urls }, { sender }) =>
+      box.retain(
+        sender,
+        urls.flatMap((url) => parseLocalAddress(url)?.url ?? [])
+      ),
     openInBrowser: ({ url }) => {
       const address = parseLocalAddress(url)
       return { opened: address ? openInBrowser(address.url) : false }

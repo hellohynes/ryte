@@ -1,4 +1,4 @@
-/** What the locked page view reports: how many things it refused since the page opened, and the last addresses. */
+/** What the page view reports: how many things it refused since the page opened, and the last addresses. */
 export interface BlockedReport {
   count: number
   addresses: string[]
