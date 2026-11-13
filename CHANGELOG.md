@@ -7,6 +7,7 @@ Ryte follows [Semantic Versioning](https://semver.org). The app version in `app/
 ## Unreleased
 
 - HTML pages and local addresses now open like a normal browser tab: they can read any file in your notes folder, use the internet, read and write the clipboard, download files through the macOS save dialog, show alert boxes, and keep what they save across restarts. A page still cannot move itself to a website. The camera, microphone, location and notifications stay off. See [what a page can do](docs/html-pages.md).
+- An HTML page or local address that sleeps, reloads because its file changed, or comes back after Ryte restarts now returns as you left it: scroll position, and what you typed or picked, even when the page saves nothing itself. Passwords are never kept. See [coming back as it was](docs/html-pages.md#coming-back-as-it-was).
 
 ## 0.3.0
 

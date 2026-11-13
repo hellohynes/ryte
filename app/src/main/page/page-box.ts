@@ -18,12 +18,8 @@ import {
 import { createKeptViews } from './kept-views'
 import { appKeptViewPool } from './sleep-limits'
 import { isSubframeAllowed, pageMoveVerdict } from './page-moves'
-import {
-  parseScroll,
-  READ_SCROLL_SCRIPT,
-  restoreScrollScript,
-  type PageScroll
-} from './page-scroll'
+import { appPageMemory } from './app-page-memory'
+import type { PageMemory } from './page-memory'
 import { createPageHandler, pageAddress, readOrCreateSalt, tokenOfNotesFolder } from './page-scheme'
 
 export type { PageBounds }
@@ -36,8 +32,8 @@ export interface PageBox {
   hide(sender: WebContents): Promise<string | null>
   /** The page's tab went to the background: hides its view and keeps it, and its session, alive. */
   park(sender: WebContents, path: string): Promise<void>
-  /** Destroys the page's view, if it has one. */
-  close(sender: WebContents, path: string): void
+  /** Destroys the page's view, if it has one, after keeping what it shows. The page's tab stays open (a reload). */
+  close(sender: WebContents, path: string): Promise<void>
   /** The pages that have a tab open in this window: the view of any other page is destroyed. */
   retain(sender: WebContents, paths: readonly string[]): void
 }
@@ -47,6 +43,8 @@ export interface PageBoxDependencies {
   emitTo: EmitTo
   /** Opens an address in the browser. The caller has already checked the kind of address. */
   openExternal: (url: string) => void
+  /** What each page showed, kept for coming back as it was. Asked for on first use. */
+  memory?: () => PageMemory
 }
 
 /** The name of the one lasting session of every HTML page: what a page saves stays across sleep, reload and restart. */
@@ -59,6 +57,9 @@ interface OpenPage {
   view: WebContentsView
   host: BrowserWindow
   log: BlockedLog
+  /** The key of what the page showed, made when the page was: the notes folder may change while it lives. */
+  memoryKey: string
+  stopTracking: () => void
 }
 
 /**
@@ -71,8 +72,12 @@ interface OpenPage {
 export function createPageBox({
   getNotesRoot,
   emitTo,
-  openExternal
+  openExternal,
+  memory = appPageMemory
 }: PageBoxDependencies): PageBox {
+  // The notes folder is part of the key, so a tab at the same path in another folder does not take this one's state.
+  const memoryKey = (path: string): string => `page:${getNotesRoot()}|${path}`
+
   // Each show and close takes a new number for its window. A show that finds its number changed while it
   // waited has been overtaken by a close or a newer show, and must not attach a view.
   const latest = new Map<number, number>()
@@ -82,9 +87,6 @@ export function createPageBox({
     return next
   }
 
-  // Where a page was scrolled to when its tab went to the background, for a page that has to load again after
-  // being put to sleep. Kept per window and only for pages that still have a tab.
-  const scrolls = new Map<number, Map<string, PageScroll>>()
   const watchedWindows = new Set<number>()
 
   // The session is shared and lasting, so closing or sleeping a page only closes its view. The session is made
@@ -102,7 +104,8 @@ export function createPageBox({
   }
 
   const destroy = (page: OpenPage): void => {
-    const { view, host, log } = page
+    const { view, host, log, stopTracking } = page
+    stopTracking()
     log.stop()
     if (!host.isDestroyed()) host.contentView.removeChildView(view)
     if (!view.webContents.isDestroyed()) view.webContents.close()
@@ -122,7 +125,6 @@ export function createPageBox({
       watchedWindows.add(senderId)
       host.once('closed', () => {
         kept.dropWindow(senderId)
-        scrolls.delete(senderId)
         latest.delete(senderId)
         watchedWindows.delete(senderId)
       })
@@ -130,25 +132,14 @@ export function createPageBox({
     return host
   }
 
-  const rememberScroll = (senderId: number, path: string, scroll: PageScroll): void => {
-    let forWindow = scrolls.get(senderId)
-    if (!forWindow) scrolls.set(senderId, (forWindow = new Map()))
-    forWindow.set(path, scroll)
-  }
-
-  const readScroll = async (page: OpenPage): Promise<PageScroll | null> => {
-    const contents = page.view.webContents
-    if (contents.isDestroyed()) return null
-    try {
-      return parseScroll(await contents.executeJavaScript(READ_SCROLL_SCRIPT))
-    } catch {
-      return null
-    }
-  }
+  // Keeps what the page shows, unless its tab has been closed or the page put to sleep by the time it answers.
+  const keep = (senderId: number, path: string, page: OpenPage): Promise<void> =>
+    memory().capture(page.memoryKey, page.view.webContents, () => kept.get(senderId, path) === page)
 
   const create = (
     sender: WebContents,
     host: BrowserWindow,
+    path: string,
     realPath: string,
     version: string,
     bounds: PageBounds
@@ -170,7 +161,14 @@ export function createPageBox({
           ? pageMoveVerdict(url, (file) => tokenOfNotesFolder(getNotesRoot(), file, getSalt()))
           : isSubframeAllowed(url)
     })
-    return { realPath, version, view, host, log }
+    const key = memoryKey(path)
+    const stopTracking = memory().track(
+      key,
+      view.webContents,
+      () => kept.get(sender.id, path)?.view === view,
+      () => kept.shown(sender.id)?.view === view
+    )
+    return { realPath, version, view, host, log, memoryKey: key, stopTracking }
   }
 
   return {
@@ -201,16 +199,18 @@ export function createPageBox({
         return 'shown'
       }
       // A different file under the same name, or the file changed while its tab was in the background: a fresh load.
+      // Whatever it showed comes back on the new view.
       if (current) {
+        await keep(sender.id, path, current)
+        if (!isCurrent()) return 'blocked'
         kept.remove(sender.id, path)
-        scrolls.get(sender.id)?.delete(path)
       }
       // Reading or making the salt can fail, so it is inside the catch with the rest of the address.
       const address = await Promise.resolve()
         .then(() => pageAddress(getNotesRoot(), located.realPath, getSalt()))
         .catch(() => null)
       if (!address || !isCurrent()) return 'blocked'
-      const page = create(sender, host, located.realPath, version, bounds)
+      const page = create(sender, host, path, located.realPath, version, bounds)
       kept.add(sender.id, path, page)
       // The tab closed while the view was being made.
       if (!kept.isWanted(sender.id, path)) {
@@ -218,15 +218,7 @@ export function createPageBox({
         return 'blocked'
       }
       kept.present(sender.id, path, rounded(bounds))
-      const scroll = scrolls.get(sender.id)?.get(path)
-      const contents = page.view.webContents
-      if (scroll) {
-        contents.once('did-finish-load', () => {
-          if (!contents.isDestroyed())
-            void contents.executeJavaScript(restoreScrollScript(scroll)).catch(() => undefined)
-        })
-      }
-      void contents.loadURL(address).catch(() => undefined)
+      void page.view.webContents.loadURL(address).catch(() => undefined)
       return 'shown'
     },
     setBounds(sender, bounds) {
@@ -240,22 +232,20 @@ export function createPageBox({
     async park(sender, path) {
       const page = kept.park(sender.id, path)
       if (!page) return
-      const scroll = await readScroll(page)
-      if (scroll && kept.get(sender.id, path) === page) rememberScroll(sender.id, path, scroll)
+      await keep(sender.id, path, page)
     },
-    close(sender, path) {
+    async close(sender, path) {
       if (!watchedHost(sender)) return
       bump(sender.id)
+      // A tab that is closed for good is cleaned up by `retain`; this is a reload, so the page comes back as it was.
+      const page = kept.get(sender.id, path)
+      if (page) await keep(sender.id, path, page)
       kept.remove(sender.id, path)
-      scrolls.get(sender.id)?.delete(path)
     },
     retain(sender, paths) {
       if (!watchedHost(sender)) return
       kept.retain(sender.id, paths)
-      const forWindow = scrolls.get(sender.id)
-      if (!forWindow) return
-      const wanted = new Set(paths)
-      for (const path of [...forWindow.keys()]) if (!wanted.has(path)) forWindow.delete(path)
+      memory().retain('page:', paths.map(memoryKey))
     }
   }
 }

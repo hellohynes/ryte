@@ -98,7 +98,7 @@ export const park = defineOperation({
 export const close = defineOperation({
   channel: 'localhost:close',
   description:
-    "Close this address's local view, shown or hidden. What the page saved stays. The next show loads it again.",
+    "Close this address's local view, shown or hidden, for a reload. What the page saved stays, and what was typed, picked and scrolled is kept. The next show loads it again and puts that back.",
   input: z.strictObject({ url: address }),
   output: z.void(),
   example: { input: { url: 'http://localhost:5173/' }, output: undefined }

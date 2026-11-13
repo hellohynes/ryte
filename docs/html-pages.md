@@ -12,6 +12,12 @@ An HTML page in your notes, and a local address you approve (a dev server, for e
 
 The camera, the microphone, your location, other devices and system notifications stay off, because Ryte has nowhere to ask you. Fullscreen and every other permission not listed above are refused too.
 
+## Coming back as it was
+
+When a page sleeps to save memory, reloads because its file changed, or comes back after Ryte restarts, it returns where you left it, even if the page saves nothing itself: how far it is scrolled (the window and the larger scrolling areas), and what you typed or picked (text boxes, text areas, number, date and similar inputs, single-choice drop-downs, checkboxes and radio buttons). Ryte reads this from the page in a separate world, so the page's own code is not involved, and puts the values back after the page loads, then fires `input` and `change` so the page notices. Text in editable regions is not kept. Password, hidden and file inputs are never read, nor is any input that asks for a password or a one-time code, nor one that was ever a password box (a "show password" button). At most 256 KB is kept per page.
+
+It is read when the tab goes to the background, before a reload, when Ryte quits, and every 30 seconds while the page is showing. It is kept in memory and, for tabs that are still open, in `page-state.json` in the app data folder. It is dropped when the tab closes.
+
 ## What stays locked
 
 - The page runs in a sandbox with no Node and no Ryte API, and has no address bar.
@@ -23,4 +29,4 @@ The camera, the microphone, your location, other devices and system notification
 
 ## Where it lives in the code
 
-`app/src/main/page/`: `page-box.ts` (HTML pages), `local-box.ts` (local addresses), `page-view.ts` (the view and the session rules they share), `page-scheme.ts` (the `ryte-page` handler and folder token) and `page-permissions.ts`. HTML pages share one lasting session (`ryte-pages`), and local addresses another (`ryte-local`). A folder's token is a hash of its path with a random salt kept in `page-token-salt` in the app data folder.
+`app/src/main/page/`: `page-box.ts` (HTML pages), `local-box.ts` (local addresses), `page-view.ts` (the view and the session rules they share), `page-scheme.ts` (the `ryte-page` handler and folder token) and `page-permissions.ts`, with `page-state.ts` and `page-memory.ts` for coming back as it was. HTML pages share one lasting session (`ryte-pages`), and local addresses another (`ryte-local`). A folder's token is a hash of its path with a random salt kept in `page-token-salt` in the app data folder.

@@ -81,7 +81,7 @@ change or remove one.
 | `localhost.setBounds` | `localhost:set-bounds` | Move and resize the open local view to a new area of the window. | `{ bounds: { x: number, y: number, width: number, height: number } }` |
 | `localhost.hide` | `localhost:hide` | Hide the open local view, for example while an overlay is open, because a native view always draws on top. Returns a still picture of the page (a data URL) to show in its place, or null when there is none. | `none` |
 | `localhost.park` | `localhost:park` | A local address's tab went to the background: hide its view but keep it alive. The app keeps local and other kept views alive until they use more than about 1.5 GB together or there are more than 24; then the ones shown longest ago go to sleep and load again when their tab returns. | `{ url: string }` |
-| `localhost.close` | `localhost:close` | Close this address's local view, shown or hidden. What the page saved stays. The next show loads it again. | `{ url: string }` |
+| `localhost.close` | `localhost:close` | Close this address's local view, shown or hidden, for a reload. What the page saved stays, and what was typed, picked and scrolled is kept. The next show loads it again and puts that back. | `{ url: string }` |
 | `localhost.retain` | `localhost:retain` | The local addresses that have a tab open in this window. The view of any other address is closed. | `{ urls: string[] }` |
 | `localhost.openInBrowser` | `localhost:open-in-browser` | Open a local address in the default browser, in a browser outside Ryte, after checking again that it is a local address. This is for the button the person presses. Returns whether it opened. | `{ url: string }` |
 
@@ -93,7 +93,7 @@ change or remove one.
 | `page.setBounds` | `page:set-bounds` | Move and resize the open page view to a new area of the window. | `{ bounds: { x: number, y: number, width: number, height: number } }` |
 | `page.hide` | `page:hide` | Hide the page view that is showing, for example while an overlay is open, because a native view always draws on top. Returns a still picture of the page (a data URL) to show in its place, or null when there is none. | `none` |
 | `page.park` | `page:park` | A page's tab went to the background: hide its view but keep it alive, so the page is as it was when the tab comes back. The app keeps page and other kept views alive until they use more than about 1.5 GB together or there are more than 24; then the ones shown longest ago go to sleep and load again when their tab returns. | `{ path: string }` |
-| `page.close` | `page:close` | Close this page's view, shown or hidden. What the page saved stays. The next show loads it again. | `{ path: string }` |
+| `page.close` | `page:close` | Close this page's view, shown or hidden, for a reload. What the page saved stays, and what was typed, picked and scrolled is kept. The next show loads it again and puts that back. | `{ path: string }` |
 | `page.retain` | `page:retain` | The pages that have a tab open in this window. The view of any other page is closed, so a closed, renamed or deleted tab does not leave a page running. | `{ paths: string[] }` |
 | `page.openInBrowser` | `page:open-in-browser` | Open an HTML page from the notes folder in the default browser, in a browser outside Ryte, after checking again that it is inside the notes folder and an HTML page. This is for the button the person presses. Returns whether it opened. | `{ path: string }` |
 
