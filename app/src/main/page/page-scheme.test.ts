@@ -27,6 +27,8 @@ describe('the ryte-page handler', () => {
     writeFileSync(join(root, 'shared', 'shot.png'), PNG_BYTES)
     writeFileSync(join(root, 'shared', 'note.md'), '# A note')
     writeFileSync(join(root, 'shared', 'data.bin'), 'bytes')
+    writeFileSync(join(root, 'shared', 'logo.svg'), '<svg xmlns="http://www.w3.org/2000/svg"/>')
+    symlinkSync(join(root, 'pages', 'index.html'), join(root, 'shared', 'page.x'))
     writeFileSync(join(outside, 'secret.html'), 'secret')
     symlinkSync(join(outside, 'secret.html'), join(root, 'pages', 'link.html'))
     symlinkSync(outside, join(root, 'pages', 'out'))
@@ -81,6 +83,20 @@ describe('the ryte-page handler', () => {
     const own = folderToken(join(root, 'pages'), SALT)
     expect((await get(`ryte-page://${own}/pages/index.html`)).status).toBe(200)
     expect((await get(`ryte-page://${TOKEN}/pages/index.html`)).status).toBe(404)
+  })
+
+  it('serves a link to an HTML page only under the token of its own folder', async () => {
+    const own = folderToken(join(root, 'shared'), SALT)
+    expect((await get(`ryte-page://${own}/shared/page.x`)).status).toBe(200)
+    expect((await get(`ryte-page://${TOKEN}/shared/page.x`)).status).toBe(404)
+  })
+
+  it('serves an SVG to another folder sandboxed, so a picture works and nothing runs as that origin', async () => {
+    const other = await get(`ryte-page://${TOKEN}/shared/logo.svg`)
+    expect(other.status).toBe(200)
+    expect(other.headers.get('content-security-policy')).toBe('sandbox')
+    const own = await get(`ryte-page://${folderToken(join(root, 'shared'), SALT)}/shared/logo.svg`)
+    expect(own.headers.get('content-security-policy')).toBeNull()
   })
 
   it('builds the address of a page from its folder token and its path from the notes folder', async () => {

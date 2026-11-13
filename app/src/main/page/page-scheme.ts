@@ -5,7 +5,6 @@ import { dirname, join, relative, sep } from 'node:path'
 
 import {
   hasSkippedSegment,
-  isHtmlPagePath,
   MAX_PAGE_TEXT_BYTES,
   pageMediaType,
   pageTextType,
@@ -74,6 +73,15 @@ const HEADERS = {
   'Cache-Control': 'no-store'
 }
 
+/** Types a browser runs as a page, with scripts and its own storage: served only under the token of their folder. */
+const PAGE_EXTENSIONS: ReadonlySet<string> = new Set(['html', 'htm', 'xhtml'])
+/**
+ * Types that are pictures or data to a page but a script-capable page when opened on their own. Under another
+ * folder's token they are served sandboxed, so a picture or a fetch still works and nothing runs as that origin.
+ * (A request does not say what it is for, so a refusal here would also break `<img src="../shared/logo.svg">`.)
+ */
+const SCRIPTED_DATA_EXTENSIONS: ReadonlySet<string> = new Set(['svg', 'xml'])
+
 /** Every refusal is the same bare 404, so a page learns nothing about what exists outside the notes folder. */
 const notFound = (): Response => new Response(null, { status: 404 })
 
@@ -81,8 +89,9 @@ const notFound = (): Response => new Response(null, { status: 404 })
  * Answers `ryte-page://<token>/<path>` from the notes folder. The path is decoded once, the file is found by real
  * path inside the notes folder (a link out is refused, and so is a link into a hidden or dependency folder) and
  * must be a regular file, and the file that was checked is the file that is read. Any file is served whatever the
- * token, except an HTML page, which is served only under the token of its own folder so that it cannot run as
- * another folder's origin. Text of a known type is read whole up to a cap; everything else is streamed with byte
+ * token, except the types a browser runs as a page (by the file's real type): HTML and XHTML are served only
+ * under the token of their own folder, and SVG and XML under another token are served sandboxed, so none can run
+ * as another folder's origin. Text of a known type is read whole up to a cap; everything else is streamed with byte
  * ranges.
  */
 export function createPageHandler(
@@ -102,12 +111,14 @@ export function createPageHandler(
     if (root === null || hasSkippedSegment(relative(root, located.realPath).split(sep))) {
       return notFound()
     }
-    if (
-      isHtmlPagePath(parsed.path) &&
-      parsed.token !== tokenOfNotesFolder(notesRoot, parsed.path, getSalt())
-    ) {
-      return notFound()
-    }
+    const mustOwnToken = PAGE_EXTENSIONS.has(located.extension)
+    const sandboxed = SCRIPTED_DATA_EXTENSIONS.has(located.extension)
+    const ownToken =
+      (!mustOwnToken && !sandboxed) ||
+      parsed.token === tokenOfNotesFolder(notesRoot, parsed.path, getSalt())
+    if (mustOwnToken && !ownToken) return notFound()
+    const headers =
+      sandboxed && !ownToken ? { ...HEADERS, 'Content-Security-Policy': 'sandbox' } : HEADERS
 
     const textType = pageTextType(located.extension)
     if (textType === undefined || located.size > MAX_PAGE_TEXT_BYTES) {
@@ -115,11 +126,11 @@ export function createPageHandler(
         method,
         range: request.headers?.get('range'),
         contentType: textType ?? pageMediaType(located.extension) ?? 'application/octet-stream',
-        headers: HEADERS
+        headers
       })
     }
 
-    const responseHeaders = { ...HEADERS, 'Content-Type': textType }
+    const responseHeaders = { ...headers, 'Content-Type': textType }
     if (method === 'HEAD') {
       return new Response(null, {
         status: 200,

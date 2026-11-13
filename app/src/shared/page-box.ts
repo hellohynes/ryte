@@ -18,6 +18,7 @@ const PAGE_TEXT_TYPES: Readonly<Record<string, string>> = {
   md: 'text/markdown; charset=utf-8',
   csv: 'text/csv; charset=utf-8',
   xml: 'application/xml; charset=utf-8',
+  xhtml: 'application/xhtml+xml; charset=utf-8',
   yaml: 'text/plain; charset=utf-8',
   yml: 'text/plain; charset=utf-8'
 }

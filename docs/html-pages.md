@@ -8,7 +8,7 @@ An HTML page in your notes, and a local address you approve (a dev server, for e
 2. **Use the internet.** It can load scripts and data from the web, embed web pages in frames, and send anything on the page anywhere. It can also reach any port on this Mac, approved or not, as a browser tab can.
 3. **Use the clipboard.** It can read and replace what you copied, at any time.
 4. **Download files and show alert boxes.** A download goes through the usual macOS save dialog, and only while the page's tab is the one showing; a page in a background tab cannot start one. `alert` and `confirm` work, and a page in a background tab can still show them. `prompt` does not work in Electron.
-5. **Keep what it saves.** Saved data (answers, settings) stays across sleeping, reloading and restarting Ryte. It is kept per folder for an HTML page (an HTML page only runs under its own folder's address), and per address for a local page. Nothing clears it automatically.
+5. **Keep what it saves.** Saved data (answers, settings) stays across sleeping, reloading and restarting Ryte. It is kept per folder for an HTML page (an HTML page only runs under its own folder's address, and an SVG or XML file from another folder is served sandboxed), and per address for a local page. Nothing clears it automatically.
 
 The camera, the microphone, your location, other devices and system notifications stay off, because Ryte has nowhere to ask you. Fullscreen and every other permission not listed above are refused too.
 

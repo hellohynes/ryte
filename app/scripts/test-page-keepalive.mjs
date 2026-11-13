@@ -55,7 +55,11 @@ const sibling = `<!doctype html><meta charset="utf-8"><title>s</title>
 <script src="../shared/lib.js"></script>
 <script>
   window.loadMarker = 1
-  window.result = { script: window.siblingScript, note: null }
+  window.result = { script: window.siblingScript, note: null, img: null }
+  const img = new Image()
+  img.onload = () => { window.result.img = img.naturalWidth }
+  img.onerror = () => { window.result.img = -1 }
+  img.src = '../shared/logo.svg'
   fetch('../shared/note.md').then((r) => r.text()).then((t) => { window.result.note = t }, (e) => { window.result.note = 'ERR ' + e })
 </script>`
 const web = (port) => `<!doctype html><meta charset="utf-8"><title>net</title>
@@ -77,6 +81,10 @@ function makeFixtures(port) {
   writeFileSync(join(notes, 'pages', 's.html'), sibling)
   writeFileSync(join(notes, 'shared', 'lib.js'), "window.siblingScript = 'loaded'")
   writeFileSync(join(notes, 'shared', 'note.md'), '# Shared note')
+  writeFileSync(
+    join(notes, 'shared', 'logo.svg'),
+    '<svg xmlns="http://www.w3.org/2000/svg" width="7" height="7"/>'
+  )
   writeFileSync(join(notes, 'net.html'), web(port))
   writeFileSync(join(notes, 'n.md'), `# A note\n\n${'Some synthetic text.\n\n'.repeat(200)}`)
   writeFileSync(
@@ -463,12 +471,14 @@ async function main() {
       await show('s.html')
       const sibling = await until('the sibling files to load', () =>
         withView('s.html', (client) =>
-          client.evaluate('window.result.note !== null && window.result')
+          client.evaluate(
+            'window.result.note !== null && window.result.img !== null && window.result'
+          )
         )
       )
       check(
-        'a page loads a script and a note from a sibling folder',
-        sibling.script === 'loaded' && sibling.note === '# Shared note',
+        'a page loads a script, a note and a picture from a sibling folder',
+        sibling.script === 'loaded' && sibling.note === '# Shared note' && sibling.img === 7,
         JSON.stringify(sibling)
       )
       await show('net.html')

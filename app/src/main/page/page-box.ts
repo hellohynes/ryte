@@ -205,9 +205,10 @@ export function createPageBox({
         kept.remove(sender.id, path)
         scrolls.get(sender.id)?.delete(path)
       }
-      const address = await pageAddress(getNotesRoot(), located.realPath, getSalt()).catch(
-        () => null
-      )
+      // Reading or making the salt can fail, so it is inside the catch with the rest of the address.
+      const address = await Promise.resolve()
+        .then(() => pageAddress(getNotesRoot(), located.realPath, getSalt()))
+        .catch(() => null)
       if (!address || !isCurrent()) return 'blocked'
       const page = create(sender, host, located.realPath, version, bounds)
       kept.add(sender.id, path, page)
