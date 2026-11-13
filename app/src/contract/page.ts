@@ -14,7 +14,7 @@ const bounds = z.strictObject({
 export const show = defineOperation({
   channel: 'page:show',
   description:
-    "Show an HTML page from the notes folder in a locked view over the given area of the window. The page loads only from its own folder and cannot reach the network, other files, new windows, downloads or permissions. Showing a page whose view is still alive, and whose file has not changed, only moves and reveals it, and hides the window's other page views. Returns `shown`, or why not: `missing`, `blocked` (outside the notes folder, or not an HTML page) or `too-large` (over 10 MB).",
+    "Show an HTML page from the notes folder in its own view over the given area of the window. The view is sandboxed, with no Node and no Ryte API, and otherwise opens like a normal browser tab: the page can read any file of the notes folder (never outside it, and not hidden or `node_modules` folders), use the internet, the clipboard, downloads (the macOS save dialog, only while its view is showing) and alert boxes, and keeps what it saves across restarts. It cannot move itself to another address. Camera, microphone, location, other devices and notifications are refused, and a link or a new window opens in the browser only on a real click. Showing a page whose view is still alive, and whose file has not changed, only moves and reveals it, and hides the window's other page views. Returns `shown`, or why not: `missing`, `blocked` (outside the notes folder, or not an HTML page) or `too-large` (over 10 MB).",
   input: z.strictObject({ path: sourcePath, bounds }),
   output: z.object({ status: z.enum(['shown', 'missing', 'blocked', 'too-large']) }),
   example: {
@@ -43,7 +43,7 @@ export const hide = defineOperation({
 export const park = defineOperation({
   channel: 'page:park',
   description:
-    "A page's tab went to the background: hide its view but keep it, and its session, alive, so the page is as it was when the tab comes back. The app keeps page and other kept views alive until they use more than about 1.5 GB together or there are more than 24; then the ones shown longest ago go to sleep and load again when their tab returns.",
+    "A page's tab went to the background: hide its view but keep it alive, so the page is as it was when the tab comes back. The app keeps page and other kept views alive until they use more than about 1.5 GB together or there are more than 24; then the ones shown longest ago go to sleep and load again when their tab returns.",
   input: z.strictObject({ path: sourcePath }),
   output: z.void(),
   example: { input: { path: 'review/index.html' }, output: undefined }
@@ -52,7 +52,7 @@ export const park = defineOperation({
 export const close = defineOperation({
   channel: 'page:close',
   description:
-    "Close this page's view, shown or hidden, and forget its folder. The page keeps nothing. The next show loads it again.",
+    "Close this page's view, shown or hidden. What the page saved stays. The next show loads it again.",
   input: z.strictObject({ path: sourcePath }),
   output: z.void(),
   example: { input: { path: 'review/index.html' }, output: undefined }
@@ -70,7 +70,7 @@ export const retain = defineOperation({
 export const openInBrowser = defineOperation({
   channel: 'page:open-in-browser',
   description:
-    'Open an HTML page from the notes folder in the default browser, outside the locked view, after checking again that it is inside the notes folder and an HTML page. The page runs unlocked there, so this is only for the button the person presses. Returns whether it opened.',
+    'Open an HTML page from the notes folder in the default browser, in a browser outside Ryte, after checking again that it is inside the notes folder and an HTML page. This is for the button the person presses. Returns whether it opened.',
   input: z.strictObject({ path: sourcePath }),
   output: z.object({ opened: z.boolean() }),
   example: { input: { path: 'review/index.html' }, output: { opened: true } }
@@ -79,7 +79,7 @@ export const openInBrowser = defineOperation({
 export const blocked = defineEvent({
   channel: 'page:blocked',
   description:
-    'The open page tried something the locked view refuses. Carries how many things were blocked since the page opened and the addresses of the last 50, as plain text.',
+    'The open page tried something its view refuses (a link without a real click, or a permission such as the camera). Carries how many things were blocked since the page opened and the addresses of the last 50, as plain text.',
   payload: z.object({ count: z.number(), addresses: z.array(z.string()) })
 })
 

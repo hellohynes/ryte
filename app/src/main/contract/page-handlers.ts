@@ -13,7 +13,7 @@ export interface PageHandlerDependencies {
 
 const isHtmlExtension = (extension: string): boolean => isHtmlPagePath(`x.${extension}`)
 
-/** The locked page view. The view belongs to the window that asked; the box shows one page per window and keeps the others alive, hidden. */
+/** The HTML page view. The view belongs to the window that asked; the box shows one page per window and keeps the others alive, hidden. */
 export function createPageHandlers({
   box,
   getNotesRoot,

@@ -1,35 +1,30 @@
-import { dirname, basename } from 'node:path'
+import { join } from 'node:path'
 
-import {
-  BrowserWindow,
-  session,
-  type Session,
-  type WebContentsView,
-  type WebContents
-} from 'electron'
+import { app, BrowserWindow, type Session, type WebContentsView, type WebContents } from 'electron'
 
 import { contract } from '../../contract'
-import { isHtmlPagePath, MAX_PAGE_TEXT_BYTES, PAGE_SCHEME, pageUrl } from '../../shared/page-box'
+import { isHtmlPagePath, MAX_PAGE_TEXT_BYTES, PAGE_SCHEME } from '../../shared/page-box'
 import type { EmitTo } from '../contract/register'
 import { locateNoteFile } from '../viewer/note-files'
 import { createBlockedLog, type BlockedLog } from './page-blocked'
 import {
-  createLockedView,
+  createPageView,
   hideWithStill,
-  lockSession,
+  lastingSession,
   rounded,
+  setUpPageSession,
   type PageBounds
-} from './locked-view'
+} from './page-view'
 import { createKeptViews } from './kept-views'
 import { appKeptViewPool } from './sleep-limits'
-import { isOwnPageAddress, isOwnPageMove } from './page-moves'
+import { isSubframeAllowed, pageMoveVerdict } from './page-moves'
 import {
   parseScroll,
   READ_SCROLL_SCRIPT,
   restoreScrollScript,
   type PageScroll
 } from './page-scroll'
-import { createPageFolderHandler, type PageFolders } from './page-scheme'
+import { createPageHandler, pageAddress, readOrCreateSalt, tokenOfNotesFolder } from './page-scheme'
 
 export type { PageBounds }
 
@@ -48,33 +43,32 @@ export interface PageBox {
 }
 
 export interface PageBoxDependencies {
-  folders: PageFolders
   getNotesRoot: () => string
   emitTo: EmitTo
   /** Opens an address in the browser. The caller has already checked the kind of address. */
   openExternal: (url: string) => void
 }
 
+/** The name of the one lasting session of every HTML page: what a page saves stays across sleep, reload and restart. */
+const PAGES_SESSION = 'ryte-pages'
+
 interface OpenPage {
-  id: string
   realPath: string
   /** Size, modification time and file identity when the page loaded: a different file on return means a fresh load. */
   version: string
   view: WebContentsView
   host: BrowserWindow
-  ses: Session
   log: BlockedLog
 }
 
 /**
- * The locked view for an HTML page: a separate sandboxed view in its own in-memory session, with no preload and
- * no Node. It loads only from the page's folder through `ryte-page`, never `ryte-file`, and refuses the
- * network, other files, windows, downloads and permissions. A window shows one page at a time and keeps the
- * pages of its other tabs alive, hidden, so each keeps its scroll position and its storage (each page has its
- * own session, shared with nothing) until its tab closes or it is put to sleep to stay within the memory budget.
+ * The view for an HTML page: a separate sandboxed view with no preload and no Node, in the one lasting session
+ * of all pages. It loads its files, and any other file of the notes folder, through `ryte-page`, and otherwise
+ * behaves like a browser tab: internet, clipboard, downloads, dialogs and saved data. A window shows one page
+ * at a time and keeps the pages of its other tabs alive, hidden, so each keeps its scroll position until its tab
+ * closes or it is put to sleep to stay within the memory budget; what it saved stays in the session.
  */
 export function createPageBox({
-  folders,
   getNotesRoot,
   emitTo,
   openExternal
@@ -93,17 +87,27 @@ export function createPageBox({
   const scrolls = new Map<number, Map<string, PageScroll>>()
   const watchedWindows = new Set<number>()
 
+  // The session is shared and lasting, so closing or sleeping a page only closes its view. The session is made
+  // the first time a page opens.
+  let salt: string | null = null
+  const getSalt = (): string =>
+    (salt ??= readOrCreateSalt(join(app.getPath('userData'), 'page-token-salt')))
+  let pagesSession: Session | null = null
+  const pageSession = (): Session => {
+    if (pagesSession) return pagesSession
+    const ses = lastingSession(PAGES_SESSION)
+    ses.protocol.handle(PAGE_SCHEME, createPageHandler(getNotesRoot, getSalt))
+    setUpPageSession(ses)
+    return (pagesSession = ses)
+  }
+
   const destroy = (page: OpenPage): void => {
-    const { view, host, ses, log } = page
-    folders.close(page.id)
+    const { view, host, log } = page
     log.stop()
     if (!host.isDestroyed()) host.contentView.removeChildView(view)
     if (!view.webContents.isDestroyed()) view.webContents.close()
-    // Electron cannot destroy a session, so its storage is cleared by hand. The filter stays, denying everything,
-    // because a closing page can still send a request while it unloads.
-    ses.webRequest.onBeforeRequest((_details, callback) => callback({ cancel: true }))
-    ses.protocol.unhandle(PAGE_SCHEME)
-    void ses.clearStorageData()
+    // What the page saved must reach the disk before its view is gone.
+    void pageSession().flushStorageData()
   }
 
   const kept = createKeptViews<OpenPage>({ destroy, pool: appKeptViewPool })
@@ -142,48 +146,31 @@ export function createPageBox({
     }
   }
 
-  const create = async (
+  const create = (
     sender: WebContents,
     host: BrowserWindow,
     realPath: string,
     version: string,
-    bounds: PageBounds,
-    isCurrent: () => boolean
-  ): Promise<OpenPage | null> => {
-    const id = folders.open(dirname(realPath))
-    // No `persist:` prefix, so the session lives in memory and is gone with the page.
-    const ses = session.fromPartition(`ryte-page-${id}`)
-    // Nothing in the page may reach the network, including connection hints that `webRequest` never sees
-    // (preconnect, WebRTC over TCP): they go to a closed local port. `ryte-page` is answered in-process and
-    // never uses the proxy.
-    await ses.setProxy({ proxyRules: 'http://127.0.0.1:9' })
-    if (!isCurrent()) {
-      folders.close(id)
-      return null
-    }
+    bounds: PageBounds
+  ): OpenPage => {
     const log: BlockedLog = createBlockedLog((state) =>
       emitTo(sender, contract.page.events.blocked, state)
     )
-
-    ses.protocol.handle(PAGE_SCHEME, createPageFolderHandler(folders))
-    ses.webRequest.onBeforeRequest((details, callback) => {
-      const allowed = isOwnPageAddress(details.url, id)
-      if (!allowed) log.add(details.url)
-      callback({ cancel: !allowed })
-    })
-    lockSession(ses, log)
-    const view = createLockedView({
-      ses,
+    const view = createPageView({
+      ses: pageSession(),
       host,
       bounds,
       log,
       emitTo,
       openExternal,
-      // A page may move to another HTML page of its folder; a frame may load the folder's own files.
+      // A frame may load anything but Ryte's own surfaces. The page may move to another HTML page, which takes the
+      // token of its own folder so its saved data stays with that folder.
       allowNavigation: (url, isMainFrame) =>
-        isMainFrame ? isOwnPageMove(url, id) : isOwnPageAddress(url, id)
+        isMainFrame
+          ? pageMoveVerdict(url, (file) => tokenOfNotesFolder(getNotesRoot(), file, getSalt()))
+          : isSubframeAllowed(url)
     })
-    return { id, realPath, version, view, host, ses, log }
+    return { realPath, version, view, host, log }
   }
 
   return {
@@ -218,8 +205,12 @@ export function createPageBox({
         kept.remove(sender.id, path)
         scrolls.get(sender.id)?.delete(path)
       }
-      const page = await create(sender, host, located.realPath, version, bounds, isCurrent)
-      if (!page) return 'blocked'
+      // Reading or making the salt can fail, so it is inside the catch with the rest of the address.
+      const address = await Promise.resolve()
+        .then(() => pageAddress(getNotesRoot(), located.realPath, getSalt()))
+        .catch(() => null)
+      if (!address || !isCurrent()) return 'blocked'
+      const page = create(sender, host, located.realPath, version, bounds)
       kept.add(sender.id, path, page)
       // The tab closed while the view was being made.
       if (!kept.isWanted(sender.id, path)) {
@@ -235,7 +226,7 @@ export function createPageBox({
             void contents.executeJavaScript(restoreScrollScript(scroll)).catch(() => undefined)
         })
       }
-      void contents.loadURL(pageUrl(page.id, basename(located.realPath))).catch(() => undefined)
+      void contents.loadURL(address).catch(() => undefined)
       return 'shown'
     },
     setBounds(sender, bounds) {

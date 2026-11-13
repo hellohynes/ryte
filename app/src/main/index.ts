@@ -40,11 +40,15 @@ if (userDataDirOverride) app.setPath('userData', userDataDirOverride)
 app.setName('Ryte')
 
 // Pictures and videos in notes load through this scheme. Privileges can only be granted before `ready`.
-// `stream` lets Chromium play media from it, with byte-range requests for seeking. HTML pages open in a locked
-// view through `ryte-page`, which has a real origin of its own and is served only by that view's own session.
+// `stream` lets Chromium play media from it, with byte-range requests for seeking. HTML pages open in their own
+// view through `ryte-page`, which has a real origin of its own and is served only by the pages' session; a page
+// may `fetch` files of the notes folder through it.
 protocol.registerSchemesAsPrivileged([
   { scheme: NOTE_FILE_SCHEME, privileges: { standard: true, secure: true, stream: true } },
-  { scheme: PAGE_SCHEME, privileges: { standard: true, secure: true, stream: true } }
+  {
+    scheme: PAGE_SCHEME,
+    privileges: { standard: true, secure: true, stream: true, supportFetchAPI: true }
+  }
 ])
 
 function createWindow(): BrowserWindow {

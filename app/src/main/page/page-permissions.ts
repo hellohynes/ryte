@@ -1,14 +1,13 @@
-/** The permissions a page may use to write to the clipboard. Chromium asks for the first on `writeText`. */
-const CLIPBOARD_WRITE_PERMISSIONS: ReadonlySet<string> = new Set([
+/** The only permissions a page gets: Chromium asks for these to read and to write the clipboard. */
+const ALLOWED_PERMISSIONS: ReadonlySet<string> = new Set([
+  'clipboard-read',
   'clipboard-sanitized-write',
   'clipboard-write'
 ])
 
 /**
- * Whether a locked page may have this permission. Decision pages copy their answers on a click, so a clipboard
- * write is allowed, and only right after a real click or key press in the page. Reading the clipboard, and every
- * other permission, is never allowed.
+ * Whether a page may have this permission. The clipboard, at any time. Camera, microphone, location, other
+ * devices and notifications are refused, because Ryte has nowhere to ask, and so is everything not listed.
  */
-export function isPagePermissionAllowed(permission: string, recentRealInput: boolean): boolean {
-  return recentRealInput && CLIPBOARD_WRITE_PERMISSIONS.has(permission)
-}
+export const isPagePermissionAllowed = (permission: string): boolean =>
+  ALLOWED_PERMISSIONS.has(permission)

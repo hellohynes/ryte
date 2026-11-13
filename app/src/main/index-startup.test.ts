@@ -149,7 +149,10 @@ describe('main startup ordering', () => {
 
     expect(mocks.protocol.registerSchemesAsPrivileged).toHaveBeenCalledWith([
       { scheme: 'ryte-file', privileges: { standard: true, secure: true, stream: true } },
-      { scheme: 'ryte-page', privileges: { standard: true, secure: true, stream: true } }
+      {
+        scheme: 'ryte-page',
+        privileges: { standard: true, secure: true, stream: true, supportFetchAPI: true }
+      }
     ])
     expect(mocks.order.indexOf('scheme:privileged')).toBeLessThan(
       mocks.order.indexOf('app:whenReady')
