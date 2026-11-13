@@ -1,9 +1,11 @@
-import { createHash } from 'node:crypto'
-import { realpathSync } from 'node:fs'
+import { createHash, randomBytes } from 'node:crypto'
+import { readFileSync, realpathSync, writeFileSync } from 'node:fs'
 import { realpath } from 'node:fs/promises'
 import { dirname, join, relative, sep } from 'node:path'
 
 import {
+  hasSkippedSegment,
+  isHtmlPagePath,
   MAX_PAGE_TEXT_BYTES,
   pageMediaType,
   pageTextType,
@@ -17,23 +19,49 @@ import {
   type NoteFileRequest
 } from '../viewer/note-files'
 
+/** The random salt of this install, made on first use and kept in `file`, so tokens are stable across restarts. */
+export function readOrCreateSalt(file: string): string {
+  try {
+    const saved = readFileSync(file, 'utf8').trim()
+    if (saved) return saved
+  } catch {
+    // Not made yet.
+  }
+  const salt = randomBytes(16).toString('hex')
+  writeFileSync(file, salt)
+  return salt
+}
+
 /**
- * The token in a page's address: a short hash of the page's folder (by real path), so what a page saves stays
- * with its folder and is found again after a restart. It names the origin only; it never limits what is served.
+ * The token in a page's address: a short salted hash of the page's folder (by real path), so what a page saves
+ * stays with its folder and is found again after a restart. The salt keeps the folder's path from being guessed
+ * out of the token, which a web server sees in `Origin`.
  */
-export const folderToken = (realFolder: string): string =>
-  createHash('sha256').update(realFolder).digest('hex').slice(0, 32)
+export const folderToken = (realFolder: string, salt: string): string =>
+  createHash('sha256').update(`${salt}\0${realFolder}`).digest('hex').slice(0, 32)
 
 /** The address of a page that is inside the notes folder, by its real path. */
-export async function pageAddress(notesRoot: string, realFile: string): Promise<string> {
+export async function pageAddress(
+  notesRoot: string,
+  realFile: string,
+  salt: string
+): Promise<string> {
   const root = await realpath(notesRoot)
-  return pageUrl(folderToken(dirname(realFile)), relative(root, realFile).split(sep).join('/'))
+  return pageUrl(
+    folderToken(dirname(realFile), salt),
+    relative(root, realFile).split(sep).join('/')
+  )
 }
 
 /** The token that belongs to the folder of a notes-relative file, or null when the folder is gone. */
-export function tokenOfNotesFolder(notesRoot: string, notesRelativeFile: string): string | null {
+export function tokenOfNotesFolder(
+  notesRoot: string,
+  notesRelativeFile: string,
+  salt: string
+): string | null {
   try {
-    return folderToken(realpathSync(join(realpathSync(notesRoot), dirname(notesRelativeFile))))
+    const folder = realpathSync(join(realpathSync(notesRoot), dirname(notesRelativeFile)))
+    return folderToken(folder, salt)
   } catch {
     return null
   }
@@ -50,13 +78,16 @@ const HEADERS = {
 const notFound = (): Response => new Response(null, { status: 404 })
 
 /**
- * Answers `ryte-page://<token>/<path>` from the notes folder, whatever the token. The path is decoded once, the
- * file is found by real path inside the notes folder (a link out is refused) and must be a regular file, and the
- * file that was checked is the file that is read. Text of a known type is read whole up to a cap; everything else
- * is streamed with byte ranges.
+ * Answers `ryte-page://<token>/<path>` from the notes folder. The path is decoded once, the file is found by real
+ * path inside the notes folder (a link out is refused, and so is a link into a hidden or dependency folder) and
+ * must be a regular file, and the file that was checked is the file that is read. Any file is served whatever the
+ * token, except an HTML page, which is served only under the token of its own folder so that it cannot run as
+ * another folder's origin. Text of a known type is read whole up to a cap; everything else is streamed with byte
+ * ranges.
  */
 export function createPageHandler(
-  getNotesRoot: () => string
+  getNotesRoot: () => string,
+  getSalt: () => string
 ): (request: NoteFileRequest) => Promise<Response> {
   return async (request) => {
     const method = request.method.toUpperCase()
@@ -64,20 +95,30 @@ export function createPageHandler(
 
     const parsed = parsePageUrl(request.url)
     if (!parsed) return notFound()
-    const located = await locateNoteFile(parsed.path, getNotesRoot(), () => true)
+    const notesRoot = getNotesRoot()
+    const located = await locateNoteFile(parsed.path, notesRoot, () => true)
     if (!located.ok) return notFound()
+    const root = await realpath(notesRoot).catch(() => null)
+    if (root === null || hasSkippedSegment(relative(root, located.realPath).split(sep))) {
+      return notFound()
+    }
+    if (
+      isHtmlPagePath(parsed.path) &&
+      parsed.token !== tokenOfNotesFolder(notesRoot, parsed.path, getSalt())
+    ) {
+      return notFound()
+    }
 
     const textType = pageTextType(located.extension)
-    if (textType === undefined) {
+    if (textType === undefined || located.size > MAX_PAGE_TEXT_BYTES) {
       return respondWithLocatedRange(located, {
         method,
         range: request.headers?.get('range'),
-        contentType: pageMediaType(located.extension) ?? 'application/octet-stream',
+        contentType: textType ?? pageMediaType(located.extension) ?? 'application/octet-stream',
         headers: HEADERS
       })
     }
 
-    if (located.size > MAX_PAGE_TEXT_BYTES) return notFound()
     const responseHeaders = { ...HEADERS, 'Content-Type': textType }
     if (method === 'HEAD') {
       return new Response(null, {

@@ -9,7 +9,7 @@
 // Usage: node scripts/test-page-keepalive.mjs [--report <file.json>]
 import { spawn, spawnSync } from 'node:child_process'
 import { createServer } from 'node:http'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -298,10 +298,12 @@ async function inApp(userData, name, steps) {
   } catch (error) {
     let views = ''
     try {
-      views = (await targets())
-        .filter((t) => t.url.startsWith('ryte-page://'))
-        .map((t) => t.url.slice(-8))
-        .join(',')
+      for (const target of (await targets()).filter((t) => t.url.startsWith('ryte-page://'))) {
+        const client = await connect(target)
+        const text = await client.evaluate('document.documentElement.outerHTML.slice(0, 120)')
+        client.close()
+        views += ` [${target.url.slice(-12)}: ${text}]`
+      }
     } catch {
       // No targets to add.
     }
@@ -317,13 +319,31 @@ async function inApp(userData, name, steps) {
 
 async function main() {
   await takeLock()
+  const listen = (server) =>
+    new Promise((resolveListen) => server.listen(0, '127.0.0.1', resolveListen)).then(
+      () => server.address().port
+    )
+  // Another local server that the approved one redirects to: a page must never be moved there.
+  let landings = 0
+  const landing = createServer((_request, response) => {
+    landings += 1
+    response.end('landing')
+  })
+  const landingPort = await listen(landing)
   // Stands in for the internet: a page may ask it for something, and it answers across origins.
-  const server = createServer((_request, response) => {
+  let awayRequests = 0
+  const server = createServer((request, response) => {
+    if (request.url === '/away') {
+      awayRequests += 1
+      response.writeHead(302, { Location: `http://127.0.0.1:${landingPort}/landing` })
+      response.end()
+      return
+    }
     response.writeHead(200, { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'text/plain' })
     response.end('pong')
   })
-  await new Promise((resolveListen) => server.listen(0, '127.0.0.1', resolveListen))
-  const { root, userData } = makeFixtures(server.address().port)
+  const port = await listen(server)
+  const { root, userData } = makeFixtures(port)
   try {
     await inApp(userData, 'run', async (app, driver) => {
       const { run, closePath, pageTargets, viewOf, withView, readState, settled, show, goTo } =
@@ -461,8 +481,27 @@ async function main() {
 
       await app.quit()
     })
-    // The same profile again: what the page saved is still there.
+    // The same profile again, with a local address already approved and open that the server redirects away.
+    const origin = `http://127.0.0.1:${port}`
+    writeFileSync(
+      join(userData, 'localhost-approvals.json'),
+      JSON.stringify({ version: 1, origins: [origin] })
+    )
+    const workspacePath = join(userData, 'workspace.json')
+    const workspace = JSON.parse(readFileSync(workspacePath, 'utf8'))
+    const tab = { id: 'away-tab', title: '127.0.0.1', viewMode: 'preview', url: `${origin}/away` }
+    writeFileSync(
+      workspacePath,
+      JSON.stringify({ ...workspace, tabs: [...workspace.tabs, tab], activeTabId: tab.id })
+    )
     await inApp(userData, 'restart', async (_app, driver) => {
+      await until('the approved local tab to ask the server', async () => awayRequests > 0)
+      await sleep(1500)
+      check(
+        'a redirect from an approved local address does not move the view to another address',
+        landings === 0,
+        `${landings} requests reached the other server`
+      )
       await driver.goTo('p1.html')
       const back = await driver.settled('p1.html')
       check(
@@ -473,6 +512,7 @@ async function main() {
     })
   } finally {
     server.close()
+    landing.close()
     rmSync(root, { recursive: true, force: true })
     spawnSync('rmdir', [LOCK], { stdio: 'ignore' })
   }

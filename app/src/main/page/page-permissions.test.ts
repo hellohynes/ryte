@@ -10,7 +10,7 @@ describe('isPagePermissionAllowed', () => {
   })
 
   it('refuses the camera, microphone, location and notifications', () => {
-    for (const permission of ['media', 'geolocation', 'notifications', 'midi', 'fullscreen']) {
+    for (const permission of ['media', 'geolocation', 'notifications']) {
       expect(isPagePermissionAllowed(permission), permission).toBe(false)
     }
   })

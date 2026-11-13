@@ -1,4 +1,6 @@
-import { BrowserWindow, type Session, type WebContentsView, type WebContents } from 'electron'
+import { join } from 'node:path'
+
+import { app, BrowserWindow, type Session, type WebContentsView, type WebContents } from 'electron'
 
 import { contract } from '../../contract'
 import { isHtmlPagePath, MAX_PAGE_TEXT_BYTES, PAGE_SCHEME } from '../../shared/page-box'
@@ -15,14 +17,14 @@ import {
 } from './page-view'
 import { createKeptViews } from './kept-views'
 import { appKeptViewPool } from './sleep-limits'
-import { isPageAddress, pageMoveVerdict } from './page-moves'
+import { isSubframeAllowed, pageMoveVerdict } from './page-moves'
 import {
   parseScroll,
   READ_SCROLL_SCRIPT,
   restoreScrollScript,
   type PageScroll
 } from './page-scroll'
-import { createPageHandler, pageAddress, tokenOfNotesFolder } from './page-scheme'
+import { createPageHandler, pageAddress, readOrCreateSalt, tokenOfNotesFolder } from './page-scheme'
 
 export type { PageBounds }
 
@@ -87,11 +89,14 @@ export function createPageBox({
 
   // The session is shared and lasting, so closing or sleeping a page only closes its view. The session is made
   // the first time a page opens.
+  let salt: string | null = null
+  const getSalt = (): string =>
+    (salt ??= readOrCreateSalt(join(app.getPath('userData'), 'page-token-salt')))
   let pagesSession: Session | null = null
   const pageSession = (): Session => {
     if (pagesSession) return pagesSession
     const ses = lastingSession(PAGES_SESSION)
-    ses.protocol.handle(PAGE_SCHEME, createPageHandler(getNotesRoot))
+    ses.protocol.handle(PAGE_SCHEME, createPageHandler(getNotesRoot, getSalt))
     setUpPageSession(ses)
     return (pagesSession = ses)
   }
@@ -158,12 +163,12 @@ export function createPageBox({
       log,
       emitTo,
       openExternal,
-      // A frame may load any file of the notes folder. The page may move to another HTML page, which takes the
+      // A frame may load anything but Ryte's own surfaces. The page may move to another HTML page, which takes the
       // token of its own folder so its saved data stays with that folder.
       allowNavigation: (url, isMainFrame) =>
         isMainFrame
-          ? pageMoveVerdict(url, (file) => tokenOfNotesFolder(getNotesRoot(), file))
-          : isPageAddress(url)
+          ? pageMoveVerdict(url, (file) => tokenOfNotesFolder(getNotesRoot(), file, getSalt()))
+          : isSubframeAllowed(url)
     })
     return { realPath, version, view, host, log }
   }
@@ -200,7 +205,9 @@ export function createPageBox({
         kept.remove(sender.id, path)
         scrolls.get(sender.id)?.delete(path)
       }
-      const address = await pageAddress(getNotesRoot(), located.realPath).catch(() => null)
+      const address = await pageAddress(getNotesRoot(), located.realPath, getSalt()).catch(
+        () => null
+      )
       if (!address || !isCurrent()) return 'blocked'
       const page = create(sender, host, located.realPath, version, bounds)
       kept.add(sender.id, path, page)

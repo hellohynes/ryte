@@ -4,9 +4,10 @@ import { join } from 'node:path'
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 
-import { createPageHandler, folderToken, pageAddress, tokenOfNotesFolder } from './page-scheme'
+import { createPageHandler, folderToken, pageAddress } from './page-scheme'
 
 const TOKEN = 'a'.repeat(32)
+const SALT = 'test-salt'
 const PNG_BYTES = Buffer.from('89504e470d0a1a0a', 'hex')
 
 describe('the ryte-page handler', () => {
@@ -29,7 +30,10 @@ describe('the ryte-page handler', () => {
     writeFileSync(join(outside, 'secret.html'), 'secret')
     symlinkSync(join(outside, 'secret.html'), join(root, 'pages', 'link.html'))
     symlinkSync(outside, join(root, 'pages', 'out'))
-    const handler = createPageHandler(() => root)
+    const handler = createPageHandler(
+      () => root,
+      () => SALT
+    )
     get = (url) => handler({ method: 'GET', url })
   })
 
@@ -73,12 +77,14 @@ describe('the ryte-page handler', () => {
     }
   })
 
-  it('gives the same folder the same token and another folder another', async () => {
-    expect(folderToken(join(root, 'pages'))).toBe(folderToken(join(root, 'pages')))
-    expect(folderToken(join(root, 'pages'))).not.toBe(folderToken(join(root, 'shared')))
+  it('serves an HTML page only under the token of its own folder', async () => {
+    const own = folderToken(join(root, 'pages'), SALT)
+    expect((await get(`ryte-page://${own}/pages/index.html`)).status).toBe(200)
+    expect((await get(`ryte-page://${TOKEN}/pages/index.html`)).status).toBe(404)
+  })
 
-    const address = await pageAddress(root, join(root, 'pages', 'index.html'))
-    expect(address).toBe(`ryte-page://${folderToken(join(root, 'pages'))}/pages/index.html`)
-    expect(tokenOfNotesFolder(root, 'pages/other.html')).toBe(folderToken(join(root, 'pages')))
+  it('builds the address of a page from its folder token and its path from the notes folder', async () => {
+    const address = await pageAddress(root, join(root, 'pages', 'index.html'), SALT)
+    expect(address).toBe(`ryte-page://${folderToken(join(root, 'pages'), SALT)}/pages/index.html`)
   })
 })

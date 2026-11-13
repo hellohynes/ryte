@@ -60,7 +60,7 @@ export const release = defineOperation({
 export const show = defineOperation({
   channel: 'localhost:show',
   description:
-    'Show an approved local address in its own view over the given area of the window. The view is sandboxed, with no Node and no Ryte API, and otherwise opens like a normal browser tab: the page can use the internet, the clipboard, downloads (the macOS save dialog) and alert boxes, and keeps what it saves per origin across restarts. Camera, microphone, location, other devices and notifications are refused, and a link or a new window opens in the browser only on a real click. Showing the address that is already open only moves and reveals it. Returns `shown`, `needs-approval` (not approved, or the approval was removed) or `blocked` (not a local address).',
+    'Show an approved local address in its own view over the given area of the window. The view is sandboxed, with no Node and no Ryte API, and otherwise opens like a normal browser tab: the page can use the internet, the clipboard, downloads (the macOS save dialog) and alert boxes, and keeps what it saves per origin across restarts. Camera, microphone, location, other devices and notifications are refused, and a link or a new window opens in the browser only on a real click. It cannot move itself, or be redirected by its server, to another origin. Showing the address that is already open only moves and reveals it. Returns `shown`, `needs-approval` (not approved, or the approval was removed) or `blocked` (not a local address).',
   input: z.strictObject({ url: address, bounds }),
   output: z.object({ status: z.enum(['shown', 'needs-approval', 'blocked']) }),
   example: {

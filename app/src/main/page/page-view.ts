@@ -28,25 +28,33 @@ export const rounded = (bounds: PageBounds): PageBounds => ({
   height: Math.max(0, Math.round(bounds.height))
 })
 
-// The blocked log of each page view, so a refused permission is reported to the page that asked.
-const logs = new WeakMap<WebContents, BlockedLog>()
+// The blocked log and the view of each page, so a refused permission or download is reported to the page that asked.
+const pages = new WeakMap<WebContents, { log: BlockedLog; view: WebContentsView }>()
 
 /** The lasting session of this name, kept on disk in the app's data folder (Electron's `persist:` partitions). */
 export const lastingSession = (name: string): Session => session.fromPartition(`persist:${name}`)
 
 /**
  * Sets up a session shared by many pages: the clipboard is allowed, every other permission and every device is
- * refused and (for a permission) recorded in the log of the page that asked. Downloads and dialogs are left to
- * Electron, which asks where to save and shows the dialog.
+ * refused and (for a permission) recorded in the log of the page that asked. A download goes through
+ * Electron's save dialog, but only when the page's view is the one showing, so a page in a background tab cannot
+ * put dialogs over the tab being read. `alert` and `confirm` are left to Electron and can still appear from a
+ * background page.
  */
 export function setUpPageSession(ses: Session): void {
   ses.setPermissionRequestHandler((contents, permission, callback) => {
     const allowed = isPagePermissionAllowed(permission)
-    if (!allowed) logs.get(contents)?.add(`permission: ${permission}`)
+    if (!allowed) pages.get(contents)?.log.add(`permission: ${permission}`)
     callback(allowed)
   })
   ses.setPermissionCheckHandler((_contents, permission) => isPagePermissionAllowed(permission))
   ses.setDevicePermissionHandler(() => false)
+  ses.on('will-download', (event, item, contents) => {
+    const page = pages.get(contents)
+    if (page?.view.getVisible()) return
+    event.preventDefault()
+    page?.log.add(item.getURL())
+  })
 }
 
 export interface PageViewOptions {
@@ -97,7 +105,7 @@ export function createPageView({
   view.setBackgroundColor('#00000000')
   contents.once('did-stop-loading', () => view.setBackgroundColor('#ffffff'))
   // A link opens in the browser only when the person just clicked it, and the box itself never loads it.
-  logs.set(contents, log)
+  pages.set(contents, { log, view })
   const gate = createRealInputGate()
   const openLink = createPageLinkOpener(gate, openExternal)
   contents.on('input-event', (_event, input) => {
@@ -108,7 +116,7 @@ export function createPageView({
     return { action: 'deny' }
   })
   contents.on('will-frame-navigate', (event) => {
-    // A frame inside the page may load the notes folder's files, and the page may move to another page of it.
+    // A frame inside the page may load anything but Ryte's own surfaces, and the page may move to another page of the notes folder.
     // Everything else is a link (opened only on a real click) or blocked.
     const verdict = allowNavigation(event.url, event.isMainFrame)
     if (verdict === true) return
@@ -120,6 +128,12 @@ export function createPageView({
     if (!event.isMainFrame || !isOpenablePageLink(event.url) || !openLink(event.url)) {
       log.add(event.url)
     }
+  })
+  // A server redirect is a move too, and `will-frame-navigate` does not see it: judge its target the same way.
+  contents.on('will-redirect', (event) => {
+    if (allowNavigation(event.url, event.isMainFrame) === true) return
+    event.preventDefault()
+    log.add(event.url)
   })
   contents.on('before-input-event', (event, input) => {
     if (input.type !== 'keyDown') return

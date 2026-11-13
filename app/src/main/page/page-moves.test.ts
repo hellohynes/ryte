@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { pageMoveVerdict } from './page-moves'
+import { isSubframeAllowed, pageMoveVerdict } from './page-moves'
 
 const OWN = 'a'.repeat(32)
 const OTHER = 'b'.repeat(32)
@@ -28,5 +28,14 @@ describe('moving between pages', () => {
     ]) {
       expect(pageMoveVerdict(url, tokenOfFolder), url).toBe(false)
     }
+  })
+})
+
+describe('frames inside a page', () => {
+  it('may load the web and the notes pages, but not local files or the notes through ryte-file', () => {
+    expect(isSubframeAllowed('https://example.com/embed')).toBe(true)
+    expect(isSubframeAllowed(`ryte-page://${OWN}/a/part.html`)).toBe(true)
+    expect(isSubframeAllowed('file:///etc/hosts')).toBe(false)
+    expect(isSubframeAllowed('ryte-file://notes/secret.md')).toBe(false)
   })
 })

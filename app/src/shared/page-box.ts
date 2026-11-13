@@ -62,6 +62,13 @@ export function pageUrl(token: string, relativePath: string): string {
 
 const PAGE_TOKEN_RE = /^[0-9a-f]{32}$/
 
+/**
+ * The same hidden-and-dependency rule as the tree, in any letter case: a page never reads `.obsidian/`, `.env.json`
+ * or `node_modules/`.
+ */
+export const hasSkippedSegment = (segments: readonly string[]): boolean =>
+  segments.some((segment) => isSkippedFolder(segment.toLowerCase()))
+
 export interface ParsedPageUrl {
   token: string
   /** The notes-relative path, decoded once; never absolute, never `.` or `..` or empty segments. */
@@ -95,7 +102,6 @@ export function parsePageUrl(url: string): ParsedPageUrl | null {
   if (!path || path.includes('\0') || path.includes('\\') || path.startsWith('/')) return null
   const segments = path.split('/')
   if (segments.some((segment) => segment === '' || segment === '.' || segment === '..')) return null
-  // The same hidden-and-dependency rule as the tree: a page never reads `.obsidian/`, `.env.json` or `node_modules/`.
-  if (segments.some(isSkippedFolder)) return null
+  if (hasSkippedSegment(segments)) return null
   return { token, path }
 }

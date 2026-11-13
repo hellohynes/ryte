@@ -14,6 +14,7 @@ import {
 import { createKeptViews } from './kept-views'
 import { appKeptViewPool } from './sleep-limits'
 import { createBlockedLog, type BlockedLog } from './page-blocked'
+import { isSubframeAllowed } from './page-moves'
 
 export type LocalShowResult = 'shown' | 'blocked'
 
@@ -111,8 +112,10 @@ export function createLocalBox({ emitTo, openExternal }: LocalBoxDependencies): 
         log,
         emitTo,
         openExternal,
-        // The page may move around its own origin, as local apps change pages; anything else is a link.
-        allowNavigation: (url) => parseLocalAddress(url)?.origin === origin
+        // The page may move around its own origin, as local apps change pages; anything else is a link. A frame
+        // may load anything but Ryte's own surfaces.
+        allowNavigation: (url, isMainFrame) =>
+          isMainFrame ? parseLocalAddress(url)?.origin === origin : isSubframeAllowed(url)
       })
       kept.add(sender.id, address.url, { url: address.url, origin, view, host, log })
       // The tab closed while the view was being made.
