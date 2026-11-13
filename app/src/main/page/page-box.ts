@@ -18,12 +18,7 @@ import {
 import { createKeptViews } from './kept-views'
 import { appKeptViewPool } from './sleep-limits'
 import { isSubframeAllowed, pageMoveVerdict } from './page-moves'
-import {
-  parseScroll,
-  READ_SCROLL_SCRIPT,
-  restoreScrollScript,
-  type PageScroll
-} from './page-scroll'
+import { appPageMemory } from './app-page-memory'
 import { createPageHandler, pageAddress, readOrCreateSalt, tokenOfNotesFolder } from './page-scheme'
 
 export type { PageBounds }
@@ -36,8 +31,8 @@ export interface PageBox {
   hide(sender: WebContents): Promise<string | null>
   /** The page's tab went to the background: hides its view and keeps it, and its session, alive. */
   park(sender: WebContents, path: string): Promise<void>
-  /** Destroys the page's view, if it has one. */
-  close(sender: WebContents, path: string): void
+  /** Destroys the page's view, if it has one, after keeping what it shows. The page's tab stays open (a reload). */
+  close(sender: WebContents, path: string): Promise<void>
   /** The pages that have a tab open in this window: the view of any other page is destroyed. */
   retain(sender: WebContents, paths: readonly string[]): void
 }
@@ -59,7 +54,11 @@ interface OpenPage {
   view: WebContentsView
   host: BrowserWindow
   log: BlockedLog
+  /** Stops the periodic capture of what the page shows. */
+  stopWatching: () => void
 }
+
+const memoryKey = (path: string): string => `page:${path}`
 
 /**
  * The view for an HTML page: a separate sandboxed view with no preload and no Node, in the one lasting session
@@ -82,9 +81,9 @@ export function createPageBox({
     return next
   }
 
-  // Where a page was scrolled to when its tab went to the background, for a page that has to load again after
-  // being put to sleep. Kept per window and only for pages that still have a tab.
-  const scrolls = new Map<number, Map<string, PageScroll>>()
+  // What a page showed (scroll, typed and picked values), for a page that has to load again after sleeping,
+  // reloading or a restart. Kept only for pages that still have a tab.
+  const memory = appPageMemory()
   const watchedWindows = new Set<number>()
 
   // The session is shared and lasting, so closing or sleeping a page only closes its view. The session is made
@@ -102,7 +101,8 @@ export function createPageBox({
   }
 
   const destroy = (page: OpenPage): void => {
-    const { view, host, log } = page
+    const { view, host, log, stopWatching } = page
+    stopWatching()
     log.stop()
     if (!host.isDestroyed()) host.contentView.removeChildView(view)
     if (!view.webContents.isDestroyed()) view.webContents.close()
@@ -122,28 +122,11 @@ export function createPageBox({
       watchedWindows.add(senderId)
       host.once('closed', () => {
         kept.dropWindow(senderId)
-        scrolls.delete(senderId)
         latest.delete(senderId)
         watchedWindows.delete(senderId)
       })
     }
     return host
-  }
-
-  const rememberScroll = (senderId: number, path: string, scroll: PageScroll): void => {
-    let forWindow = scrolls.get(senderId)
-    if (!forWindow) scrolls.set(senderId, (forWindow = new Map()))
-    forWindow.set(path, scroll)
-  }
-
-  const readScroll = async (page: OpenPage): Promise<PageScroll | null> => {
-    const contents = page.view.webContents
-    if (contents.isDestroyed()) return null
-    try {
-      return parseScroll(await contents.executeJavaScript(READ_SCROLL_SCRIPT))
-    } catch {
-      return null
-    }
   }
 
   const create = (
@@ -170,7 +153,7 @@ export function createPageBox({
           ? pageMoveVerdict(url, (file) => tokenOfNotesFolder(getNotesRoot(), file, getSalt()))
           : isSubframeAllowed(url)
     })
-    return { realPath, version, view, host, log }
+    return { realPath, version, view, host, log, stopWatching: () => undefined }
   }
 
   return {
@@ -201,9 +184,15 @@ export function createPageBox({
         return 'shown'
       }
       // A different file under the same name, or the file changed while its tab was in the background: a fresh load.
+      // The same file changed on disk comes back as it was; a different one does not.
       if (current) {
+        if (current.realPath === located.realPath) {
+          await memory.capture(memoryKey(path), current.view.webContents, () => true)
+          if (!isCurrent()) return 'blocked'
+        } else {
+          memory.forget(memoryKey(path))
+        }
         kept.remove(sender.id, path)
-        scrolls.get(sender.id)?.delete(path)
       }
       // Reading or making the salt can fail, so it is inside the catch with the rest of the address.
       const address = await Promise.resolve()
@@ -218,14 +207,15 @@ export function createPageBox({
         return 'blocked'
       }
       kept.present(sender.id, path, rounded(bounds))
-      const scroll = scrolls.get(sender.id)?.get(path)
       const contents = page.view.webContents
-      if (scroll) {
-        contents.once('did-finish-load', () => {
-          if (!contents.isDestroyed())
-            void contents.executeJavaScript(restoreScrollScript(scroll)).catch(() => undefined)
-        })
-      }
+      const isLive = (): boolean => kept.get(sender.id, path) === page
+      memory.restoreOnLoad(memoryKey(path), contents)
+      page.stopWatching = memory.watch(
+        memoryKey(path),
+        contents,
+        isLive,
+        () => kept.shown(sender.id) === page
+      )
       void contents.loadURL(address).catch(() => undefined)
       return 'shown'
     },
@@ -240,22 +230,24 @@ export function createPageBox({
     async park(sender, path) {
       const page = kept.park(sender.id, path)
       if (!page) return
-      const scroll = await readScroll(page)
-      if (scroll && kept.get(sender.id, path) === page) rememberScroll(sender.id, path, scroll)
+      await memory.capture(
+        memoryKey(path),
+        page.view.webContents,
+        () => kept.get(sender.id, path) === page
+      )
     },
-    close(sender, path) {
+    async close(sender, path) {
       if (!watchedHost(sender)) return
       bump(sender.id)
+      // A tab that is closed for good is cleaned up by `retain`; this is a reload, so the page comes back as it was.
+      const page = kept.get(sender.id, path)
+      if (page) await memory.capture(memoryKey(path), page.view.webContents, () => true)
       kept.remove(sender.id, path)
-      scrolls.get(sender.id)?.delete(path)
     },
     retain(sender, paths) {
       if (!watchedHost(sender)) return
       kept.retain(sender.id, paths)
-      const forWindow = scrolls.get(sender.id)
-      if (!forWindow) return
-      const wanted = new Set(paths)
-      for (const path of [...forWindow.keys()]) if (!wanted.has(path)) forWindow.delete(path)
+      memory.retain('page:', paths)
     }
   }
 }

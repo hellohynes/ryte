@@ -68,7 +68,7 @@ export function createLocalhostHandlers({
     },
     close: ({ url }, { sender }) => {
       const address = parseLocalAddress(url)
-      if (address) box.close(sender, address.url)
+      return address ? box.close(sender, address.url) : undefined
     },
     retain: ({ urls }, { sender }) =>
       box.retain(

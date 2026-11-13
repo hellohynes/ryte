@@ -15,6 +15,7 @@ import { createKeptViews } from './kept-views'
 import { appKeptViewPool } from './sleep-limits'
 import { createBlockedLog, type BlockedLog } from './page-blocked'
 import { isSubframeAllowed } from './page-moves'
+import { appPageMemory } from './app-page-memory'
 
 export type LocalShowResult = 'shown' | 'blocked'
 
@@ -24,8 +25,8 @@ export interface LocalBox {
   hide(sender: WebContents): Promise<string | null>
   /** The address's tab went to the background: hides its view and keeps it, and its session, alive. */
   park(sender: WebContents, url: string): void
-  /** Destroys the address's view, if it has one. */
-  close(sender: WebContents, url: string): void
+  /** Destroys the address's view, if it has one, after keeping what it shows. The address's tab stays open (a reload). */
+  close(sender: WebContents, url: string): Promise<void>
   /** The addresses that have a tab open in this window: the view of any other address is destroyed. */
   retain(sender: WebContents, urls: readonly string[]): void
   /** Closes every open view of this origin, in any window. */
@@ -47,7 +48,11 @@ interface OpenLocal {
   view: WebContentsView
   host: BrowserWindow
   log: BlockedLog
+  /** Stops the periodic capture of what the page shows. */
+  stopWatching: () => void
 }
+
+const memoryKey = (url: string): string => `local:${url}`
 
 /**
  * The view for an approved local address: the same sandboxed view as an HTML page, in its own lasting session,
@@ -56,6 +61,7 @@ interface OpenLocal {
  * memory budget. The caller has already checked that the origin is approved.
  */
 export function createLocalBox({ emitTo, openExternal }: LocalBoxDependencies): LocalBox {
+  const memory = appPageMemory()
   const watchedWindows = new Set<number>()
 
   // The session is shared and lasting, so closing or sleeping a page only closes its view. The session is made
@@ -69,7 +75,8 @@ export function createLocalBox({ emitTo, openExternal }: LocalBoxDependencies): 
   }
 
   const destroy = (page: OpenLocal): void => {
-    const { view, host, log } = page
+    const { view, host, log, stopWatching } = page
+    stopWatching()
     log.stop()
     if (!host.isDestroyed()) host.contentView.removeChildView(view)
     if (!view.webContents.isDestroyed()) view.webContents.close()
@@ -117,13 +124,28 @@ export function createLocalBox({ emitTo, openExternal }: LocalBoxDependencies): 
         allowNavigation: (url, isMainFrame) =>
           isMainFrame ? parseLocalAddress(url)?.origin === origin : isSubframeAllowed(url)
       })
-      kept.add(sender.id, address.url, { url: address.url, origin, view, host, log })
+      const page: OpenLocal = {
+        url: address.url,
+        origin,
+        view,
+        host,
+        log,
+        stopWatching: () => undefined
+      }
+      kept.add(sender.id, address.url, page)
       // The tab closed while the view was being made.
       if (!kept.isWanted(sender.id, address.url)) {
         kept.remove(sender.id, address.url)
         return 'blocked'
       }
       kept.present(sender.id, address.url, rounded(bounds))
+      memory.restoreOnLoad(memoryKey(address.url), view.webContents)
+      page.stopWatching = memory.watch(
+        memoryKey(address.url),
+        view.webContents,
+        () => kept.get(sender.id, address.url) === page,
+        () => kept.shown(sender.id) === page
+      )
       void view.webContents.loadURL(address.url).catch(() => undefined)
       return 'shown'
     },
@@ -136,15 +158,25 @@ export function createLocalBox({ emitTo, openExternal }: LocalBoxDependencies): 
       return page ? hideWithStill(page.view) : null
     },
     park(sender, url) {
-      kept.park(sender.id, url)
+      const page = kept.park(sender.id, url)
+      if (page) {
+        void memory.capture(
+          memoryKey(url),
+          page.view.webContents,
+          () => kept.get(sender.id, url) === page
+        )
+      }
     },
-    close(sender, url) {
+    async close(sender, url) {
       if (!watchedHost(sender)) return
+      const page = kept.get(sender.id, url)
+      if (page) await memory.capture(memoryKey(url), page.view.webContents, () => true)
       kept.remove(sender.id, url)
     },
     retain(sender, urls) {
       if (!watchedHost(sender)) return
       kept.retain(sender.id, urls)
+      memory.retain('local:', urls)
     },
     closeOrigin(origin) {
       kept.removeWhere((page) => page.origin === origin)

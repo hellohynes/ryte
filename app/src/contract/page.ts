@@ -52,7 +52,7 @@ export const park = defineOperation({
 export const close = defineOperation({
   channel: 'page:close',
   description:
-    "Close this page's view, shown or hidden. What the page saved stays. The next show loads it again.",
+    "Close this page's view, shown or hidden, for a reload. What the page saved stays, and what was typed, picked and scrolled is kept. The next show loads it again and puts that back.",
   input: z.strictObject({ path: sourcePath }),
   output: z.void(),
   example: { input: { path: 'review/index.html' }, output: undefined }

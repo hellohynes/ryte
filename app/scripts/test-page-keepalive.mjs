@@ -1,5 +1,5 @@
-// Built-app check: an HTML page keeps its scroll position, its typed answers and its saved data across tab switches,
-// sleep and a restart, and opens like a normal tab (a file from a sibling folder, a web request).
+// Built-app check: an HTML page keeps its scroll position, its typed answers, picked values and its saved data across
+// tab switches, sleep, a reload of a changed file and a restart, and opens like a normal tab (a file from a sibling folder, a web request).
 //
 // Launches the built app (run `pnpm build` first) hidden, on synthetic notes in a throwaway profile, and drives it
 // over the DevTools protocol: no window is shown, no OS automation is used. It takes the shared launch lock so only
@@ -42,8 +42,12 @@ async function takeLock() {
 }
 
 const tall = (name) => `<!doctype html><meta charset="utf-8"><title>${name}</title>
-<style>body{margin:0;height:6000px}input{display:block;margin:20px;width:300px}</style>
+<style>body{margin:0;height:6000px}input,textarea,select{display:block;margin:20px;width:300px}#box{height:100px;overflow:auto;margin:20px}</style>
 <input id="answer" placeholder="answer">
+<textarea id="notes"></textarea>
+<select id="size"><option value="small">small</option><option value="large">large</option></select>
+<input type="checkbox" id="agree">
+<div id="box"><div style="height:1000px"></div></div>
 <script>
   window.loadMarker = Math.random()
   const answer = document.getElementById('answer')
@@ -204,13 +208,20 @@ function makeDriver(main) {
     withView(name, async (client, target) => ({
       id: target.url,
       ...(await client.evaluate(
-        `({ value: document.getElementById('answer')?.value ?? null, stored: localStorage.getItem('answer-' + document.title), scroll: Math.round(window.scrollY), marker: window.loadMarker })`
+        `({ value: document.getElementById('answer')?.value ?? null, notes: document.getElementById('notes')?.value ?? null, size: document.getElementById('size')?.value ?? null, agree: document.getElementById('agree')?.checked ?? null, box: Math.round(document.getElementById('box')?.scrollTop ?? -1), stored: localStorage.getItem('answer-' + document.title), scroll: Math.round(window.scrollY), marker: window.loadMarker })`
       ))
     }))
   const settled = (name) =>
     until(
       `${name} to load`,
       async () => (await readState(name)).marker !== undefined && (await readState(name))
+    )
+  // Types into the box, picks, ticks and scrolls. Only the answer is saved by the page itself; the rest it ignores.
+  const fill = (name, { answer, y }) =>
+    withView(name, (client) =>
+      client.evaluate(
+        `(() => { const a = document.getElementById('answer'); a.value = ${JSON.stringify(answer)}; a.dispatchEvent(new Event('input')); document.getElementById('notes').value = 'line one\\nline two'; document.getElementById('size').value = 'large'; document.getElementById('agree').checked = true; document.getElementById('box').scrollTop = 250; window.scrollTo(0, ${y}); return true })()`
+      )
     )
   const show = async (path) => {
     await openFile(path)
@@ -233,6 +244,7 @@ function makeDriver(main) {
     withView,
     readState,
     settled,
+    fill,
     show,
     goTo
   }
@@ -248,6 +260,8 @@ async function launch(userData) {
       RYTE_USER_DATA_DIR: userData,
       // A few synthetic pages never come near the memory budget, so a low ceiling makes the oldest views sleep.
       RYTE_TEST_KEPT_CEILING: '4',
+      // A page left showing is captured on a short timer instead of every 30 s.
+      RYTE_TEST_CAPTURE_MS: '1000',
       RYTE_TEST_KEPT_BUDGET_MB: process.env.RYTE_TEST_KEPT_BUDGET_MB ?? ''
     },
     stdio: 'ignore'
@@ -351,20 +365,26 @@ async function main() {
     response.end('pong')
   })
   const port = await listen(server)
-  const { root, userData } = makeFixtures(port)
+  const { root, notes, userData } = makeFixtures(port)
   try {
     await inApp(userData, 'run', async (app, driver) => {
-      const { run, closePath, pageTargets, viewOf, withView, readState, settled, show, goTo } =
-        driver
+      const {
+        run,
+        closePath,
+        pageTargets,
+        viewOf,
+        withView,
+        readState,
+        settled,
+        fill,
+        show,
+        goTo
+      } = driver
 
       // 1. The reported bug: scroll a page, type an answer, switch away and back.
       await show('p1.html')
       const baseline = rssOfAppProcesses(app.electron.pid)
-      await withView('p1.html', (client) =>
-        client.evaluate(
-          `(() => { const a = document.getElementById('answer'); a.value = 'my answer'; a.dispatchEvent(new Event('input')); window.scrollTo(0, 900); return true })()`
-        )
-      )
+      await fill('p1.html', { answer: 'my answer', y: 900 })
       await sleep(200)
       const before = await readState('p1.html')
       check(
@@ -386,6 +406,11 @@ async function main() {
         JSON.stringify(after)
       )
       check('scroll unchanged after one switch', after.scroll === 900, `scroll ${after.scroll}`)
+      const filled = (state) =>
+        state.notes === 'line one\nline two' &&
+        state.size === 'large' &&
+        state.agree === true &&
+        Math.abs(state.box - 250) <= 2
 
       // 2. Ten rounds between two pages and a note.
       await show('p2.html')
@@ -454,6 +479,11 @@ async function main() {
         `scroll ${restored.scroll}, marker changed: ${back.marker !== before.marker}`
       )
       check(
+        'a page that went to sleep comes back with what was typed, picked, ticked and scrolled',
+        restored.value === 'my answer' && filled(restored),
+        JSON.stringify(restored)
+      )
+      check(
         'what the page saved survives its sleep',
         restored.stored === 'my answer',
         `stored ${restored.stored}`
@@ -487,6 +517,31 @@ async function main() {
       )
       check('a page fetches from a web server', reply === 'pong', String(reply))
 
+      // 6. The file changes while its tab is in the background: the page loads again and comes back as it was.
+      await show('p4.html')
+      await fill('p4.html', { answer: 'before reload', y: 1200 })
+      const beforeReload = await readState('p4.html')
+      await goTo('n.md')
+      writeFileSync(join(notes, 'p4.html'), `${tall('p4')}<!-- changed -->`)
+      await goTo('p4.html')
+      const afterReload = await until('p4 to load again', async () => {
+        const state = await readState('p4.html')
+        return state.marker !== beforeReload.marker && state
+      })
+      await sleep(1200)
+      const reloaded = await readState('p4.html')
+      check(
+        'a reloaded page comes back with what was typed, picked, ticked and scrolled',
+        afterReload.marker !== beforeReload.marker &&
+          reloaded.value === 'before reload' &&
+          filled(reloaded) &&
+          Math.abs(reloaded.scroll - 1200) <= 2,
+        JSON.stringify(reloaded)
+      )
+      // 7. A page left showing is read on a timer: type more and quit without leaving the tab.
+      await fill('p4.html', { answer: 'left showing', y: 1500 })
+      await sleep(2500)
+
       report.memory = { baseline, twoViews, fourViews }
 
       await app.quit()
@@ -518,6 +573,27 @@ async function main() {
         'what the page saved survives a restart',
         back.stored === 'my answer',
         `stored ${back.stored}`
+      )
+      await sleep(800)
+      const sleptThenBack = await driver.readState('p1.html')
+      check(
+        'a page comes back after a restart with what was typed, picked, ticked and scrolled',
+        sleptThenBack.value === 'my answer' &&
+          sleptThenBack.notes === 'line one\nline two' &&
+          sleptThenBack.size === 'large' &&
+          sleptThenBack.agree === true &&
+          Math.abs(sleptThenBack.box - 250) <= 2 &&
+          Math.abs(sleptThenBack.scroll - 900) <= 2,
+        JSON.stringify(sleptThenBack)
+      )
+      await driver.goTo('p4.html')
+      await driver.settled('p4.html')
+      await sleep(800)
+      const late = await driver.readState('p4.html')
+      check(
+        'a page that was left showing comes back after a restart as the timer last saw it',
+        late.value === 'left showing' && Math.abs(late.scroll - 1500) <= 2,
+        JSON.stringify(late)
       )
     })
   } finally {
