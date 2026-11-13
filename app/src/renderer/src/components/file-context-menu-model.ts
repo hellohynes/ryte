@@ -4,4 +4,5 @@ export type FileContextMenuAction =
   | 'show-in-finder'
   | 'copy-file-path'
   | 'close'
+  | 'open-in-browser'
   | 'move-to-trash'

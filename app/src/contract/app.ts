@@ -22,7 +22,8 @@ export const appMenuCommand = z.discriminatedUnion('type', [
   z.strictObject({ type: z.literal('focus-previous-tab') }),
   z.strictObject({ type: z.literal('toggle-sidebar') }),
   z.strictObject({ type: z.literal('toggle-source-mode') }),
-  z.strictObject({ type: z.literal('open-settings') })
+  z.strictObject({ type: z.literal('open-settings') }),
+  z.strictObject({ type: z.literal('open-in-browser') })
 ])
 
 export type AppMenuCommand = z.output<typeof appMenuCommand>

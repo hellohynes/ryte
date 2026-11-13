@@ -53,21 +53,6 @@ const stopBlocked = window.ryte.page.onBlocked((report) => {
   banner.value = receiveReport(banner.value, report)
 })
 
-const openFailed = ref(false)
-
-// The page runs without the lock there, so this is only ever a button the person presses.
-async function openInBrowser(): Promise<void> {
-  openFailed.value = false
-  try {
-    const { opened } = props.url
-      ? await window.ryte.localhost.openInBrowser({ url: props.url })
-      : await window.ryte.page.openInBrowser({ path: props.path ?? '' })
-    openFailed.value = !opened
-  } catch {
-    openFailed.value = true
-  }
-}
-
 function dismiss(): void {
   banner.value = dismissBanner(banner.value)
   showAddresses.value = false
@@ -220,19 +205,6 @@ watch(
 
 <template>
   <div class="page-tab">
-    <header class="page-caption">
-      <span class="page-name">{{ name }}</span>
-      <StButton
-        v-if="!problem"
-        variant="secondary"
-        size="sm"
-        class="page-open"
-        data-page-open-browser
-        @click="openInBrowser"
-      >
-        {{ openFailed ? "Couldn't open it" : 'Open in browser' }}
-      </StButton>
-    </header>
     <StNotice
       v-if="bannerView"
       tone="warning"
@@ -276,29 +248,10 @@ watch(
   display: flex;
   flex-direction: column;
   gap: var(--st-space-100);
-  padding: var(--st-space-300) 0 0;
-}
-
-.page-caption {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--st-space-100) var(--st-space-200);
-  padding: 0 var(--st-space-400);
-}
-
-.page-open {
-  margin-left: auto;
-}
-
-.page-name {
-  font: var(--st-type-label-md);
-  color: var(--st-color-text-primary);
-  overflow-wrap: anywhere;
 }
 
 .page-banner {
-  margin: 0 var(--st-space-400);
+  margin: var(--st-space-200) var(--st-space-400) 0;
 }
 
 .page-banner-list {

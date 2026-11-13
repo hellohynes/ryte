@@ -1,7 +1,7 @@
 // FROZEN SNAPSHOT of the hand-written `app` declarations in `src/preload/index.ts`, `src/shared/app-menu.ts` and
 // `src/shared/workspace.ts` before the contract replaced them (copied from git at a8e06fa; `getVersion` moved first,
 // then `onMenuCommand`). It is the oracle for the type-equality check in `app.wire-types.check.ts`: the types inferred
-// from the contract must equal it. Do not edit.
+// from the contract must equal it. Do not edit, except to add a menu command variant the contract gained.
 
 interface WorkspaceSourceFileRef {
   sourcePath: string
@@ -26,6 +26,7 @@ export type AppMenuCommand =
   | { type: 'toggle-sidebar' }
   | { type: 'toggle-source-mode' }
   | { type: 'open-settings' }
+  | { type: 'open-in-browser' }
 
 export interface AppApi {
   getVersion(): Promise<string>

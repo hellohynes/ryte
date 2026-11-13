@@ -26,7 +26,7 @@ Use this checklist before a release that includes pictures, code, video, HTML pa
 | A code file and a JSON file open in the code view, and a too-large file says so                                     |        |       |
 | A video plays and seeks, in its own tab and inside a note                                                           |        |       |
 | An HTML page opens in its tab and loads a file from a sibling folder, and a web request works                       |        |       |
-| "Open in browser" opens that one page in the default browser                                                        |        |       |
+| An HTML page starts right under the tabs; "Open in Browser" (tab menu, View menu) opens it                          |        |       |
 | A link in an HTML page opens the browser only on a real click, and a page-to-page link stays in the tab             |        |       |
 | A link to a local address asks first: Open once opens it, Always allow opens it and remembers, Cancel opens nothing |        |       |
 | Removing an allowed address in Preferences makes it ask again                                                       |        |       |
