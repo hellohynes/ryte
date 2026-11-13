@@ -191,12 +191,21 @@ onBeforeUnmount(() => {
   document.removeEventListener('toggle', scheduleOverlaySync, true)
   if (frame !== null) window.cancelAnimationFrame(frame)
   // Behind any show still waiting in the queue, so it cannot attach a view after the tab has left. If the person
-  // has come back to this page by then (a quick A, B, A), the newer tab shows it and a park would hide it.
-  enqueue(async () => {
-    const backAgain = props.url ? viewer.addressUrl === props.url : viewer.pagePath === props.path
-    if (backAgain) return
-    await parkView().catch(() => undefined)
-  })
+  // has come back to this page by then (a quick A, B, A), the newer tab shows it and a park would hide it. A frame
+  // later, so the show of the tab that replaces this one reaches the main process first and the stage is never
+  // left empty; a timer covers a window that draws no frames.
+  let parked = false
+  const parkAfterFrame = (): void => {
+    if (parked) return
+    parked = true
+    enqueue(async () => {
+      const backAgain = props.url ? viewer.addressUrl === props.url : viewer.pagePath === props.path
+      if (backAgain) return
+      await parkView().catch(() => undefined)
+    })
+  }
+  window.requestAnimationFrame(parkAfterFrame)
+  window.setTimeout(parkAfterFrame, 100)
 })
 
 watch(() => viewer.pageVersion, reload)

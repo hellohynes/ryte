@@ -3,6 +3,9 @@ import type { WebContents, WebContentsView } from 'electron'
 import type { BlockedLog } from './page-blocked'
 import { createKeptViewPool, type KeptViewPool, type PoolMember } from './kept-view-pool'
 
+/** How long a parked view stays visible for a show that is on its way before it is hidden regardless. */
+const HIDE_FALLBACK_MS = 1000
+
 interface ViewBounds {
   x: number
   y: number
@@ -22,6 +25,8 @@ interface WindowViews<T> {
   /** When each view was last shown, in the pool's shared order. */
   stamps: Map<string, number>
   shown: string | null
+  /** The key of the latest show that has not presented yet: a tab switch in flight. */
+  pending: string | null
   /** The keys that have a tab open, as last reported by the window. Null until it has reported. */
   wanted: Set<string> | null
 }
@@ -82,7 +87,7 @@ export function createKeptViews<T extends KeptView>({
   const windowOf = (senderId: number): WindowViews<T> => {
     let views = windows.get(senderId)
     if (!views) {
-      views = { items: new Map(), stamps: new Map(), shown: null, wanted: null }
+      views = { items: new Map(), stamps: new Map(), shown: null, pending: null, wanted: null }
       windows.set(senderId, views)
     }
     return views
@@ -127,7 +132,9 @@ export function createKeptViews<T extends KeptView>({
 
     /** Notes that a tab for this key is open, ahead of the window's next report. */
     claim: (senderId: number, key: string): void => {
-      windows.get(senderId)?.wanted?.add(key)
+      const views = windowOf(senderId)
+      views.wanted?.add(key)
+      views.pending = key
     },
 
     /** False once the window has reported its tabs and this key is not among them. */
@@ -160,6 +167,7 @@ export function createKeptViews<T extends KeptView>({
       if (!item.view.webContents.isDestroyed()) item.view.webContents.setAudioMuted(false)
       views.stamps.set(key, pool.stamp())
       views.shown = key
+      if (views.pending === key) views.pending = null
       return true
     },
 
@@ -168,8 +176,17 @@ export function createKeptViews<T extends KeptView>({
       const views = windows.get(senderId)
       const item = views?.items.get(key)
       if (!views || !item) return undefined
-      hold(item)
       if (views.shown === key) views.shown = null
+      if (views.pending !== null && views.pending !== key) {
+        // Another tab's show is on its way and hides this view when it presents, so the stage is never empty in
+        // between. If that show never presents (it failed), this view is hidden after a moment anyway.
+        const timer = setTimeout(() => {
+          if (views.items.get(key) === item && views.shown !== key) hold(item)
+        }, HIDE_FALLBACK_MS)
+        timer.unref()
+      } else {
+        hold(item)
+      }
       pool.sweep(item)
       return item
     },
@@ -181,7 +198,9 @@ export function createKeptViews<T extends KeptView>({
 
     remove(senderId: number, key: string): void {
       const views = windows.get(senderId)
-      if (views) drop(views, key)
+      if (!views) return
+      if (views.pending === key) views.pending = null
+      drop(views, key)
     },
 
     /** The window's tabs: every view whose key is not among them is destroyed. */

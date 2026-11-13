@@ -50,6 +50,36 @@ describe('kept views', () => {
     expect(kept.get(1, 'a')).toBe(a)
   })
 
+  it("keeps a parked view showing while another tab's show is on its way, and hides it if that show never presents", () => {
+    vi.useFakeTimers()
+    try {
+      const { kept, make } = setup()
+      const a = make('a')
+      const b = make('b')
+      kept.add(1, 'a', a)
+      kept.present(1, 'a', bounds)
+      kept.claim(1, 'b')
+      kept.park(1, 'a')
+      expect(a.view.setVisible).not.toHaveBeenLastCalledWith(false)
+      // The show arrives and presents: it hides the parked view.
+      kept.add(1, 'b', b)
+      kept.present(1, 'b', bounds)
+      expect(a.view.setVisible).toHaveBeenLastCalledWith(false)
+
+      // A show that fails never presents, so the parked view is hidden after a moment.
+      const c = make('c')
+      kept.add(1, 'c', c)
+      kept.present(1, 'c', bounds)
+      kept.claim(1, 'd')
+      kept.park(1, 'c')
+      expect(c.view.setVisible).not.toHaveBeenLastCalledWith(false)
+      vi.advanceTimersByTime(1100)
+      expect(c.view.setVisible).toHaveBeenLastCalledWith(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('silences a view in the background: no sound, no reports to the page in front', () => {
     const { kept, make } = setup()
     const a = make('a')

@@ -98,8 +98,10 @@ export function createLockedView({
     }
   })
   const contents = view.webContents
-  // A page is shown on white, as a browser would, not through the window's translucent background.
-  view.setBackgroundColor('#ffffff')
+  // A page is shown on white, as a browser would, once it has loaded. Until then the view is clear so the stage
+  // shows through, and a dark page does not flash white before its first paint.
+  view.setBackgroundColor('#00000000')
+  contents.once('did-stop-loading', () => view.setBackgroundColor('#ffffff'))
   contents.setWebRTCIPHandlingPolicy('disable_non_proxied_udp')
   // A link opens in the browser only when the person just clicked it, and the box itself never loads it.
   const gate = createRealInputGate()
