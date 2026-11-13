@@ -123,7 +123,7 @@ export const useViewerStore = defineStore('viewer', () => {
       ? activeTab.value.sourcePath
       : null
   )
-  // A local address tab shows the page in a locked view over the tab; it is never read as a file or watched.
+  // A local address tab shows the page in a view over the tab; it is never read as a file or watched.
   const addressUrl = computed(() =>
     activeTab.value && isWorkspaceAddressTab(activeTab.value) ? activeTab.value.url : null
   )
@@ -145,7 +145,7 @@ export const useViewerStore = defineStore('viewer', () => {
       ? sourcePath.value
       : null
   )
-  // An HTML tab shows the page in a locked view over the tab; it is never read as text or watched here.
+  // An HTML tab shows the page in a view over the tab; it is never read as text or watched here.
   const pagePath = computed(() =>
     sourcePath.value !== null && supportedKindOf(sourcePath.value) === 'html'
       ? sourcePath.value

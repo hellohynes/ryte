@@ -1,14 +1,15 @@
-import { type BrowserWindow, WebContentsView, type Session, type WebContents } from 'electron'
+import {
+  type BrowserWindow,
+  session,
+  WebContentsView,
+  type Session,
+  type WebContents
+} from 'electron'
 
 import { contract } from '../../contract'
 import type { EmitTo } from '../contract/register'
 import type { BlockedLog } from './page-blocked'
-import {
-  createPageLinkOpener,
-  createRealInputGate,
-  isOpenablePageLink,
-  type RealInputGate
-} from './page-links'
+import { createPageLinkOpener, createRealInputGate, isOpenablePageLink } from './page-links'
 import { isPagePermissionAllowed } from './page-permissions'
 import { appKeyFor } from './page-keys'
 import { isRealPress } from '../real-input'
@@ -27,36 +28,28 @@ export const rounded = (bounds: PageBounds): PageBounds => ({
   height: Math.max(0, Math.round(bounds.height))
 })
 
-// The real-input gate of each locked view, so a permission request can ask whether the person just clicked in it.
-const gates = new WeakMap<WebContents, RealInputGate>()
-const recentInput = (contents: WebContents | null): boolean =>
-  (contents && gates.get(contents)?.recent()) ?? false
+// The blocked log of each page view, so a refused permission is reported to the page that asked.
+const logs = new WeakMap<WebContents, BlockedLog>()
+
+/** The lasting session of this name, kept on disk in the app's data folder (Electron's `persist:` partitions). */
+export const lastingSession = (name: string): Session => session.fromPartition(`persist:${name}`)
 
 /**
- * Refuses every permission, device and download the page asks for, and records each refusal. The one exception is
- * a clipboard write right after a real click in the page: decision pages copy their answers that way. Reading the
- * clipboard is never allowed.
+ * Sets up a session shared by many pages: the clipboard is allowed, every other permission and every device is
+ * refused and (for a permission) recorded in the log of the page that asked. Downloads and dialogs are left to
+ * Electron, which asks where to save and shows the dialog.
  */
-export function lockSession(ses: Session, log: BlockedLog): void {
+export function setUpPageSession(ses: Session): void {
   ses.setPermissionRequestHandler((contents, permission, callback) => {
-    if (isPagePermissionAllowed(permission, recentInput(contents))) {
-      callback(true)
-      return
-    }
-    log.add(`permission: ${permission}`)
-    callback(false)
+    const allowed = isPagePermissionAllowed(permission)
+    if (!allowed) logs.get(contents)?.add(`permission: ${permission}`)
+    callback(allowed)
   })
-  ses.setPermissionCheckHandler((contents, permission) =>
-    isPagePermissionAllowed(permission, recentInput(contents))
-  )
+  ses.setPermissionCheckHandler((_contents, permission) => isPagePermissionAllowed(permission))
   ses.setDevicePermissionHandler(() => false)
-  ses.on('will-download', (event, item) => {
-    event.preventDefault()
-    log.add(item.getURL())
-  })
 }
 
-export interface LockedViewOptions {
+export interface PageViewOptions {
   ses: Session
   host: BrowserWindow
   bounds: PageBounds
@@ -64,16 +57,18 @@ export interface LockedViewOptions {
   emitTo: EmitTo
   /** Opens an address in the browser. The caller has already checked the kind of address. */
   openExternal: (url: string) => void
-  /** Whether the page may load or move to this address itself. Anything else is a link or is blocked. */
-  allowNavigation: (url: string, isMainFrame: boolean) => boolean
+  /**
+   * Whether the page may load or move to this address itself: `true`, `false` (a link, or blocked), or another
+   * address to load in its place. */
+  allowNavigation: (url: string, isMainFrame: boolean) => boolean | string
 }
 
 /**
- * The sandboxed view both kinds of page share: no preload, no Node, no devtools, no dialogs, no new windows. A link
- * opens in the browser only on a real click, Ryte's own shortcuts are handed to the app before the page sees
- * them, and the view is placed over `bounds` of the host window.
+ * The sandboxed view both kinds of page share: no preload, no Node, no devtools, no new windows. A link opens in
+ * the browser only on a real click, Ryte's own shortcuts are handed to the app before the page sees them, and
+ * the view is placed over `bounds` of the host window.
  */
-export function createLockedView({
+export function createPageView({
   ses,
   host,
   bounds,
@@ -81,7 +76,7 @@ export function createLockedView({
   emitTo,
   openExternal,
   allowNavigation
-}: LockedViewOptions): WebContentsView {
+}: PageViewOptions): WebContentsView {
   const view = new WebContentsView({
     webPreferences: {
       session: ses,
@@ -91,7 +86,6 @@ export function createLockedView({
       webSecurity: true,
       spellcheck: false,
       devTools: false,
-      disableDialogs: true,
       navigateOnDragDrop: false,
       webviewTag: false,
       autoplayPolicy: 'user-gesture-required'
@@ -102,10 +96,9 @@ export function createLockedView({
   // shows through, and a dark page does not flash white before its first paint.
   view.setBackgroundColor('#00000000')
   contents.once('did-stop-loading', () => view.setBackgroundColor('#ffffff'))
-  contents.setWebRTCIPHandlingPolicy('disable_non_proxied_udp')
   // A link opens in the browser only when the person just clicked it, and the box itself never loads it.
+  logs.set(contents, log)
   const gate = createRealInputGate()
-  gates.set(contents, gate)
   const openLink = createPageLinkOpener(gate, openExternal)
   contents.on('input-event', (_event, input) => {
     if (isRealPress(input)) gate.note()
@@ -115,10 +108,15 @@ export function createLockedView({
     return { action: 'deny' }
   })
   contents.on('will-frame-navigate', (event) => {
-    // A frame inside the page may load the page's own files, and the page may move within what it was opened
-    // from. Everything else is a link (opened only on a real click) or blocked.
-    if (allowNavigation(event.url, event.isMainFrame)) return
+    // A frame inside the page may load the notes folder's files, and the page may move to another page of it.
+    // Everything else is a link (opened only on a real click) or blocked.
+    const verdict = allowNavigation(event.url, event.isMainFrame)
+    if (verdict === true) return
     event.preventDefault()
+    if (typeof verdict === 'string') {
+      void contents.loadURL(verdict).catch(() => undefined)
+      return
+    }
     if (!event.isMainFrame || !isOpenablePageLink(event.url) || !openLink(event.url)) {
       log.add(event.url)
     }

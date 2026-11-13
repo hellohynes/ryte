@@ -37,7 +37,6 @@ import { approvals } from './localhost/approvals-store'
 import { createLocalBox } from './page/local-box'
 import { createPageBox } from './page/page-box'
 import { OPENABLE_PROTOCOLS } from './page/page-links'
-import { createPageFolders } from './page/page-scheme'
 import { fileRefForPickedMarkdownFile, resolveExternalMarkdownFile } from './picked-file'
 import { recentRealInput } from './real-input'
 import { SearchService } from './search/search-service'
@@ -173,7 +172,6 @@ export function registerIpc(): void {
     }),
     page: createPageHandlers({
       box: createPageBox({
-        folders: createPageFolders(),
         getNotesRoot: () => settingsStore.load().notesRoot,
         emitTo: emit.to,
         openExternal: openPageLink

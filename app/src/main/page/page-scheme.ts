@@ -1,13 +1,14 @@
-import { randomBytes } from 'node:crypto'
+import { createHash } from 'node:crypto'
+import { realpathSync } from 'node:fs'
 import { realpath } from 'node:fs/promises'
+import { dirname, join, relative, sep } from 'node:path'
 
 import {
   MAX_PAGE_TEXT_BYTES,
   pageMediaType,
   pageTextType,
-  parsePageUrl,
-  isPageExtension,
-  PAGE_SCHEME
+  pageUrl,
+  parsePageUrl
 } from '../../shared/page-box'
 import {
   locateNoteFile,
@@ -16,69 +17,46 @@ import {
   type NoteFileRequest
 } from '../viewer/note-files'
 
-/** Which folder each open page may read from. The id is random and new every time a page opens. */
-export interface PageFolders {
-  /** Registers a folder (by its real path) and returns the id its address uses. */
-  open(folder: string): string
-  folderFor(id: string): string | undefined
-  close(id: string): void
+/**
+ * The token in a page's address: a short hash of the page's folder (by real path), so what a page saves stays
+ * with its folder and is found again after a restart. It names the origin only; it never limits what is served.
+ */
+export const folderToken = (realFolder: string): string =>
+  createHash('sha256').update(realFolder).digest('hex').slice(0, 32)
+
+/** The address of a page that is inside the notes folder, by its real path. */
+export async function pageAddress(notesRoot: string, realFile: string): Promise<string> {
+  const root = await realpath(notesRoot)
+  return pageUrl(folderToken(dirname(realFile)), relative(root, realFile).split(sep).join('/'))
 }
 
-export function createPageFolders(
-  newId: () => string = () => randomBytes(16).toString('hex')
-): PageFolders {
-  const folders = new Map<string, string>()
-  return {
-    open(folder) {
-      const id = newId()
-      folders.set(id, folder)
-      return id
-    },
-    folderFor: (id) => folders.get(id),
-    close: (id) => void folders.delete(id)
+/** The token that belongs to the folder of a notes-relative file, or null when the folder is gone. */
+export function tokenOfNotesFolder(notesRoot: string, notesRelativeFile: string): string | null {
+  try {
+    return folderToken(realpathSync(join(realpathSync(notesRoot), dirname(notesRelativeFile))))
+  } catch {
+    return null
   }
 }
 
-/** The content policy a page is served with: everything from its own origin, nothing from anywhere else. */
-export function pageContentPolicy(id: string): string {
-  const origin = `${PAGE_SCHEME}://${id}`
-  return [
-    `default-src ${origin}`,
-    `script-src ${origin} 'unsafe-inline'`,
-    `style-src ${origin} 'unsafe-inline'`,
-    `img-src ${origin} data: blob:`,
-    `media-src ${origin} blob:`,
-    `font-src ${origin} data:`,
-    "connect-src 'none'",
-    `frame-src ${origin}`,
-    "worker-src 'none'",
-    "form-action 'none'",
-    "base-uri 'none'",
-    "object-src 'none'"
-  ].join('; ')
+const HEADERS = {
+  'X-Content-Type-Options': 'nosniff',
+  'Cross-Origin-Resource-Policy': 'same-origin',
+  'Referrer-Policy': 'no-referrer',
+  'Cache-Control': 'no-store'
 }
 
-function headersFor(id: string): Record<string, string> {
-  return {
-    'Content-Security-Policy': pageContentPolicy(id),
-    'X-Content-Type-Options': 'nosniff',
-    'Cross-Origin-Resource-Policy': 'same-origin',
-    'Referrer-Policy': 'no-referrer',
-    'Cache-Control': 'no-store'
-  }
-}
-
-/** Every refusal is the same bare 404, so a page learns nothing about what exists outside its folder. */
+/** Every refusal is the same bare 404, so a page learns nothing about what exists outside the notes folder. */
 const notFound = (): Response => new Response(null, { status: 404 })
 
 /**
- * Answers `ryte-page://<id>/<path>` from the folder registered for that id. The path is decoded once, the file
- * is found by real path inside the folder (a link out is refused), it must be a regular file of a known type,
- * and the file that was checked is the file that is read. Text is read whole up to a cap; pictures, fonts and
- * video are streamed with byte ranges.
+ * Answers `ryte-page://<token>/<path>` from the notes folder, whatever the token. The path is decoded once, the
+ * file is found by real path inside the notes folder (a link out is refused) and must be a regular file, and the
+ * file that was checked is the file that is read. Text of a known type is read whole up to a cap; everything else
+ * is streamed with byte ranges.
  */
-export function createPageFolderHandler(
-  folders: Pick<PageFolders, 'folderFor'>
+export function createPageHandler(
+  getNotesRoot: () => string
 ): (request: NoteFileRequest) => Promise<Response> {
   return async (request) => {
     const method = request.method.toUpperCase()
@@ -86,26 +64,21 @@ export function createPageFolderHandler(
 
     const parsed = parsePageUrl(request.url)
     if (!parsed) return notFound()
-    const folder = folders.folderFor(parsed.id)
-    if (folder === undefined) return notFound()
-
-    const located = await locateNoteFile(parsed.path, folder, isPageExtension)
+    const located = await locateNoteFile(parsed.path, getNotesRoot(), () => true)
     if (!located.ok) return notFound()
 
-    const headers = headersFor(parsed.id)
-    const mediaType = pageMediaType(located.extension)
-    if (mediaType !== undefined) {
+    const textType = pageTextType(located.extension)
+    if (textType === undefined) {
       return respondWithLocatedRange(located, {
         method,
         range: request.headers?.get('range'),
-        contentType: mediaType,
-        headers
+        contentType: pageMediaType(located.extension) ?? 'application/octet-stream',
+        headers: HEADERS
       })
     }
 
-    const textType = pageTextType(located.extension)!
     if (located.size > MAX_PAGE_TEXT_BYTES) return notFound()
-    const responseHeaders = { ...headers, 'Content-Type': textType }
+    const responseHeaders = { ...HEADERS, 'Content-Type': textType }
     if (method === 'HEAD') {
       return new Response(null, {
         status: 200,
@@ -120,7 +93,3 @@ export function createPageFolderHandler(
     })
   }
 }
-
-/** The real path of a folder, or null when it is gone. */
-export const realFolder = (folder: string): Promise<string | null> =>
-  realpath(folder).catch(() => null)

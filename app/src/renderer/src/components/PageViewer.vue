@@ -1,6 +1,6 @@
 <script setup lang="ts">
 /**
- * The tab for an HTML page, or for a local address (`url`). The page itself is drawn by a separate locked view that the main process places over
+ * The tab for an HTML page, or for a local address (`url`). The page itself is drawn by a separate view that the main process places over
  * this tab's content area, so this component only reports where that area is. A native view always draws on
  * top, so while an overlay is open the view is hidden and a still picture of the page shows in its place.
  */
@@ -40,7 +40,7 @@ const name = computed(() =>
     ? describeOrigin(parseLocalAddress(props.url)?.origin ?? props.url)
     : (props.path ?? '').slice((props.path ?? '').lastIndexOf('/') + 1)
 )
-// A local address and an HTML file are shown through the same kind of locked view, by different operations.
+// A local address and an HTML file are shown through the same kind of view, by different operations.
 const views = computed(() => (props.url ? window.ryte.localhost : window.ryte.page))
 const stage = ref<HTMLElement | null>(null)
 const problem = ref<PageProblem | null>(null)
@@ -230,7 +230,7 @@ watch(
         data-page-open-browser
         @click="openInBrowser"
       >
-        {{ openFailed ? "Couldn't open it" : 'Open in browser (not locked)' }}
+        {{ openFailed ? "Couldn't open it" : 'Open in browser' }}
       </StButton>
     </header>
     <StNotice

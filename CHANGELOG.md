@@ -4,6 +4,10 @@ All notable Ryte changes should be recorded here before a tagged release.
 
 Ryte follows [Semantic Versioning](https://semver.org). The app version in `app/package.json` is the source of truth for packaged builds, Git tags, and DMG filenames. See the [Versioning Policy](#versioning-policy).
 
+## Unreleased
+
+- HTML pages and local addresses now open like a normal browser tab: they can read any file in your notes folder, use the internet, read and write the clipboard, download files through the macOS save dialog, show alert boxes, and keep what they save across restarts. The camera, microphone, location and notifications stay off. See [what a page can do](docs/html-pages.md).
+
 ## 0.3.0
 
 ### Highlights
