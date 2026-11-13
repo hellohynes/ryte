@@ -41,9 +41,14 @@ async function takeLock() {
   }
 }
 
-const tall = (name) => `<!doctype html><meta charset="utf-8"><title>${name}</title>
+const tall = (
+  name,
+  answerType = 'text'
+) => `<!doctype html><meta charset="utf-8"><title>${name}</title>
 <style>body{margin:0;height:6000px}input,textarea,select{display:block;margin:20px;width:300px}#box{height:100px;overflow:auto;margin:20px}</style>
-<input id="answer" placeholder="answer">
+<input id="answer" type="${answerType}" placeholder="answer">
+<input id="pw" type="password" autocomplete="current-password">
+<input id="pw2" type="password">
 <textarea id="notes"></textarea>
 <select id="size"><option value="small">small</option><option value="large">large</option></select>
 <input type="checkbox" id="agree">
@@ -260,8 +265,6 @@ async function launch(userData) {
       RYTE_USER_DATA_DIR: userData,
       // A few synthetic pages never come near the memory budget, so a low ceiling makes the oldest views sleep.
       RYTE_TEST_KEPT_CEILING: '4',
-      // A page left showing is captured on a short timer instead of every 30 s.
-      RYTE_TEST_CAPTURE_MS: '1000',
       RYTE_TEST_KEPT_BUDGET_MB: process.env.RYTE_TEST_KEPT_BUDGET_MB ?? ''
     },
     stdio: 'ignore'
@@ -522,7 +525,8 @@ async function main() {
       await fill('p4.html', { answer: 'before reload', y: 1200 })
       const beforeReload = await readState('p4.html')
       await goTo('n.md')
-      writeFileSync(join(notes, 'p4.html'), `${tall('p4')}<!-- changed -->`)
+      // The file changes, and its answer box has become a password box: that value must not be put back.
+      writeFileSync(join(notes, 'p4.html'), `${tall('p4', 'password')}<!-- changed -->`)
       await goTo('p4.html')
       const afterReload = await until('p4 to load again', async () => {
         const state = await readState('p4.html')
@@ -531,21 +535,42 @@ async function main() {
       await sleep(1200)
       const reloaded = await readState('p4.html')
       check(
-        'a reloaded page comes back with what was typed, picked, ticked and scrolled',
+        'a reloaded page comes back as it was, except into an input that became a password',
         afterReload.marker !== beforeReload.marker &&
-          reloaded.value === 'before reload' &&
+          reloaded.value === '' &&
           filled(reloaded) &&
           Math.abs(reloaded.scroll - 1200) <= 2,
         JSON.stringify(reloaded)
       )
-      // 7. A page left showing is read on a timer: type more and quit without leaving the tab.
-      await fill('p4.html', { answer: 'left showing', y: 1500 })
-      await sleep(2500)
+      // 7. A password box that shows its text ("show password") is never kept; a page left showing is read on quit.
+      await show('p3.html')
+      await withView('p3.html', (client) =>
+        client.evaluate(
+          `(() => { document.getElementById('pw').value = 'hunter2-a'; document.getElementById('pw2').value = 'hunter2-b'; return true })()`
+        )
+      )
+      await goTo('n.md')
+      await goTo('p3.html')
+      await withView('p3.html', (client) =>
+        client.evaluate(
+          `(() => { document.getElementById('pw').type = 'text'; document.getElementById('pw2').type = 'text'; return true })()`
+        )
+      )
+      await goTo('n.md')
+      await goTo('p3.html')
+      await fill('p3.html', { answer: 'left showing', y: 1500 })
 
       report.memory = { baseline, twoViews, fourViews }
 
       await app.quit()
     })
+    // What Ryte wrote when it quit: the page left showing is in it, and no password is, shown as text or not.
+    const kept = readFileSync(join(userData, 'page-state.json'), 'utf8')
+    check(
+      'no password, shown as text or not, was written to the kept state',
+      kept.includes('left showing') && !kept.includes('hunter2'),
+      `${kept.length} bytes`
+    )
     // The same profile again, with a local address already approved and open that the server redirects away.
     const origin = `http://127.0.0.1:${port}`
     writeFileSync(
@@ -586,12 +611,12 @@ async function main() {
           Math.abs(sleptThenBack.scroll - 900) <= 2,
         JSON.stringify(sleptThenBack)
       )
-      await driver.goTo('p4.html')
-      await driver.settled('p4.html')
+      await driver.goTo('p3.html')
+      await driver.settled('p3.html')
       await sleep(800)
-      const late = await driver.readState('p4.html')
+      const late = await driver.readState('p3.html')
       check(
-        'a page that was left showing comes back after a restart as the timer last saw it',
+        'a page that was left showing when Ryte quit comes back after a restart',
         late.value === 'left showing' && Math.abs(late.scroll - 1500) <= 2,
         JSON.stringify(late)
       )

@@ -16,6 +16,7 @@ import { appKeptViewPool } from './sleep-limits'
 import { createBlockedLog, type BlockedLog } from './page-blocked'
 import { isSubframeAllowed } from './page-moves'
 import { appPageMemory } from './app-page-memory'
+import type { PageMemory } from './page-memory'
 
 export type LocalShowResult = 'shown' | 'blocked'
 
@@ -37,6 +38,8 @@ export interface LocalBoxDependencies {
   emitTo: EmitTo
   /** Opens an address in the browser. The caller has already checked the kind of address. */
   openExternal: (url: string) => void
+  /** What each page showed, kept for coming back as it was. Asked for on first use. */
+  memory?: () => PageMemory
 }
 
 /** The name of the one lasting session of every local address: storage is kept per origin, as in a browser. */
@@ -48,8 +51,7 @@ interface OpenLocal {
   view: WebContentsView
   host: BrowserWindow
   log: BlockedLog
-  /** Stops the periodic capture of what the page shows. */
-  stopWatching: () => void
+  stopTracking: () => void
 }
 
 const memoryKey = (url: string): string => `local:${url}`
@@ -60,8 +62,11 @@ const memoryKey = (url: string): string => `local:${url}`
  * tabs alive, hidden, until their tabs close, an approval is removed, or they are put to sleep to stay within the
  * memory budget. The caller has already checked that the origin is approved.
  */
-export function createLocalBox({ emitTo, openExternal }: LocalBoxDependencies): LocalBox {
-  const memory = appPageMemory()
+export function createLocalBox({
+  emitTo,
+  openExternal,
+  memory = appPageMemory
+}: LocalBoxDependencies): LocalBox {
   const watchedWindows = new Set<number>()
 
   // The session is shared and lasting, so closing or sleeping a page only closes its view. The session is made
@@ -75,8 +80,8 @@ export function createLocalBox({ emitTo, openExternal }: LocalBoxDependencies): 
   }
 
   const destroy = (page: OpenLocal): void => {
-    const { view, host, log, stopWatching } = page
-    stopWatching()
+    const { view, host, log, stopTracking } = page
+    stopTracking()
     log.stop()
     if (!host.isDestroyed()) host.contentView.removeChildView(view)
     if (!view.webContents.isDestroyed()) view.webContents.close()
@@ -85,6 +90,14 @@ export function createLocalBox({ emitTo, openExternal }: LocalBoxDependencies): 
   }
 
   const kept = createKeptViews<OpenLocal>({ destroy, pool: appKeptViewPool })
+
+  // Keeps what the page shows, unless its tab has been closed or the page put to sleep by the time it answers.
+  const keep = (senderId: number, page: OpenLocal): Promise<void> =>
+    memory().capture(
+      memoryKey(page.url),
+      page.view.webContents,
+      () => kept.get(senderId, page.url) === page
+    )
 
   // The window a call came from, with its bookkeeping set to be dropped when it closes. Every call that keeps
   // something per window goes through this first, so a window that never shows a page leaves nothing behind.
@@ -124,28 +137,19 @@ export function createLocalBox({ emitTo, openExternal }: LocalBoxDependencies): 
         allowNavigation: (url, isMainFrame) =>
           isMainFrame ? parseLocalAddress(url)?.origin === origin : isSubframeAllowed(url)
       })
-      const page: OpenLocal = {
-        url: address.url,
-        origin,
-        view,
-        host,
-        log,
-        stopWatching: () => undefined
-      }
-      kept.add(sender.id, address.url, page)
+      const stopTracking = memory().track(
+        memoryKey(address.url),
+        view.webContents,
+        () => kept.get(sender.id, address.url)?.view === view,
+        () => kept.shown(sender.id)?.view === view
+      )
+      kept.add(sender.id, address.url, { url: address.url, origin, view, host, log, stopTracking })
       // The tab closed while the view was being made.
       if (!kept.isWanted(sender.id, address.url)) {
         kept.remove(sender.id, address.url)
         return 'blocked'
       }
       kept.present(sender.id, address.url, rounded(bounds))
-      memory.restoreOnLoad(memoryKey(address.url), view.webContents)
-      page.stopWatching = memory.watch(
-        memoryKey(address.url),
-        view.webContents,
-        () => kept.get(sender.id, address.url) === page,
-        () => kept.shown(sender.id) === page
-      )
       void view.webContents.loadURL(address.url).catch(() => undefined)
       return 'shown'
     },
@@ -159,24 +163,18 @@ export function createLocalBox({ emitTo, openExternal }: LocalBoxDependencies): 
     },
     park(sender, url) {
       const page = kept.park(sender.id, url)
-      if (page) {
-        void memory.capture(
-          memoryKey(url),
-          page.view.webContents,
-          () => kept.get(sender.id, url) === page
-        )
-      }
+      if (page) void keep(sender.id, page)
     },
     async close(sender, url) {
       if (!watchedHost(sender)) return
       const page = kept.get(sender.id, url)
-      if (page) await memory.capture(memoryKey(url), page.view.webContents, () => true)
+      if (page) await keep(sender.id, page)
       kept.remove(sender.id, url)
     },
     retain(sender, urls) {
       if (!watchedHost(sender)) return
       kept.retain(sender.id, urls)
-      memory.retain('local:', urls)
+      memory().retain('local:', urls.map(memoryKey))
     },
     closeOrigin(origin) {
       kept.removeWhere((page) => page.origin === origin)

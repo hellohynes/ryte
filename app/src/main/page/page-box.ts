@@ -19,6 +19,7 @@ import { createKeptViews } from './kept-views'
 import { appKeptViewPool } from './sleep-limits'
 import { isSubframeAllowed, pageMoveVerdict } from './page-moves'
 import { appPageMemory } from './app-page-memory'
+import type { PageMemory } from './page-memory'
 import { createPageHandler, pageAddress, readOrCreateSalt, tokenOfNotesFolder } from './page-scheme'
 
 export type { PageBounds }
@@ -42,6 +43,8 @@ export interface PageBoxDependencies {
   emitTo: EmitTo
   /** Opens an address in the browser. The caller has already checked the kind of address. */
   openExternal: (url: string) => void
+  /** What each page showed, kept for coming back as it was. Asked for on first use. */
+  memory?: () => PageMemory
 }
 
 /** The name of the one lasting session of every HTML page: what a page saves stays across sleep, reload and restart. */
@@ -54,11 +57,8 @@ interface OpenPage {
   view: WebContentsView
   host: BrowserWindow
   log: BlockedLog
-  /** Stops the periodic capture of what the page shows. */
-  stopWatching: () => void
+  stopTracking: () => void
 }
-
-const memoryKey = (path: string): string => `page:${path}`
 
 /**
  * The view for an HTML page: a separate sandboxed view with no preload and no Node, in the one lasting session
@@ -70,8 +70,12 @@ const memoryKey = (path: string): string => `page:${path}`
 export function createPageBox({
   getNotesRoot,
   emitTo,
-  openExternal
+  openExternal,
+  memory = appPageMemory
 }: PageBoxDependencies): PageBox {
+  // The notes folder is part of the key, so a tab at the same path in another folder does not take this one's state.
+  const memoryKey = (path: string): string => `page:${getNotesRoot()}|${path}`
+
   // Each show and close takes a new number for its window. A show that finds its number changed while it
   // waited has been overtaken by a close or a newer show, and must not attach a view.
   const latest = new Map<number, number>()
@@ -81,9 +85,6 @@ export function createPageBox({
     return next
   }
 
-  // What a page showed (scroll, typed and picked values), for a page that has to load again after sleeping,
-  // reloading or a restart. Kept only for pages that still have a tab.
-  const memory = appPageMemory()
   const watchedWindows = new Set<number>()
 
   // The session is shared and lasting, so closing or sleeping a page only closes its view. The session is made
@@ -101,8 +102,8 @@ export function createPageBox({
   }
 
   const destroy = (page: OpenPage): void => {
-    const { view, host, log, stopWatching } = page
-    stopWatching()
+    const { view, host, log, stopTracking } = page
+    stopTracking()
     log.stop()
     if (!host.isDestroyed()) host.contentView.removeChildView(view)
     if (!view.webContents.isDestroyed()) view.webContents.close()
@@ -129,9 +130,18 @@ export function createPageBox({
     return host
   }
 
+  // Keeps what the page shows, unless its tab has been closed or the page put to sleep by the time it answers.
+  const keep = (senderId: number, path: string, page: OpenPage): Promise<void> =>
+    memory().capture(
+      memoryKey(path),
+      page.view.webContents,
+      () => kept.get(senderId, path) === page
+    )
+
   const create = (
     sender: WebContents,
     host: BrowserWindow,
+    path: string,
     realPath: string,
     version: string,
     bounds: PageBounds
@@ -153,7 +163,13 @@ export function createPageBox({
           ? pageMoveVerdict(url, (file) => tokenOfNotesFolder(getNotesRoot(), file, getSalt()))
           : isSubframeAllowed(url)
     })
-    return { realPath, version, view, host, log, stopWatching: () => undefined }
+    const stopTracking = memory().track(
+      memoryKey(path),
+      view.webContents,
+      () => kept.get(sender.id, path)?.view === view,
+      () => kept.shown(sender.id)?.view === view
+    )
+    return { realPath, version, view, host, log, stopTracking }
   }
 
   return {
@@ -184,14 +200,10 @@ export function createPageBox({
         return 'shown'
       }
       // A different file under the same name, or the file changed while its tab was in the background: a fresh load.
-      // The same file changed on disk comes back as it was; a different one does not.
+      // Whatever it showed comes back on the new view.
       if (current) {
-        if (current.realPath === located.realPath) {
-          await memory.capture(memoryKey(path), current.view.webContents, () => true)
-          if (!isCurrent()) return 'blocked'
-        } else {
-          memory.forget(memoryKey(path))
-        }
+        await keep(sender.id, path, current)
+        if (!isCurrent()) return 'blocked'
         kept.remove(sender.id, path)
       }
       // Reading or making the salt can fail, so it is inside the catch with the rest of the address.
@@ -199,7 +211,7 @@ export function createPageBox({
         .then(() => pageAddress(getNotesRoot(), located.realPath, getSalt()))
         .catch(() => null)
       if (!address || !isCurrent()) return 'blocked'
-      const page = create(sender, host, located.realPath, version, bounds)
+      const page = create(sender, host, path, located.realPath, version, bounds)
       kept.add(sender.id, path, page)
       // The tab closed while the view was being made.
       if (!kept.isWanted(sender.id, path)) {
@@ -207,16 +219,7 @@ export function createPageBox({
         return 'blocked'
       }
       kept.present(sender.id, path, rounded(bounds))
-      const contents = page.view.webContents
-      const isLive = (): boolean => kept.get(sender.id, path) === page
-      memory.restoreOnLoad(memoryKey(path), contents)
-      page.stopWatching = memory.watch(
-        memoryKey(path),
-        contents,
-        isLive,
-        () => kept.shown(sender.id) === page
-      )
-      void contents.loadURL(address).catch(() => undefined)
+      void page.view.webContents.loadURL(address).catch(() => undefined)
       return 'shown'
     },
     setBounds(sender, bounds) {
@@ -230,24 +233,20 @@ export function createPageBox({
     async park(sender, path) {
       const page = kept.park(sender.id, path)
       if (!page) return
-      await memory.capture(
-        memoryKey(path),
-        page.view.webContents,
-        () => kept.get(sender.id, path) === page
-      )
+      await keep(sender.id, path, page)
     },
     async close(sender, path) {
       if (!watchedHost(sender)) return
       bump(sender.id)
       // A tab that is closed for good is cleaned up by `retain`; this is a reload, so the page comes back as it was.
       const page = kept.get(sender.id, path)
-      if (page) await memory.capture(memoryKey(path), page.view.webContents, () => true)
+      if (page) await keep(sender.id, path, page)
       kept.remove(sender.id, path)
     },
     retain(sender, paths) {
       if (!watchedHost(sender)) return
       kept.retain(sender.id, paths)
-      memory.retain('page:', paths)
+      memory().retain('page:', paths.map(memoryKey))
     }
   }
 }

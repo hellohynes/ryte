@@ -14,9 +14,9 @@ The camera, the microphone, your location, other devices and system notification
 
 ## Coming back as it was
 
-When a page sleeps to save memory, reloads because its file changed, or comes back after Ryte restarts, it returns where you left it, even if the page saves nothing itself: how far it is scrolled (the window and the larger scrolling areas), and what you typed or picked (text boxes, text areas, number, date and similar inputs, drop-downs, checkboxes and radio buttons). Ryte reads this from the page in a separate world, so the page's own code is not involved, and puts the values back after the page loads, then fires `input` and `change` so the page notices. Text in editable regions is not kept. Password, hidden and file inputs are never read. At most 256 KB is kept per page.
+When a page sleeps to save memory, reloads because its file changed, or comes back after Ryte restarts, it returns where you left it, even if the page saves nothing itself: how far it is scrolled (the window and the larger scrolling areas), and what you typed or picked (text boxes, text areas, number, date and similar inputs, single-choice drop-downs, checkboxes and radio buttons). Ryte reads this from the page in a separate world, so the page's own code is not involved, and puts the values back after the page loads, then fires `input` and `change` so the page notices. Text in editable regions is not kept. Password, hidden and file inputs are never read, nor is any input that asks for a password or a one-time code, nor one that was ever a password box (a "show password" button). At most 256 KB is kept per page.
 
-It is read when the tab goes to the background, before a reload, and every 30 seconds while the page is showing. It is kept in memory and, for tabs that are still open, in `page-state.json` in the app data folder. It is dropped when the tab closes.
+It is read when the tab goes to the background, before a reload, when Ryte quits, and every 30 seconds while the page is showing. It is kept in memory and, for tabs that are still open, in `page-state.json` in the app data folder. It is dropped when the tab closes.
 
 ## What stays locked
 

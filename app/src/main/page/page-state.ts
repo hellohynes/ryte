@@ -3,18 +3,19 @@ import { z } from 'zod'
 // Far past any real page, so a page that reports a huge number cannot make the restore script absurd.
 const MAX_SCROLL = 10_000_000
 const MAX_AREAS = 20
-const MAX_FIELDS = 2000
-const MAX_VALUE_CHARS = 65_536
-/** A page's kept state is cut down to this, largest values first. */
+/** What is kept for one page, in bytes of its JSON. The capture script stops adding fields at this size. */
 export const MAX_STATE_BYTES = 256 * 1024
+// Room for the path, the window scroll and the scrolled areas, which the capture script does not count.
+const RESERVED_BYTES = 20 * 1024
 
 const scrollNumber = z
   .number()
   .finite()
   .transform((n) => Math.min(Math.max(Math.round(n), 0), MAX_SCROLL))
 
-// An element is found again by `#id` (when the id was unique) or by a tag and position path from the root.
-// The pattern is also what keeps a page's reply from putting anything else into the restore script.
+// An element is found again by `#id` (when the id was unique) or by a tag and position path from the root. The
+// pattern only holds keys to those two shapes: it is the JSON encoding of the state, not this pattern, that keeps
+// a page's text from becoming code in the restore script.
 const key = z
   .string()
   .max(300)
@@ -23,22 +24,27 @@ const key = z
 const TEXT_KINDS = [
   'textarea',
   'select-one',
-  ...['text', 'search', 'url', 'tel', 'email', 'number', 'date', 'datetime-local'].map(
-    (type) => `input-${type}`
-  ),
-  ...['month', 'week', 'time', 'range', 'color'].map((type) => `input-${type}`)
+  'input-text',
+  'input-search',
+  'input-url',
+  'input-tel',
+  'input-email',
+  'input-number',
+  'input-date',
+  'input-datetime-local',
+  'input-month',
+  'input-week',
+  'input-time',
+  'input-range',
+  'input-color'
 ] as [string, ...string[]]
+const TICK_KINDS = ['input-checkbox', 'input-radio'] as const
 
 // Only these kinds are ever read or written. Password, hidden and file inputs are not among them, so a page that
 // lies about one gets it dropped here, and the restore script would not touch it anyway.
 const field = z.union([
-  z.object({ key, kind: z.enum(TEXT_KINDS), value: z.string().max(MAX_VALUE_CHARS) }),
-  z.object({ key, kind: z.enum(['input-checkbox', 'input-radio']), value: z.boolean() }),
-  z.object({
-    key,
-    kind: z.literal('select-multiple'),
-    value: z.array(z.string().max(1000)).max(1000)
-  })
+  z.object({ key, kind: z.enum(TEXT_KINDS), value: z.string() }),
+  z.object({ key, kind: z.enum(TICK_KINDS), value: z.boolean() })
 ])
 const area = z.object({ key, x: scrollNumber, y: scrollNumber })
 
@@ -52,13 +58,16 @@ export interface PageState {
   fields: PageField[]
 }
 
-const keepValid = <T>(schema: z.ZodType<T>, items: unknown, max: number): T[] =>
-  (Array.isArray(items) ? items.slice(0, max) : []).flatMap((item) => {
+const keepValid = <T>(schema: z.ZodType<T>, items: unknown): T[] =>
+  (Array.isArray(items) ? items : []).flatMap((item) => {
     const parsed = schema.safeParse(item)
     return parsed.success ? [parsed.data] : []
   })
 
-/** The page's reply is untrusted: whatever does not fit the schema is dropped, numbers are clamped, and the whole is capped. */
+/**
+ * The page's reply is untrusted: whatever does not fit the schema is dropped, numbers are clamped, and a reply
+ * over the cap is refused (the capture script keeps its own replies under it).
+ */
 export function parsePageState(reply: unknown): PageState | null {
   if (typeof reply !== 'object' || reply === null) return null
   const raw = reply as Record<string, unknown>
@@ -68,24 +77,10 @@ export function parsePageState(reply: unknown): PageState | null {
   const state: PageState = {
     path: path.data,
     scroll: scroll.data,
-    areas: keepValid(area, raw['areas'], MAX_AREAS),
-    fields: keepValid(field, raw['fields'], MAX_FIELDS)
+    areas: keepValid(area, Array.isArray(raw['areas']) ? raw['areas'].slice(0, MAX_AREAS) : []),
+    fields: keepValid(field, raw['fields'])
   }
-  // Over the cap: drop the largest field values first.
-  let total = JSON.stringify(state).length
-  if (total > MAX_STATE_BYTES) {
-    const bySize = state.fields
-      .map((f) => ({ f, size: JSON.stringify(f).length }))
-      .sort((a, b) => b.size - a.size)
-    const dropped = new Set<PageField>()
-    for (const { f, size } of bySize) {
-      if (total <= MAX_STATE_BYTES) break
-      dropped.add(f)
-      total -= size + 1
-    }
-    state.fields = state.fields.filter((f) => !dropped.has(f))
-  }
-  return total > MAX_STATE_BYTES ? null : state
+  return Buffer.byteLength(JSON.stringify(state)) > MAX_STATE_BYTES ? null : state
 }
 
 /** True when nothing needs putting back: the page is at the top and has no typed or picked values. */
@@ -95,12 +90,30 @@ export const isEmptyState = (state: PageState): boolean =>
   state.areas.length === 0 &&
   state.fields.length === 0
 
+// Shared by both scripts: the kind of an element (empty for what is not kept) and whether it still has the
+// value the page gave it.
+const ELEMENT_HELPERS = `
+  const kindOf = (el) =>
+    el.tagName === 'TEXTAREA' ? 'textarea'
+    : el.tagName === 'SELECT' ? (el.multiple ? '' : 'select-one')
+    : el.tagName === 'INPUT' ? 'input-' + el.type : ''
+  const atDefault = (el) => {
+    if (el.tagName === 'SELECT') {
+      const first = [...el.options].find((o) => o.defaultSelected) || el.options[0]
+      return !first || el.value === first.value
+    }
+    return el.type === 'checkbox' || el.type === 'radio' ? el.checked === el.defaultChecked : el.value === el.defaultValue
+  }`
+
 /**
  * Asks a page what it shows. It runs in its own isolated world, so it does not depend on the page's own code and
  * the page cannot see it. Only values that differ from the page's own defaults are read, and never a password,
- * hidden or file input.
+ * hidden or file input, an input that asks for a password or one-time code, or an input that has ever been a
+ * password (a "show password" button turns one into text).
  */
-export const CAPTURE_SCRIPT = `(() => {
+export const CAPTURE_SCRIPT = `(() => {${ELEMENT_HELPERS}
+  const seen = (globalThis.rytePasswordInputs ??= new WeakSet())
+  for (const el of document.querySelectorAll('input[type=password]')) seen.add(el)
   const ids = new Map()
   const all = document.getElementsByTagName('*')
   for (const e of all) if (e.id) ids.set(e.id, (ids.get(e.id) || 0) + 1)
@@ -114,29 +127,18 @@ export const CAPTURE_SCRIPT = `(() => {
     }
     return parts.join('/')
   }
-  const TEXT = ${JSON.stringify(TEXT_KINDS.filter((kind) => kind.startsWith('input-')).map((kind) => kind.slice(6)))}
+  const kinds = ${JSON.stringify([...TEXT_KINDS, ...TICK_KINDS])}
+  const encoder = new TextEncoder()
+  let room = ${MAX_STATE_BYTES - RESERVED_BYTES}
   const fields = []
   for (const el of document.querySelectorAll('input,textarea,select')) {
-    if (fields.length >= ${MAX_FIELDS}) break
-    const tag = el.tagName
-    let kind, value
-    if (tag === 'TEXTAREA') {
-      if (el.value !== el.defaultValue) { kind = 'textarea'; value = el.value }
-    } else if (tag === 'SELECT') {
-      const options = [...el.options]
-      const first = options.find((o) => o.defaultSelected) || options[0]
-      if (el.multiple ? options.some((o) => o.selected !== o.defaultSelected) : first && el.value !== first.value) {
-        kind = el.multiple ? 'select-multiple' : 'select-one'
-        value = el.multiple ? options.filter((o) => o.selected).map((o) => o.value) : el.value
-      }
-    } else if (el.type === 'checkbox' || el.type === 'radio') {
-      if (el.checked !== el.defaultChecked) { kind = 'input-' + el.type; value = el.checked }
-    } else if (TEXT.includes(el.type) && el.value !== el.defaultValue) {
-      kind = 'input-' + el.type; value = el.value
-    }
-    if (kind !== undefined && !(typeof value === 'string' && value.length > ${MAX_VALUE_CHARS})) {
-      fields.push({ key: keyOf(el), kind, value })
-    }
+    const kind = kindOf(el)
+    if (!kinds.includes(kind) || seen.has(el) || /password|one-time-code/i.test(el.autocomplete) || atDefault(el)) continue
+    const f = { key: keyOf(el), kind, value: kind === 'input-checkbox' || kind === 'input-radio' ? el.checked : el.value }
+    const size = encoder.encode(JSON.stringify(f)).length + 1
+    if (size > room) continue
+    room -= size
+    fields.push(f)
   }
   const scrolled = []
   for (const el of all) {
@@ -151,12 +153,13 @@ export const CAPTURE_SCRIPT = `(() => {
 export const STATE_WORLD_ID = 1234
 
 /**
- * The script that puts a page back as it was. It is built only from a state that `parsePageState` has checked and
- * JSON-encoded, so no text from the page is ever spliced into code. It does nothing on another path, skips an
- * element that is missing or no longer the same kind, and fires `input` and `change` so the page notices.
+ * The script that puts a page back as it was. The state is JSON-encoded into it, so no text from the page is ever
+ * spliced into code. It does nothing on another path, skips an element that is missing or no longer the same
+ * kind, and fires `input` and `change` so the page notices. The second pass, for pages that render late, leaves
+ * alone whatever the person has already changed or scrolled.
  */
-export function restoreScript(state: PageState): string {
-  return `((s) => {
+export function restoreScript(state: PageState, secondPass = false): string {
+  return `((s, secondPass) => {${ELEMENT_HELPERS}
   if (location.pathname !== s.path) return
   const find = (key) => {
     if (key[0] === '#') return document.getElementById(key.slice(1))
@@ -172,23 +175,12 @@ export function restoreScript(state: PageState): string {
     }
     return node
   }
-  const kindOf = (el) =>
-    el.tagName === 'TEXTAREA' ? 'textarea'
-    : el.tagName === 'SELECT' ? (el.multiple ? 'select-multiple' : 'select-one')
-    : el.tagName === 'INPUT' ? 'input-' + el.type : ''
   const fire = (el) => { for (const type of ['input', 'change']) el.dispatchEvent(new Event(type, { bubbles: true })) }
   for (const f of s.fields) {
     const el = find(f.key)
-    if (!el || kindOf(el) !== f.kind) continue
+    if (!el || kindOf(el) !== f.kind || (secondPass && !atDefault(el))) continue
     if (f.kind === 'input-checkbox' || f.kind === 'input-radio') {
       if (el.checked !== f.value) { el.checked = f.value; fire(el) }
-    } else if (f.kind === 'select-multiple') {
-      let changed = false
-      for (const o of el.options) {
-        const on = f.value.includes(o.value)
-        if (o.selected !== on) { o.selected = on; changed = true }
-      }
-      if (changed) fire(el)
     } else if (el.value !== f.value) {
       el.value = f.value
       fire(el)
@@ -196,8 +188,8 @@ export function restoreScript(state: PageState): string {
   }
   for (const a of s.areas) {
     const el = find(a.key)
-    if (el) { el.scrollLeft = a.x; el.scrollTop = a.y }
+    if (el && !(secondPass && (el.scrollTop || el.scrollLeft))) { el.scrollLeft = a.x; el.scrollTop = a.y }
   }
-  window.scrollTo({ left: s.scroll.x, top: s.scroll.y, behavior: 'instant' })
-})(${JSON.stringify(state)})`
+  if (!(secondPass && (window.scrollX || window.scrollY))) window.scrollTo({ left: s.scroll.x, top: s.scroll.y, behavior: 'instant' })
+})(${JSON.stringify(state)}, ${secondPass})`
 }
