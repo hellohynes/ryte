@@ -54,7 +54,7 @@ nvm use # switches only this shell to the repository's Node 24
 corepack enable # once per Node installation; pnpm versions remain project-scoped
 pnpm build:local # production build only
 pnpm dmg:local   # ad-hoc signed (not notarized) Apple Silicon DMG for local installer checks; removes the unpacked staging app
-pnpm qa:local    # validate, smoke the indexer, then launch the built app
+pnpm qa:local    # fast check (about 20 s), then launch the built app; pnpm validate runs everything
 pnpm stencil     # serve the Stencil gallery on http://localhost:6002
 pnpm site:preview # serve the landing page (site/) instantly on http://localhost:6001; /stencil/ forwards to the gallery when pnpm site:stencil is running
 pnpm site:stencil # the Stencil gallery with hot reload on http://localhost:6002 (same as pnpm stencil)
@@ -67,8 +67,8 @@ Or run individual commands from `app`:
 cd app
 nvm use # reads the repository's .nvmrc
 pnpm check:node
-pnpm validate      # full local validation: node, Stencil checks, lint, typecheck, test, build
-pnpm qa:local      # validate, smoke the indexer, then launch the built app
+pnpm validate      # full local validation: node, Stencil checks, lint, typecheck, test, bundle build
+pnpm qa:local      # fast check, then launch the built app (see docs/branch-workflow.md)
 pnpm launch -- --user-data-dir=/tmp/ryte-profile # launch an existing production build with optional Electron flags
 pnpm dev          # start with hot-reload (macOS: runs a Ryte-named copy of Electron, see below)
 pnpm test         # unit tests (vitest)

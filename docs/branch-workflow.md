@@ -25,12 +25,14 @@ pnpm smoke:indexer
 
 `pnpm smoke:indexer` uses synthetic notes and should not touch a real notes folder by default.
 
-To run the full local check and then launch the built app for manual smoke testing:
+To try a build, run the fast path and then launch the built app:
 
 ```bash
 cd app
 pnpm qa:local
 ```
+
+`pnpm qa:local` runs lint, the type check once, the tests, and the bundle build, then launches. It skips the Stencil, site and contract checks, the native tests and the release-script tests, and prints that on its first line. It also skips the watcher scenarios and `pnpm smoke:indexer` unless indexing code changed against the merge-base with `origin/main` (`app/src/main/indexing/`, supported file types, the smoke scripts, the lockfile), or the change cannot be worked out; then it runs both. `pnpm validate` runs every check and is what CI and every PR use.
 
 ## Branch Names
 
