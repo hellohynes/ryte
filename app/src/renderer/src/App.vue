@@ -6,6 +6,7 @@ import { applyFont } from './fonts/load-fonts'
 import FileOpenOverlay from './components/FileOpenOverlay.vue'
 import LocalAddressPrompt from './components/LocalAddressPrompt.vue'
 import SearchOverlay from './components/SearchOverlay.vue'
+import { openTabInBrowser } from './components/page-open-browser'
 import PreferencesModal from './components/preferences/PreferencesModal.vue'
 import RebuildNotice from './components/RebuildNotice.vue'
 import ShellRail from './components/ShellRail.vue'
@@ -13,6 +14,7 @@ import Sidebar from './components/Sidebar.vue'
 import StatusBar from './components/StatusBar.vue'
 import Viewer from './components/Viewer.vue'
 import WorkspaceTabs from './components/WorkspaceTabs.vue'
+import StToaster from './stencil/components/StToaster.vue'
 import { useEmbeddingStatusStore } from './stores/embedding-status'
 import { useIndexStatusStore } from './stores/index-status'
 import { useRebuildNoticeStore } from './stores/rebuild-notice'
@@ -382,6 +384,11 @@ function handleMenuCommand(command: AppMenuCommand): void {
     return
   }
 
+  if (command.type === 'open-in-browser') {
+    void openTabInBrowser(workspace.activeTab)
+    return
+  }
+
   if (command.type === 'toggle-source-mode') {
     window.dispatchEvent(new Event('ryte:toggle-source-mode'))
     return
@@ -496,6 +503,7 @@ function onGlobalAppKeyup(event: KeyboardEvent): void {
 
     <FileOpenOverlay v-if="showFileOpen" @close="showFileOpen = false" />
     <LocalAddressPrompt />
+    <StToaster />
     <SearchOverlay
       v-if="showSearch"
       @close="showSearch = false"

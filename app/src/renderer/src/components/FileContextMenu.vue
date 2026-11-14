@@ -13,6 +13,9 @@ const props = defineProps<{
   /** False for a picture: it cannot be renamed or copied as text. */
   isNote: boolean
   canClose?: boolean
+  /** A local address: it is not a file, so only the browser and close items apply. */
+  isAddress?: boolean
+  canOpenInBrowser?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -31,13 +34,20 @@ const anchor = computed(() => ({ x: props.x, y: props.y, width: 0, height: 0 }))
       <StMenuItem @click="emit('action', 'rename')">Rename</StMenuItem>
       <StMenuSeparator />
     </template>
-    <StMenuItem @click="emit('action', 'show-in-finder')">Show in Finder</StMenuItem>
-    <StMenuItem @click="emit('action', 'copy-file-path')">Copy file path</StMenuItem>
+    <StMenuItem v-if="canOpenInBrowser" @click="emit('action', 'open-in-browser')">
+      Open in Browser
+    </StMenuItem>
+    <template v-if="!isAddress">
+      <StMenuItem @click="emit('action', 'show-in-finder')">Show in Finder</StMenuItem>
+      <StMenuItem @click="emit('action', 'copy-file-path')">Copy file path</StMenuItem>
+    </template>
     <template v-if="canClose">
       <StMenuSeparator />
       <StMenuItem @click="emit('action', 'close')">Close</StMenuItem>
     </template>
-    <StMenuSeparator />
-    <StMenuItem tone="danger" @click="emit('action', 'move-to-trash')">Move to Trash</StMenuItem>
+    <template v-if="!isAddress">
+      <StMenuSeparator />
+      <StMenuItem tone="danger" @click="emit('action', 'move-to-trash')">Move to Trash</StMenuItem>
+    </template>
   </StMenu>
 </template>

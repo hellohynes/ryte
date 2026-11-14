@@ -25,6 +25,7 @@ import StIcon from '../stencil/icons/StIcon.vue'
 import FileContextMenu from './FileContextMenu.vue'
 import type { FileContextMenuAction } from './file-context-menu-model'
 import InlineFileRename from './InlineFileRename.vue'
+import { browserTargetOf, openTabInBrowser } from './page-open-browser'
 import {
   WORKSPACE_TABPANEL_ID,
   getCloseFallbackWorkspaceTabId,
@@ -43,6 +44,8 @@ interface TabFileContextMenu {
   tabId: string
   fileName: string
   isNote: boolean
+  isAddress: boolean
+  canOpenInBrowser: boolean
   x: number
   y: number
 }
@@ -228,13 +231,15 @@ function fileRefForTab(tab: WorkspaceFileTab): WorkspaceFileRef {
 }
 
 function openTabContextMenu(event: MouseEvent, tab: WorkspaceTab): void {
-  // The file menu (rename, copy, reveal) has nothing to act on for an address.
-  if (isWorkspaceAddressTab(tab)) return
   inlineRename.value = null
+  const isAddress = isWorkspaceAddressTab(tab)
   fileContextMenu.value = {
     tabId: tab.id,
     fileName: tab.title,
+    isAddress,
+    canOpenInBrowser: browserTargetOf(tab) !== null,
     isNote:
+      !isAddress &&
       supportedKindOf(isWorkspaceSourceFileRef(tab) ? tab.sourcePath : tab.externalPath) === 'note',
     x: event.clientX,
     y: event.clientY
@@ -357,14 +362,21 @@ async function handleFileContextAction(action: FileContextMenuAction): Promise<v
   if (!menu) return
   fileContextMenu.value = null
   const tab = workspace.tabs.find((candidate) => candidate.id === menu.tabId)
-  if (!tab || isWorkspaceAddressTab(tab)) return
+  if (!tab) return
 
-  if (action === 'rename') {
-    startInlineRename(tab)
+  if (action === 'open-in-browser') {
+    void openTabInBrowser(tab)
     return
   }
   if (action === 'close') {
     closeTabWithFocusRecovery(tab.id, { moveKeyboardFocus: true, announceClose: true })
+    return
+  }
+  // The rest act on a file, which an address is not.
+  if (isWorkspaceAddressTab(tab)) return
+
+  if (action === 'rename') {
+    startInlineRename(tab)
     return
   }
 
@@ -517,6 +529,8 @@ function onGlobalKeydown(event: KeyboardEvent): void {
     :y="fileContextMenu.y"
     :file-name="fileContextMenu.fileName"
     :is-note="fileContextMenu.isNote"
+    :is-address="fileContextMenu.isAddress"
+    :can-open-in-browser="fileContextMenu.canOpenInBrowser"
     can-close
     @action="handleFileContextAction"
     @dismiss="fileContextMenu = null"

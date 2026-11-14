@@ -123,6 +123,11 @@ function viewMenu(): MenuItemConstructorOptions {
         accelerator: `${commandKey}+E`,
         click: () => sendMenuCommand({ type: 'toggle-source-mode' })
       },
+      {
+        // The menu cannot know the active tab, so it is always on; the window ignores it for a tab that is not a page.
+        label: 'Open in Browser',
+        click: () => sendMenuCommand({ type: 'open-in-browser' })
+      },
       { type: 'separator' },
       {
         label: 'Next',

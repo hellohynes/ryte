@@ -71,18 +71,20 @@ describe('app.menuCommand event', () => {
     { type: 'focus-previous-tab' },
     { type: 'toggle-sidebar' },
     { type: 'toggle-source-mode' },
-    { type: 'open-settings' }
+    { type: 'open-settings' },
+    { type: 'open-in-browser' }
   ])('accepts %j', (command) => {
     expect(accepts(command)).toBe(true)
   })
 
-  it('covers exactly the ten command types', () => {
+  it('covers exactly the eleven command types', () => {
     expect(appMenuCommand.options.map((option) => option.shape.type.value).sort()).toEqual(
       [
         'close-active-tab',
         'close-all-tabs',
         'focus-next-tab',
         'focus-previous-tab',
+        'open-in-browser',
         'open-native-file',
         'open-recent-file',
         'open-settings',
