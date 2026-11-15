@@ -20,6 +20,10 @@ It doesn't yet take answers, keep receipts, or write summaries. Those come in la
 
 The record shape is defined by the contract (kept in the owner's notes); `contract.mjs` is its machine form.
 
+## Pinned dependencies
+
+`pnpm.overrides` in `package.json` holds five packages that the MCP SDK pulls in, pinned to versions at least 7 days old. Remove the overrides when the SDK is next upgraded, then check the new lockfile against the same rule.
+
 ## Test
 
 ```bash

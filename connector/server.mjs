@@ -1,13 +1,15 @@
 import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
 import { createAsk } from './ask.mjs'
 import { askInput } from './contract.mjs'
 
-const dir = process.env.RYTE_ANSWERS_DIR || join(homedir(), 'Library', 'Application Support', 'ryte-answers')
+// MCP configs pass env values without a shell, so a leading ~ arrives as written and must be expanded here.
+const configured = process.env.RYTE_ANSWERS_DIR?.replace(/^~(?=$|\/)/, homedir())
+const dir = configured ? resolve(configured) : join(homedir(), 'Library', 'Application Support', 'ryte-answers')
 const ask = createAsk({ dir })
 
 const reply = (text, isError = false) => ({ content: [{ type: 'text', text }], ...(isError ? { isError: true } : {}) })
