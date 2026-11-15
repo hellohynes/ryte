@@ -4,10 +4,28 @@ All notable Ryte changes should be recorded here before a tagged release.
 
 Ryte follows [Semantic Versioning](https://semver.org). The app version in `app/package.json` is the source of truth for packaged builds, Git tags, and DMG filenames. See the [Versioning Policy](#versioning-policy).
 
-## Unreleased
+## 0.4.0
+
+### Highlights
+
+HTML pages in your notes now work like normal browser tabs, and they keep your place. A page can use the internet, the clipboard, downloads and its own saved data. Switching tabs no longer resets it. If it sleeps, reloads or Ryte restarts, it comes back with your scroll and what you typed. The page also starts right under the tabs.
+
+#### HTML pages
 
 - HTML pages and local addresses now open like a normal browser tab: they can read any file in your notes folder, use the internet, read and write the clipboard, download files through the macOS save dialog, show alert boxes, and keep what they save across restarts. A page still cannot move itself to a website. The camera, microphone, location and notifications stay off. See [what a page can do](docs/html-pages.md).
+- A page in a background tab stays alive and keeps its place when you switch tabs. Background pages sleep only when together they use more than about 1.5 GB of memory, and the one you looked at longest ago sleeps first.
 - An HTML page or local address that sleeps, reloads because its file changed, or comes back after Ryte restarts now returns as you left it: scroll position, and what you typed or picked, even when the page saves nothing itself. Passwords are never kept. See [coming back as it was](docs/html-pages.md#coming-back-as-it-was).
+- A page starts right under the tabs, without the gray row above it. Open in Browser is in the tab's right-click menu and in View > Open in Browser.
+
+#### Fixes
+
+- Switching back to a note after viewing a large HTML page no longer freezes the app, and opening a file or switching tabs in a very large notes folder no longer pauses for about half a second.
+
+### Validation
+
+- `pnpm --dir app validate`
+- `pnpm --dir app smoke:indexer` (synthetic fixtures)
+- `pnpm dmg:local` (ad-hoc signed Apple Silicon package)
 
 ## 0.3.0
 
