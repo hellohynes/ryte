@@ -13,6 +13,7 @@
     "site:preview": "node scripts/serve.mjs site 6001 --stencil http://localhost:6002/ --fill",
     "site:stencil": "corepack pnpm --dir app stencil",
     "site:serve": "node scripts/build-site.mjs && node scripts/serve.mjs site-dist 6001",
+    "connector:test": "corepack pnpm --dir connector test",
     "check:site": "node scripts/check-site.mjs",
     "site:screenshots": "node scripts/capture-site-screenshots.mjs",
     "check:skills": "node scripts/check-skill-contracts.mjs",
