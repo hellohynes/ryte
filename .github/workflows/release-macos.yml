@@ -99,7 +99,7 @@ jobs:
         run: |
           notes="$RUNNER_TEMP/release-notes.md"
           section="$RUNNER_TEMP/changelog-section.md"
-          if node ../scripts/changelog-section.mjs "$RELEASE_VERSION" > "$section" && [ -s "$section" ]; then
+          if node ../scripts/changelog-section.mjs "$RELEASE_VERSION" --link-base "https://github.com/${GITHUB_REPOSITORY}/blob/${RELEASE_TAG}/" > "$section" && [ -s "$section" ]; then
             { cat "$section"; echo; } > "$notes"
           else
             echo "::error::No CHANGELOG section for $RELEASE_VERSION; publishing with the install notes only."
