@@ -1,6 +1,7 @@
 # App
 /node_modules/
 app/node_modules/
+connector/node_modules/
 app/out/
 app/dist/
 app/.eslintcache

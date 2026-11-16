@@ -71,3 +71,10 @@ jobs:
         env:
           # Reads the latest published release (read-only) to fill the site's version and download links.
           GITHUB_TOKEN: ${{ github.token }}
+
+      # The connector is a separate package with its own lockfile and no link to the app.
+      - name: Connector tests
+        working-directory: connector
+        run: |
+          pnpm install --frozen-lockfile
+          pnpm test

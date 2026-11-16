@@ -51,20 +51,21 @@ type(scope)!: description        breaking change
 - **Types:** `feat`, `fix`, `perf`, `refactor`, `revert`, `build`, `chore`, `ci`, `docs`, `style`, `test`. Use `fix`, not `bug`.
 - **Scopes** (optional but encouraged; list several with commas):
 
-  | Scope      | Covers                                                                              |
-  | ---------- | ----------------------------------------------------------------------------------- |
-  | `app`      | App-wide changes no narrower scope fits: build config, packaging setup under `app/` |
-  | `main`     | The Electron main process                                                           |
-  | `renderer` | The UI                                                                              |
-  | `preload`  | The preload API and IPC contract                                                    |
-  | `stencil`  | Stencil, Ryte's design system: tokens, behaviors, components, gallery, agent checks |
-  | `search`   | Search, summaries, and answers                                                      |
-  | `indexer`  | Indexing, the watcher, SQLite and vector storage                                    |
-  | `site`     | The landing page in `site/` and its Pages build                                     |
-  | `release`  | Versioning, the changelog, release workflows, DMG packaging                         |
-  | `agents`   | Agent skills in `.agents/` and `.claude/`                                           |
-  | `deps`     | Dependency updates                                                                  |
-  | `repo`     | Root config, CI, docs, and scripts                                                  |
+  | Scope       | Covers                                                                              |
+  | ----------- | ----------------------------------------------------------------------------------- |
+  | `app`       | App-wide changes no narrower scope fits: build config, packaging setup under `app/` |
+  | `main`      | The Electron main process                                                           |
+  | `renderer`  | The UI                                                                              |
+  | `preload`   | The preload API and IPC contract                                                    |
+  | `stencil`   | Stencil, Ryte's design system: tokens, behaviors, components, gallery, agent checks |
+  | `search`    | Search, summaries, and answers                                                      |
+  | `indexer`   | Indexing, the watcher, SQLite and vector storage                                    |
+  | `site`      | The landing page in `site/` and its Pages build                                     |
+  | `release`   | Versioning, the changelog, release workflows, DMG packaging                         |
+  | `agents`    | Agent skills in `.agents/` and `.claude/`                                           |
+  | `deps`      | Dependency updates                                                                  |
+  | `repo`      | Root config, CI, docs, and scripts                                                  |
+  | `connector` | The standalone answers connector in `connector/`                                    |
 
   When a slice introduces a new area (for example `mcp`), add the scope to `scripts/conventional-commits.mjs` and this table in the same change.
 

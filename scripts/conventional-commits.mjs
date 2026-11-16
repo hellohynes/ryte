@@ -46,6 +46,7 @@ export const COMMIT_SCOPES = [
   "agents",
   "deps",
   "repo",
+  "connector",
 ];
 
 export const MAX_HEADER_LENGTH = 100;
